@@ -22,7 +22,7 @@ interface PageData {
   facets: AdvertiserFacets;
 }
 
-export default function Home() {
+export default function PublicAdvertisersPage() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
 
@@ -144,87 +144,89 @@ export default function Home() {
   );
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-            Advertisers
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Merchants and stores your Awin publisher account has joined.
-          </p>
-        </div>
-        <RegionSelector
-          value={country ?? ""}
-          countries={facets.countries}
-          onChange={handleCountryChange}
-          detecting={!countryResolved}
-        />
-      </header>
-
-      {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
-          <p className="text-sm font-medium text-red-800">
-            Couldn&apos;t load advertisers
-          </p>
-          <p className="mt-1 text-sm text-red-600">{error}</p>
-          <button
-            onClick={() => load(filters, page, country ?? "")}
-            className="mt-4 inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover"
-          >
-            Try again
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <FilterBar
-            filters={filters}
-            onChange={setFilters}
-            regions={facets.regions}
-            relationships={facets.relationships}
+    <div className="min-h-screen bg-gray-50">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+              Advertisers
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Merchants and stores your Awin publisher account has joined.
+            </p>
+          </div>
+          <RegionSelector
+            value={country ?? ""}
+            countries={facets.countries}
+            onChange={handleCountryChange}
+            detecting={!countryResolved}
           />
+        </header>
 
-          {loading ? (
-            <SkeletonGrid />
-          ) : !data || data.total === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
-              <p className="text-sm font-medium text-gray-700">
-                No advertisers match your filters
-              </p>
-              <p className="mt-1 text-sm text-gray-500">
-                Try clearing the search, filters, or region.
-              </p>
-              {(hasActiveFilters || country) && (
-                <button
-                  onClick={() => {
-                    setFilters(EMPTY_FILTERS);
-                    handleCountryChange("");
-                  }}
-                  className="mt-4 text-sm font-medium text-accent hover:text-accent-hover"
-                >
-                  Clear all filters
-                </button>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {data.advertisers.map((a) => (
-                  <AdvertiserCard key={a.id} advertiser={a} />
-                ))}
+        {error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
+            <p className="text-sm font-medium text-red-800">
+              Couldn&apos;t load advertisers
+            </p>
+            <p className="mt-1 text-sm text-red-600">{error}</p>
+            <button
+              onClick={() => load(filters, page, country ?? "")}
+              className="mt-4 inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover"
+            >
+              Try again
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <FilterBar
+              filters={filters}
+              onChange={setFilters}
+              regions={facets.regions}
+              relationships={facets.relationships}
+            />
+
+            {loading ? (
+              <SkeletonGrid />
+            ) : !data || data.total === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
+                <p className="text-sm font-medium text-gray-700">
+                  No advertisers match your filters
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Try clearing the search, filters, or region.
+                </p>
+                {(hasActiveFilters || country) && (
+                  <button
+                    onClick={() => {
+                      setFilters(EMPTY_FILTERS);
+                      handleCountryChange("");
+                    }}
+                    className="mt-4 text-sm font-medium text-accent hover:text-accent-hover"
+                  >
+                    Clear all filters
+                  </button>
+                )}
               </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {data.advertisers.map((a) => (
+                    <AdvertiserCard key={a.id} advertiser={a} />
+                  ))}
+                </div>
 
-              <Pagination
-                page={data.page}
-                totalPages={data.totalPages}
-                total={data.total}
-                pageSize={data.pageSize}
-                onPageChange={goToPage}
-              />
-            </>
-          )}
-        </div>
-      )}
-    </main>
+                <Pagination
+                  page={data.page}
+                  totalPages={data.totalPages}
+                  total={data.total}
+                  pageSize={data.pageSize}
+                  onPageChange={goToPage}
+                />
+              </>
+            )}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }

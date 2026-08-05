@@ -9,6 +9,7 @@ Built with **Next.js (App Router)**, **TypeScript**, and **Tailwind CSS**. Awin 
 ## Features
 
 - 🔒 Server-side Awin integration — API token and Publisher ID never reach the client
+- 🔐 Admin login — simple username/password authentication with signed JWT session cookies
 - 🗂️ `/api/advertisers` route returns normalised advertiser data (id, name, logo, status, commission, region…)
 - 🔎 Search + filter by name, region, and status (joined / pending)
 - 💅 Clean, responsive UI (Inter font, neutral palette, one accent colour)
@@ -39,6 +40,9 @@ cp .env.example .env.local
 | `AWIN_PUBLISHER_ID` | Your numeric Awin Publisher ID                                     |
 | `CRON_SECRET`       | Any long random string — protects the cron route                   |
 | `DEFAULT_COUNTRY`   | Fallback 2-letter ISO country when IP geolocation fails (default `US`) |
+| `ADMIN_USERNAME`    | Username for admin login (server-side only)                        |
+| `ADMIN_PASSWORD`    | Password for admin login (server-side only)                        |
+| `AUTH_SECRET`       | Random secret used to sign session JWT tokens                      |
 
 #### Where to get your Awin token & publisher ID
 
@@ -47,10 +51,14 @@ cp .env.example .env.local
 3. Generate/copy your **OAuth2 token** → `AWIN_API_TOKEN`.
 4. Your **Publisher ID** is the numeric account ID shown in your dashboard (and in the dashboard URL) → `AWIN_PUBLISHER_ID`.
 
-Generate a cron secret with:
+Generate secrets with:
 
 ```bash
+# Cron secret
 openssl rand -hex 32
+
+# Auth secret (for signing session tokens)
+openssl rand -base64 32
 ```
 
 ### 3. Run the dev server
@@ -154,23 +162,53 @@ The route is intentionally a stub. Extend it later to persist advertisers/offers
 
 ---
 
+## Authentication
+
+The app is protected behind a simple admin login. All routes under `/dashboard` (and the root `/`) require authentication. The `/login` page provides a username/password form.
+
+### How it works
+
+1. User visits any protected route → middleware checks for a valid `session` cookie.
+2. If no valid session → redirected to `/login`.
+3. User submits credentials → `POST /api/auth/login` validates against `ADMIN_USERNAME` / `ADMIN_PASSWORD` from env.
+4. On success, a signed JWT (HS256, 7-day expiry) is set as an `httpOnly`, `secure`, `sameSite: strict` cookie.
+5. Logout clears the cookie via `POST /api/auth/logout`.
+
+No database is needed — this is designed for a single admin user.
+
+---
+
 ## Project structure
 
 ```
 src/
 ├─ app/
 │  ├─ api/
-│  │  ├─ advertisers/route.ts          # GET advertisers (server-side Awin fetch)
-│  │  └─ cron/sync-advertisers/route.ts # Protected cron placeholder
+│  │  ├─ advertisers/route.ts            # GET advertisers (server-side Awin fetch)
+│  │  ├─ auth/
+│  │  │  ├─ login/route.ts               # POST login (validates credentials, sets cookie)
+│  │  │  └─ logout/route.ts              # POST logout (clears cookie)
+│  │  ├─ cron/sync-advertisers/route.ts  # Protected cron placeholder
+│  │  └─ geo/route.ts                    # GET visitor geolocation
+│  ├─ dashboard/
+│  │  └─ page.tsx                        # Protected advertisers dashboard
+│  ├─ login/
+│  │  └─ page.tsx                        # Login form
 │  ├─ globals.css
-│  ├─ layout.tsx                        # Inter font, root layout
-│  └─ page.tsx                          # Client UI: grid + filters + states
+│  ├─ layout.tsx                         # Inter font, root layout
+│  └─ page.tsx                           # Redirects to /dashboard
 ├─ components/
 │  ├─ AdvertiserCard.tsx
 │  ├─ FilterBar.tsx
+│  ├─ Pagination.tsx
+│  ├─ RegionSelector.tsx
 │  └─ SkeletonGrid.tsx
-└─ lib/
-   └─ awin.ts                           # Typed Awin client + normalisation
+├─ lib/
+│  ├─ auth.ts                            # JWT session helpers (jose)
+│  ├─ awin.ts                            # Typed Awin client + normalisation
+│  ├─ countries.ts                       # Country code → name mapping
+│  └─ geo.ts                             # IP geolocation utilities
+└─ middleware.ts                          # Route protection (session validation)
 ```
 
 ---
