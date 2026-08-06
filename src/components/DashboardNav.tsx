@@ -7,7 +7,7 @@ import { useState } from "react";
 const navItems = [
   {
     label: "Advertisers",
-    href: "/",
+    href: "/dashboard/advertisers",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
@@ -68,10 +68,7 @@ export default function DashboardNav() {
           {/* Nav tabs */}
           <div className="flex items-center gap-1">
             {navItems.map((item) => {
-              const isActive =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.href);
+              const isActive = pathname === item.href;
 
               return (
                 <Link

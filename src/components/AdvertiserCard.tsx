@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Advertiser } from "@/lib/awin";
 
 const RELATIONSHIP_STYLES: Record<string, string> = {
@@ -20,12 +21,17 @@ function StatusBadge({ relationship }: { relationship: string | null }) {
   );
 }
 
+interface AdvertiserCardProps {
+  advertiser: Advertiser;
+  /** 2-letter country code (lowercase) for building the detail link. */
+  country?: string;
+}
+
 export default function AdvertiserCard({
   advertiser,
-}: {
-  advertiser: Advertiser;
-}) {
-  return (
+  country,
+}: AdvertiserCardProps) {
+  const content = (
     <div className="group flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-card transition hover:border-gray-300 hover:shadow-card-hover">
       <div className="flex items-start gap-4">
         <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
@@ -47,7 +53,6 @@ export default function AdvertiserCard({
           <h3 className="truncate text-sm font-semibold text-gray-900">
             {advertiser.name}
           </h3>
-          <p className="mt-0.5 text-xs text-gray-500">ID: {advertiser.id}</p>
         </div>
         <StatusBadge relationship={advertiser.relationship} />
       </div>
@@ -88,12 +93,22 @@ export default function AdvertiserCard({
         )}
       </dl>
 
-      {advertiser.url && (
+      {/* View deals prompt (only when card is clickable) */}
+      {country && (
+        <div className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-accent group-hover:text-accent-hover">
+          View deals
+          <span aria-hidden>→</span>
+        </div>
+      )}
+
+      {/* Fallback link when no country (admin dashboard) */}
+      {!country && advertiser.url && (
         <a
           href={advertiser.url}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover"
+          onClick={(e) => e.stopPropagation()}
         >
           Visit advertiser
           <span aria-hidden>→</span>
@@ -101,4 +116,24 @@ export default function AdvertiserCard({
       )}
     </div>
   );
+
+  // Wrap in Link when country is provided (public pages)
+  if (country) {
+    const slugName = advertiser.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    const slug = `${advertiser.id}-${slugName}`;
+
+    return (
+      <Link
+        href={`/${country.toLowerCase()}/advertisers/${slug}`}
+        className="block"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }

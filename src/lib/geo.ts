@@ -17,7 +17,7 @@ export interface GeoResult {
 }
 
 /** Minimal shape we need from the incoming request. */
-type RequestLike = { headers: Headers };
+type RequestLike = { headers: { get(name: string): string | null } };
 
 const CODE_RE = /^[A-Za-z]{2}$/;
 

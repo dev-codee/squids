@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Awin Advertisers",
-  description: "Browse the advertisers your Awin publisher account has joined.",
+  title: "Awin Deals & Advertisers",
+  description: "Browse deals, vouchers, and advertisers from your Awin publisher account.",
 };
 
 export default function RootLayout({
