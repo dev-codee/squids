@@ -20,14 +20,14 @@ export interface AwinPromotion {
     logoUrl?: string;
   };
   type: string; // "voucher" | "promotion"
-  code?: string; // voucher code, only present for vouchers
+  voucher?: { code: string }; // nested voucher code
   title: string;
   description?: string;
   startDate?: string;
   endDate?: string;
   terms?: string;
-  trackingLink?: string;
-  deepLink?: string;
+  urlTracking?: string;
+  url?: string;
   status?: string; // "active" | "expiring-soon" | "upcoming"
   regionCodes?: string[];
   exclusiveOnly?: boolean;
@@ -35,10 +35,9 @@ export interface AwinPromotion {
 
 /** Awin Offers API paginated response wrapper. */
 interface AwinPromotionsResponse {
+  data?: AwinPromotion[];
   promotions?: AwinPromotion[];
-  totalResults?: number;
-  page?: number;
-  pageSize?: number;
+  pagination?: { total: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -124,11 +123,11 @@ function normalisePromotion(p: AwinPromotion): Deal {
       logoUrl: p.advertiser.logoUrl || null,
     },
     type: normaliseDealType(p.type),
-    code: p.code || null,
+    code: p.voucher?.code || null,
     startDate: p.startDate || null,
     endDate: p.endDate || null,
     status: normaliseDealStatus(p.status),
-    trackingUrl: p.trackingLink || p.deepLink || null,
+    trackingUrl: p.urlTracking || p.url || null,
     regionCodes: p.regionCodes ?? [],
   };
 }
@@ -243,16 +242,16 @@ export async function fetchDeals(filters: DealFilters = {}): Promise<{
     );
   }
 
-  const json = (await res.json()) as AwinPromotionsResponse;
+  const json = (await res.json()) as any;
 
-  // The API may return the promotions array at the top level or nested.
+  // The API may return the promotions array at the top level, under 'promotions', or under 'data'.
   const rawPromotions = Array.isArray(json)
-    ? (json as unknown as AwinPromotion[])
-    : json.promotions ?? [];
+    ? (json as AwinPromotion[])
+    : (json.data as AwinPromotion[]) ?? (json.promotions as AwinPromotion[]) ?? [];
 
   const total =
     typeof json === "object" && !Array.isArray(json)
-      ? json.totalResults ?? rawPromotions.length
+      ? json.pagination?.total ?? json.totalResults ?? rawPromotions.length
       : rawPromotions.length;
 
   const deals = rawPromotions.map(normalisePromotion);
