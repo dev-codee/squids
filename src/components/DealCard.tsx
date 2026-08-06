@@ -121,6 +121,15 @@ const TYPE_STYLES: Record<string, string> = {
 };
 
 export default function DealCard({ deal }: { deal: Deal }) {
+  const [isRevealed, setIsRevealed] = useState(false);
+
+  const handleReveal = () => {
+    setIsRevealed(true);
+    if (deal.trackingUrl) {
+      window.open(deal.trackingUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
   return (
     <div className="group flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-card transition hover:border-gray-300 hover:shadow-card-hover">
       {/* Header: advertiser info + type badge */}
@@ -169,7 +178,27 @@ export default function DealCard({ deal }: { deal: Deal }) {
       {/* Voucher code */}
       {deal.code && (
         <div className="mt-3">
-          <CopyCodeButton code={deal.code} />
+          {isRevealed ? (
+            <CopyCodeButton code={deal.code} />
+          ) : (
+            <button
+              onClick={handleReveal}
+              className="inline-flex items-center gap-2 rounded-md border-2 border-dashed border-accent/40 bg-accent/5 px-3 py-1.5 font-mono text-sm font-semibold tracking-wide text-accent transition hover:bg-accent/10"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              Show Code
+            </button>
+          )}
         </div>
       )}
 
@@ -182,6 +211,7 @@ export default function DealCard({ deal }: { deal: Deal }) {
             href={deal.trackingUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => setIsRevealed(true)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-accent-hover"
           >
             Get Deal
