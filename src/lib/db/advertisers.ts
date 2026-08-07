@@ -42,7 +42,7 @@ export async function upsertAdvertisers(
   const ops = advertisers.map((a) => ({
     updateOne: {
       filter: { id: a.id },
-      update: { $set: { ...a, syncedAt: now } },
+      update: { $setOnInsert: { ...a, syncedAt: now } },
       upsert: true,
     },
   }));

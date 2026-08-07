@@ -37,7 +37,7 @@ export async function upsertDeals(
   const ops = deals.map((d) => ({
     updateOne: {
       filter: { id: d.id },
-      update: { $set: { ...d, syncedAt: now } },
+      update: { $setOnInsert: { ...d, syncedAt: now } },
       upsert: true,
     },
   }));
