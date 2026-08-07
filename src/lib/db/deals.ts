@@ -176,3 +176,67 @@ export async function removeStaleDeals(
 
   return result.deletedCount;
 }
+
+/**
+ * Get the next available deal ID for newly created items.
+ */
+export async function getNextDealId(): Promise<number> {
+  const db = await getDb();
+  const col = db.collection<DealDoc>(COLLECTION);
+  const maxDoc = await col.find({}).sort({ id: -1 }).limit(1).toArray();
+  const maxId = maxDoc.length > 0 ? maxDoc[0].id : 0;
+  return Math.max(maxId + 1, 900000); // 900000+ range for custom created deals
+}
+
+/**
+ * Create a new deal in MongoDB.
+ */
+export async function createDeal(deal: Deal): Promise<Deal> {
+  const db = await getDb();
+  const col = db.collection<DealDoc>(COLLECTION);
+
+  await col.createIndex({ id: 1 }, { unique: true });
+
+  const doc: DealDoc = {
+    ...deal,
+    syncedAt: new Date(),
+  };
+
+  await col.updateOne(
+    { id: deal.id },
+    { $set: doc },
+    { upsert: true }
+  );
+
+  return deal;
+}
+
+/**
+ * Update an existing deal in MongoDB.
+ */
+export async function updateDeal(
+  id: number,
+  data: Partial<Deal>,
+): Promise<boolean> {
+  const db = await getDb();
+  const col = db.collection<DealDoc>(COLLECTION);
+
+  const result = await col.updateOne(
+    { id },
+    { $set: { ...data, syncedAt: new Date() } }
+  );
+
+  return result.matchedCount > 0;
+}
+
+/**
+ * Delete a deal from MongoDB by ID.
+ */
+export async function deleteDeal(id: number): Promise<boolean> {
+  const db = await getDb();
+  const col = db.collection<DealDoc>(COLLECTION);
+
+  const result = await col.deleteOne({ id });
+  return result.deletedCount > 0;
+}
+

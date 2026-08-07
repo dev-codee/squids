@@ -176,3 +176,67 @@ export async function removeStaleAdvertisers(
 
   return result.deletedCount;
 }
+
+/**
+ * Get the next available advertiser ID for newly created items.
+ */
+export async function getNextAdvertiserId(): Promise<number> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+  const maxDoc = await col.find({}).sort({ id: -1 }).limit(1).toArray();
+  const maxId = maxDoc.length > 0 ? maxDoc[0].id : 0;
+  return Math.max(maxId + 1, 900000); // 900000+ range for custom created advertisers
+}
+
+/**
+ * Create a new advertiser manually in MongoDB.
+ */
+export async function createAdvertiser(advertiser: Advertiser): Promise<Advertiser> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+
+  await col.createIndex({ id: 1 }, { unique: true });
+
+  const doc: AdvertiserDoc = {
+    ...advertiser,
+    syncedAt: new Date(),
+  };
+
+  await col.updateOne(
+    { id: advertiser.id },
+    { $set: doc },
+    { upsert: true }
+  );
+
+  return advertiser;
+}
+
+/**
+ * Update an existing advertiser in MongoDB.
+ */
+export async function updateAdvertiser(
+  id: number,
+  data: Partial<Advertiser>,
+): Promise<boolean> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+
+  const result = await col.updateOne(
+    { id },
+    { $set: { ...data, syncedAt: new Date() } }
+  );
+
+  return result.matchedCount > 0;
+}
+
+/**
+ * Delete an advertiser from MongoDB by ID.
+ */
+export async function deleteAdvertiser(id: number): Promise<boolean> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+
+  const result = await col.deleteOne({ id });
+  return result.deletedCount > 0;
+}
+

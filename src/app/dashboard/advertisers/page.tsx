@@ -7,10 +7,10 @@ import FilterBar, { type Filters } from "@/components/FilterBar";
 import Pagination from "@/components/Pagination";
 import RegionSelector from "@/components/RegionSelector";
 import SkeletonGrid from "@/components/SkeletonGrid";
+import AdvertiserModal from "@/components/admin/AdvertiserModal";
 
 const PAGE_SIZE = 24;
 const EMPTY_FILTERS: Filters = { search: "", region: "", relationship: "" };
-// localStorage key for a manually chosen region override.
 const COUNTRY_KEY = "awin_country";
 
 interface PageData {
@@ -22,18 +22,10 @@ interface PageData {
   facets: AdvertiserFacets;
 }
 
-/**
- * Admin advertisers view.
- *
- * Unlike the public `/[country]` page, this one (behind auth) keeps the full
- * controls: the region switcher and the status filter. It's how an admin
- * inspects the whole catalogue across regions and relationship states.
- */
 export default function AdminAdvertisersPage() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
 
-  // country: null while still being detected; "" means "All regions".
   const [country, setCountry] = useState<string | null>(null);
   const [countryResolved, setCountryResolved] = useState(false);
 
@@ -41,12 +33,16 @@ export default function AdminAdvertisersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Facets persist across fetches so the dropdowns don't flicker while loading.
   const [facets, setFacets] = useState<AdvertiserFacets>({
     regions: [],
     relationships: [],
     countries: [],
   });
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAdvertiser, setSelectedAdvertiser] = useState<Advertiser | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const load = useCallback(
     async (
@@ -83,15 +79,13 @@ export default function AdminAdvertisersPage() {
     [],
   );
 
-  // Resolve the initial country once: manual override (localStorage) wins,
-  // otherwise auto-detect via /api/geo.
   useEffect(() => {
     let cancelled = false;
     const stored =
       typeof window !== "undefined" ? localStorage.getItem(COUNTRY_KEY) : null;
 
     if (stored !== null) {
-      setCountry(stored); // may be "" (user chose All regions)
+      setCountry(stored);
       setCountryResolved(true);
       return;
     }
@@ -113,10 +107,9 @@ export default function AdminAdvertisersPage() {
     };
   }, []);
 
-  // Debounce filter/country changes and always reset to page 1.
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
-    if (!countryResolved) return; // wait until the country is known
+    if (!countryResolved) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setPage(1);
@@ -125,8 +118,7 @@ export default function AdminAdvertisersPage() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, country, countryResolved]);
+  }, [filters, country, countryResolved, load]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -138,11 +130,40 @@ export default function AdminAdvertisersPage() {
 
   function handleCountryChange(code: string) {
     setCountry(code);
-    // Persist the manual override so it's remembered next visit.
     try {
       localStorage.setItem(COUNTRY_KEY, code);
-    } catch {
-      /* ignore storage errors (private mode, etc.) */
+    } catch {}
+  }
+
+  function handleCreate() {
+    setSelectedAdvertiser(null);
+    setIsModalOpen(true);
+  }
+
+  function handleEdit(advertiser: Advertiser) {
+    setSelectedAdvertiser(advertiser);
+    setIsModalOpen(true);
+  }
+
+  async function handleDelete(id: number, name: string) {
+    if (!confirm(`Are you sure you want to delete "${name}" (#${id}) from MongoDB?`)) {
+      return;
+    }
+
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/admin/advertisers?id=${id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.error || "Failed to delete advertiser.");
+      }
+      load(filters, page, country ?? "");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error deleting advertiser.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -155,18 +176,31 @@ export default function AdminAdvertisersPage() {
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-            Advertisers
+            Advertisers Management
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Merchants and stores your Awin publisher account has joined.
+            Manage merchants and store profiles directly in MongoDB.
           </p>
         </div>
-        <RegionSelector
-          value={country ?? ""}
-          countries={facets.countries}
-          onChange={handleCountryChange}
-          detecting={!countryResolved}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleCreate}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-accent-hover"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add Advertiser
+          </button>
+
+          <RegionSelector
+            value={country ?? ""}
+            countries={facets.countries}
+            onChange={handleCountryChange}
+            detecting={!countryResolved}
+          />
+        </div>
       </header>
 
       {error ? (
@@ -217,7 +251,34 @@ export default function AdminAdvertisersPage() {
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {data.advertisers.map((a) => (
-                  <AdvertiserCard key={a.id} advertiser={a} />
+                  <div key={a.id} className="relative group">
+                    <AdvertiserCard advertiser={a} />
+
+                    {/* Admin Action Overlay Bar */}
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-lg bg-white/95 p-1 shadow-md border border-gray-200 backdrop-blur-sm transition opacity-90 group-hover:opacity-100">
+                      <button
+                        onClick={() => handleEdit(a)}
+                        title="Edit Advertiser"
+                        className="rounded p-1 text-gray-600 hover:bg-gray-100 hover:text-accent transition"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(a.id, a.name)}
+                        disabled={deletingId === a.id}
+                        title="Delete Advertiser"
+                        className="rounded p-1 text-gray-600 hover:bg-red-50 hover:text-red-600 transition disabled:opacity-50"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
 
@@ -232,6 +293,14 @@ export default function AdminAdvertisersPage() {
           )}
         </div>
       )}
+
+      {/* Modal for Create/Edit */}
+      <AdvertiserModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSaved={() => load(filters, page, country ?? "")}
+        advertiser={selectedAdvertiser}
+      />
     </main>
   );
 }

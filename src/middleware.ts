@@ -31,7 +31,9 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtectedRoute =
-    pathname.startsWith("/dashboard") || pathname.startsWith("/api/transactions");
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/api/transactions") ||
+    pathname.startsWith("/api/admin");
 
   const loggedIn = await isValidSession(request);
 
@@ -40,8 +42,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Not logged in → protected route → redirect to /login.
+  // Not logged in → protected route
   if (isProtectedRoute && !loggedIn) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(loginUrl);
