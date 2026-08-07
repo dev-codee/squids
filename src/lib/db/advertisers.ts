@@ -146,6 +146,16 @@ export async function getAdvertisersFromDb(
 }
 
 /**
+ * Get a single advertiser by ID from MongoDB.
+ */
+export async function getAdvertiserByIdFromDb(id: number): Promise<Advertiser | null> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+  const doc = await col.findOne({ id }, { projection: { _id: 0, syncedAt: 0 } });
+  return (doc as unknown as Advertiser) || null;
+}
+
+/**
  * Check if there is any data in the advertisers collection.
  */
 export async function hasAdvertiserData(): Promise<boolean> {

@@ -19,6 +19,28 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
 
+  // Single advertiser lookup
+  const idRaw = params.get("id");
+  if (idRaw && !isNaN(Number(idRaw))) {
+    const id = Number(idRaw);
+    try {
+      const { getAdvertiserByIdFromDb } = await import("@/lib/db/advertisers");
+      const advertiser = await getAdvertiserByIdFromDb(id);
+      if (advertiser) {
+        return NextResponse.json({ advertiser });
+      }
+    } catch {
+      /* fallback to array search */
+    }
+
+    const all = await fetchProgrammesForRelationships();
+    const match = all.find((a) => a.id === id);
+    if (match) {
+      return NextResponse.json({ advertiser: match });
+    }
+    return NextResponse.json({ error: "Advertiser not found." }, { status: 404 });
+  }
+
   const query = {
     search: params.get("search") ?? undefined,
     region: params.get("region") ?? undefined,

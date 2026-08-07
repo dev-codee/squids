@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchDeals } from "@/lib/deals";
+import { fetchDeals, type Deal } from "@/lib/deals";
 import {
   upsertDeals,
   removeExpiredDeals,
@@ -26,7 +26,7 @@ function isAuthorised(request: NextRequest): boolean {
 /**
  * GET /api/cron/sync-deals
  *
- * Fetches all deals/promotions from Awin, persists them to MongoDB,
+ * Fetches all pages of deals/promotions from Awin, persists them to MongoDB,
  * removes expired deals, and removes deals no longer returned by Awin.
  */
 export async function GET(request: NextRequest) {
@@ -35,8 +35,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Fetch all deals from Awin (no status filter to avoid API 400 errors)
-    const { deals: allDeals } = await fetchDeals({ pageSize: 100 });
+    const allDeals: Deal[] = [];
+    let page = 1;
+    const pageSize = 100;
+
+    // Fetch all pages of deals from Awin
+    while (page <= 10) { // Safety limit of 10 pages (1000 deals max)
+      try {
+        const { deals } = await fetchDeals({ page, pageSize });
+        if (!deals || deals.length === 0) break;
+        allDeals.push(...deals);
+        if (deals.length < pageSize) break;
+        page++;
+      } catch (pageErr) {
+        console.warn(`[cron/sync-deals] Error fetching page ${page}:`, pageErr);
+        break;
+      }
+    }
 
     // Persist to MongoDB
     const result = await upsertDeals(allDeals);
@@ -44,9 +59,12 @@ export async function GET(request: NextRequest) {
     // Remove expired deals (endDate has passed)
     const expired = await removeExpiredDeals();
 
-    // Remove deals no longer in the Awin response
-    const currentIds = allDeals.map((d) => d.id);
-    const stale = await removeStaleDeals(currentIds);
+    // Remove deals no longer in the Awin response (only if we fetched successfully)
+    let stale = 0;
+    if (allDeals.length > 0) {
+      const currentIds = allDeals.map((d) => d.id);
+      stale = await removeStaleDeals(currentIds);
+    }
 
     // Update sync metadata
     await updateSyncTime("deals", allDeals.length);

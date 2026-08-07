@@ -252,12 +252,19 @@ export default function AdminAdvertisersPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {data.advertisers.map((a) => (
                   <div key={a.id} className="relative group">
-                    <AdvertiserCard advertiser={a} />
+                    <AdvertiserCard advertiser={a} adminHref={`/dashboard/advertisers/${a.id}`} />
 
                     {/* Admin Action Overlay Bar */}
-                    <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-lg bg-white/95 p-1 shadow-md border border-gray-200 backdrop-blur-sm transition opacity-90 group-hover:opacity-100">
+                    <div
+                      className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-lg bg-white/95 p-1 shadow-md border border-gray-200 backdrop-blur-sm transition opacity-90 group-hover:opacity-100"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
-                        onClick={() => handleEdit(a)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleEdit(a);
+                        }}
                         title="Edit Advertiser"
                         className="rounded p-1 text-gray-600 hover:bg-gray-100 hover:text-accent transition"
                       >
@@ -267,7 +274,11 @@ export default function AdminAdvertisersPage() {
                         </svg>
                       </button>
                       <button
-                        onClick={() => handleDelete(a.id, a.name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          handleDelete(a.id, a.name);
+                        }}
                         disabled={deletingId === a.id}
                         title="Delete Advertiser"
                         className="rounded p-1 text-gray-600 hover:bg-red-50 hover:text-red-600 transition disabled:opacity-50"

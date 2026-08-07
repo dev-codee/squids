@@ -59,30 +59,46 @@ export async function upsertDeals(
  * Build MongoDB filter from the query parameters.
  */
 function buildFilter(query: DealQuery): Record<string, unknown> {
-  const filter: Record<string, unknown> = {};
+  const conditions: Record<string, unknown>[] = [];
 
   if (query.search?.trim()) {
-    // Search across title, advertiser name, and description
-    filter.$or = [
-      { title: { $regex: query.search.trim(), $options: "i" } },
-      { "advertiser.name": { $regex: query.search.trim(), $options: "i" } },
-      { description: { $regex: query.search.trim(), $options: "i" } },
-    ];
-  }
-  if (query.advertiserId) {
-    filter["advertiser.id"] = query.advertiserId;
-  }
-  if (query.status && query.status !== "all") {
-    filter.status = query.status;
-  }
-  if (query.type && query.type !== "all") {
-    filter.type = query.type;
-  }
-  if (query.country?.trim()) {
-    filter.regionCodes = query.country.trim().toUpperCase();
+    const searchRegex = { $regex: query.search.trim(), $options: "i" };
+    conditions.push({
+      $or: [
+        { title: searchRegex },
+        { "advertiser.name": searchRegex },
+        { description: searchRegex },
+        { code: searchRegex },
+      ],
+    });
   }
 
-  return filter;
+  if (query.advertiserId) {
+    conditions.push({ "advertiser.id": query.advertiserId });
+  }
+
+  if (query.status && query.status !== "all") {
+    conditions.push({ status: query.status });
+  }
+
+  if (query.type && query.type !== "all") {
+    conditions.push({ type: query.type });
+  }
+
+  if (query.country?.trim()) {
+    const cc = query.country.trim().toUpperCase();
+    conditions.push({
+      $or: [
+        { regionCodes: { $size: 0 } },
+        { regionCodes: cc },
+        { regionCodes: { $exists: false } },
+      ],
+    });
+  }
+
+  if (conditions.length === 0) return {};
+  if (conditions.length === 1) return conditions[0];
+  return { $and: conditions };
 }
 
 /**

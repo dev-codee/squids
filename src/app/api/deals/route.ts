@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     ? Number.parseInt(advertiserIdRaw, 10) || undefined
     : undefined;
 
-  const status = params.get("status") ?? "active";
+  const status = params.get("status") || "all";
   const type = params.get("type") ?? "all";
   const country = params.get("country") ?? undefined;
   const search = params.get("search") ?? undefined;
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   try {
     // Try MongoDB first
     try {
-      const dbResult = await getDealsFromDb({
+      let dbResult = await getDealsFromDb({
         search,
         advertiserId,
         status,
@@ -44,6 +44,36 @@ export async function GET(request: NextRequest) {
         page,
         pageSize,
       });
+
+      // If querying by advertiserId and MongoDB returned 0 deals (and no search filter active),
+      // fetch directly from Awin API for this advertiser and save to MongoDB!
+      if (advertiserId && (!dbResult || dbResult.total === 0) && !search) {
+        try {
+          const { fetchDeals } = await import("@/lib/deals");
+          const { upsertDeals } = await import("@/lib/db/deals");
+
+          const { deals: freshDeals } = await fetchDeals({
+            advertiserIds: [advertiserId],
+            pageSize: 100,
+          });
+
+          if (freshDeals && freshDeals.length > 0) {
+            await upsertDeals(freshDeals);
+            dbResult = await getDealsFromDb({
+              search,
+              advertiserId,
+              status,
+              type,
+              country,
+              page,
+              pageSize,
+            });
+          }
+        } catch (fetchErr) {
+          console.warn("[/api/deals] On-demand fetch failed for advertiser:", advertiserId, fetchErr);
+        }
+      }
+
       if (dbResult) {
         return NextResponse.json(dbResult);
       }
