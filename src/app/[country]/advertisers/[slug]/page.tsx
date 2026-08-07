@@ -24,15 +24,10 @@ export default function AdvertiserDetailPage({
     redirect(`/${rawCountry.toLowerCase()}/advertisers/${rawSlug}`);
   }
 
-  const advertiserId = Number.parseInt(rawSlug, 10);
-  if (Number.isNaN(advertiserId)) {
-    redirect(`/${rawCountry.toLowerCase()}`);
-  }
-
   return (
     <AdvertiserDetailClient
       country={rawCountry.toUpperCase()}
-      advertiserId={advertiserId}
+      slug={rawSlug}
     />
   );
 }

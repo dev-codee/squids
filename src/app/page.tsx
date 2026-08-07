@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
  * bar. All the actual browsing UI lives under `/[country]`.
  */
 export default async function RootPage() {
-  const { country } = await getUserCountry({ headers: headers() });
+  const hdrs = await headers();
+  const { country } = await getUserCountry({ headers: hdrs });
   redirect(`/${country.toLowerCase()}`);
 }

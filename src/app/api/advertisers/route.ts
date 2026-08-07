@@ -5,6 +5,7 @@ import {
   AwinConfigError,
   AwinApiError,
 } from "@/lib/awin";
+import { getAdvertisersFromDb } from "@/lib/db/advertisers";
 
 // Always run on the server, never statically prerendered.
 export const dynamic = "force-dynamic";
@@ -12,9 +13,8 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/advertisers?page=1&pageSize=24&search=&region=&relationship=
  *
- * Fetches the publisher's programmes from Awin (cached briefly), then applies
- * search/region/status filters and returns a single page — so the client never
- * loads the whole dataset at once.
+ * Primary: reads from MongoDB (fast, no Awin rate-limit concerns).
+ * Fallback: fetches directly from Awin if MongoDB is empty or unavailable.
  */
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -29,6 +29,20 @@ export async function GET(request: NextRequest) {
   };
 
   try {
+    // Try MongoDB first
+    try {
+      const dbResult = await getAdvertisersFromDb(query);
+      if (dbResult) {
+        return NextResponse.json(dbResult);
+      }
+    } catch (dbError) {
+      console.warn(
+        "[/api/advertisers] MongoDB unavailable, falling back to Awin API:",
+        dbError instanceof Error ? dbError.message : dbError,
+      );
+    }
+
+    // Fallback: fetch from Awin API directly
     const all = await fetchProgrammesForRelationships();
     const result = queryAdvertisers(all, query);
     return NextResponse.json(result);

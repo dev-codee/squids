@@ -21,12 +21,12 @@ interface PageData {
 
 interface AdvertiserDetailClientProps {
   country: string;
-  advertiserId: number;
+  slug: string;
 }
 
 export default function AdvertiserDetailClient({
   country,
-  advertiserId,
+  slug,
 }: AdvertiserDetailClientProps) {
   const [advertiser, setAdvertiser] = useState<Advertiser | null>(null);
   const [advertiserLoading, setAdvertiserLoading] = useState(true);
@@ -51,8 +51,14 @@ export default function AdvertiserDetailClient({
         const res = await fetch(`/api/advertisers?${params.toString()}`);
         const json = await res.json();
         if (!cancelled && json.advertisers) {
+          const generateSlug = (name: string) =>
+            name
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/(^-|-$)/g, "");
+
           const match = (json.advertisers as Advertiser[]).find(
-            (a) => a.id === advertiserId,
+            (a) => generateSlug(a.name) === slug,
           );
           setAdvertiser(match ?? null);
         }
@@ -65,16 +71,16 @@ export default function AdvertiserDetailClient({
     return () => {
       cancelled = true;
     };
-  }, [advertiserId, country]);
+  }, [slug, country]);
 
   // Fetch deals for this advertiser
   const loadDeals = useCallback(
-    async (currentPage: number) => {
+    async (currentPage: number, adId: number) => {
       setDealsLoading(true);
       setDealsError(null);
       try {
         const params = new URLSearchParams({
-          advertiserId: String(advertiserId),
+          advertiserId: String(adId),
           page: String(currentPage),
           pageSize: String(PAGE_SIZE),
           country,
@@ -94,18 +100,24 @@ export default function AdvertiserDetailClient({
         setDealsLoading(false);
       }
     },
-    [advertiserId, country],
+    [country],
   );
 
   useEffect(() => {
-    loadDeals(1);
-  }, [loadDeals]);
+    if (advertiser) {
+      loadDeals(1, advertiser.id);
+    } else if (!advertiserLoading) {
+      setDealsLoading(false);
+    }
+  }, [advertiser, advertiserLoading, loadDeals]);
 
   function goToPage(next: number) {
-    setDealsPage(next);
-    loadDeals(next);
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    if (advertiser) {
+      setDealsPage(next);
+      loadDeals(next, advertiser.id);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   }
 
@@ -189,7 +201,7 @@ export default function AdvertiserDetailClient({
         ) : (
           <div className="mb-8 rounded-xl border border-gray-200 bg-white p-6 shadow-card">
             <p className="text-sm text-gray-500">
-              Advertiser #{advertiserId} in{" "}
+              Advertiser "{slug}" in{" "}
               <span className="inline-flex items-center gap-1">
                 <span aria-hidden>{countryFlag(country)}</span>
                 {countryName(country)}
@@ -209,7 +221,7 @@ export default function AdvertiserDetailClient({
               </p>
               <p className="mt-1 text-sm text-red-600">{dealsError}</p>
               <button
-                onClick={() => loadDeals(dealsPage)}
+                onClick={() => loadDeals(dealsPage, advertiser!.id)}
                 className="mt-4 inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover"
               >
                 Try again

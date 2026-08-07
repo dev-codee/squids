@@ -119,11 +119,10 @@ export default function AdvertiserCard({
 
   // Wrap in Link when country is provided (public pages)
   if (country) {
-    const slugName = advertiser.name
+    const slug = advertiser.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
-    const slug = `${advertiser.id}-${slugName}`;
 
     return (
       <Link
