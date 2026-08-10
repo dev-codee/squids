@@ -199,20 +199,7 @@ export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | nu
     .limit(25)
     .toArray();
 
-  if (candidates.length === 0) {
-    // Fallback to Awin API if MongoDB is empty or the advertiser hasn't synced
-    try {
-      const { fetchProgrammesForRelationships } = await import("@/lib/awin");
-      const all = await fetchProgrammesForRelationships();
-      const exact = all.find(
-        (a) => slugifyAdvertiserName(a.name) === normalized,
-      );
-      if (exact) return exact;
-    } catch {
-      // Ignore Awin errors during fallback
-    }
-    return null;
-  }
+  if (candidates.length === 0) return null;
 
   // Prefer an exact slug match; otherwise take the first regex candidate.
   const exact = candidates.find(

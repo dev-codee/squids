@@ -222,14 +222,21 @@ function dealFromDeal(
  * not resolve to a known advertiser (caller should render `notFound()`).
  */
 export async function loadStoreData(slug: string): Promise<StoreData | null> {
-  const advertiser: Advertiser | null = await getAdvertiserBySlug(slug);
+  let advertiser: Advertiser | null = null;
+  try {
+    advertiser = await getAdvertiserBySlug(slug);
+  } catch (error) {
+    // If MongoDB connection fails, log it and return null (which renders a 404)
+    console.warn("MongoDB error in getAdvertiserBySlug:", error);
+  }
+
   if (!advertiser) return null;
 
   const canonicalSlug = slugifyAdvertiserName(advertiser.name);
   const websiteUrl = advertiser.url || "#";
 
   const storeMeta = {
-    slug: slugifyAdvertiserName(advertiser.name),
+    slug: canonicalSlug,
     rating: advertiser.rating || 0,
     bannerUrl: advertiser.bannerUrl || null,
     avgSavings: advertiser.avgSavings || null,
@@ -239,14 +246,21 @@ export async function loadStoreData(slug: string): Promise<StoreData | null> {
 
   const finalSlug = storeMeta.slug;
 
+  // Safe wrapper for DB queries
+  async function safeQuery<T>(queryFn: () => Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await queryFn();
+    } catch (e) {
+      console.warn("MongoDB error during safeQuery:", e);
+      return fallback;
+    }
+  }
+
   // Pull every deal for this advertiser (bounded per store).
-  const dealsResult = await getDealsFromDb({
-    advertiserId: advertiser.id,
-    status: "all",
-    type: "all",
-    page: 1,
-    pageSize: 100,
-  });
+  const dealsResult = await safeQuery(
+    () => getDealsFromDb({ advertiserId: advertiser!.id, status: "all", type: "all", page: 1, pageSize: 100 }),
+    { deals: [], page: 1, pageSize: 100, total: 0, totalPages: 1 } as any
+  );
   const allDeals: Deal[] = dealsResult?.deals ?? [];
 
   const coupons = allDeals
@@ -257,11 +271,10 @@ export async function loadStoreData(slug: string): Promise<StoreData | null> {
     .filter((d) => d.type === "promotion")
     .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode));
 
-  const productsResult = await getProductsFromDb({
-    advertiserId: advertiser.id,
-    page: 1,
-    pageSize: 50,
-  });
+  const productsResult = await safeQuery(
+    () => getProductsFromDb({ advertiserId: advertiser!.id, page: 1, pageSize: 50 }),
+    { products: [], page: 1, pageSize: 50, total: 0, totalPages: 1 }
+  );
   
   const products: ProductFeedItem[] = productsResult.products.map(p => ({
     id: String(p.id),
@@ -277,7 +290,10 @@ export async function loadStoreData(slug: string): Promise<StoreData | null> {
     affiliateUrl: p.trackingUrl || websiteUrl,
   }));
 
-  const reviewsResult = await getReviewsFromDb({ advertiserId: advertiser.id, page: 1, pageSize: 100 });
+  const reviewsResult = await safeQuery(
+    () => getReviewsFromDb({ advertiserId: advertiser!.id, page: 1, pageSize: 100 }),
+    { items: [], page: 1, pageSize: 100, total: 0, totalPages: 1 }
+  );
   const reviews: StoreReviewItem[] = reviewsResult.items.map(r => ({
     id: String(r.id),
     author: r.author,
@@ -294,13 +310,19 @@ export async function loadStoreData(slug: string): Promise<StoreData | null> {
     finalRating = Number((sum / reviews.length).toFixed(1));
   }
 
-  const faqsResult = await getFAQsFromDb({ advertiserId: advertiser.id, page: 1, pageSize: 50 });
+  const faqsResult = await safeQuery(
+    () => getFAQsFromDb({ advertiserId: advertiser!.id, page: 1, pageSize: 50 }),
+    { items: [], page: 1, pageSize: 50, total: 0, totalPages: 1 }
+  );
   const faqs: FAQItem[] = faqsResult.items.map(f => ({
     question: f.question,
     answer: f.answer,
   }));
 
-  const guidesResult = await getGuidesFromDb({ advertiserId: advertiser.id, page: 1, pageSize: 20 });
+  const guidesResult = await safeQuery(
+    () => getGuidesFromDb({ advertiserId: advertiser!.id, page: 1, pageSize: 20 }),
+    { items: [], page: 1, pageSize: 20, total: 0, totalPages: 1 }
+  );
   const buyingGuides: BuyingGuideItem[] = guidesResult.items.map(g => ({
     id: String(g.id),
     title: g.title,
