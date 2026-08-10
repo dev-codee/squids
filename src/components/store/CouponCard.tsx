@@ -11,6 +11,7 @@ interface CouponCardProps {
 export default function CouponCard({ coupon, storeName }: CouponCardProps) {
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [revealed, setRevealed] = useState(false);
 
   const merchantUrl =
     coupon.affiliateUrl || `https://www.${storeName.toLowerCase()}.com`;
@@ -24,6 +25,7 @@ export default function CouponCard({ coupon, storeName }: CouponCardProps) {
     if (coupon.code) {
       navigator.clipboard.writeText(coupon.code).catch(() => {});
       setCopied(true);
+      setRevealed(true);
       setShowModal(true);
       setTimeout(() => setCopied(false), 3000);
     }
@@ -122,9 +124,9 @@ export default function CouponCard({ coupon, storeName }: CouponCardProps) {
               className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-amber-500 active:scale-95 shadow-sm"
             >
               <span className="tracking-widest font-mono uppercase bg-gray-800 px-2 py-0.5 rounded text-amber-400">
-                {coupon.code}
+                {revealed ? coupon.code : (coupon.code.length > 3 ? coupon.code.slice(0, 3) + "***" : "***")}
               </span>
-              <span>{copied ? "Copied!" : "Show Code"}</span>
+              <span>{copied ? "Copied!" : revealed ? "Copy Code" : "Show Code"}</span>
             </button>
           ) : (
             <a
