@@ -29,6 +29,11 @@ export default function AdvertiserModal({
     currencyCode: "",
     commission: "",
     url: "",
+    description: "",
+    bannerUrl: "",
+    categories: "",
+    avgSavings: "",
+    rating: "",
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -47,6 +52,11 @@ export default function AdvertiserModal({
         currencyCode: advertiser.currencyCode || "",
         commission: advertiser.commission || "",
         url: advertiser.url || "",
+        description: advertiser.description || "",
+        bannerUrl: advertiser.bannerUrl || "",
+        categories: advertiser.categories?.join(", ") || "",
+        avgSavings: advertiser.avgSavings || "",
+        rating: advertiser.rating !== undefined ? String(advertiser.rating) : "",
       });
     } else {
       setFormData({
@@ -60,6 +70,11 @@ export default function AdvertiserModal({
         currencyCode: "",
         commission: "",
         url: "",
+        description: "",
+        bannerUrl: "",
+        categories: "",
+        avgSavings: "",
+        rating: "",
       });
     }
     setError(null);
@@ -76,10 +91,18 @@ export default function AdvertiserModal({
       const url = "/api/admin/advertisers";
       const method = isEditing ? "PUT" : "POST";
 
+      const payload = {
+        ...formData,
+        categories: formData.categories
+          ? formData.categories.split(",").map((c) => c.trim()).filter(Boolean)
+          : [],
+        rating: formData.rating ? Number(formData.rating) : undefined,
+      };
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const json = await res.json();
@@ -244,6 +267,69 @@ export default function AdvertiserModal({
                 placeholder="USD, EUR, GBP"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent uppercase"
               />
+            </div>
+          </div>
+
+          <div className="pt-4 mt-2 border-t border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Store Metadata (SEO & Public Page)</h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-700">SEO Description</label>
+                <textarea
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Enter a description for the public store page..."
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-700">Banner Image URL</label>
+                <input
+                  type="url"
+                  value={formData.bannerUrl}
+                  onChange={(e) => setFormData({ ...formData, bannerUrl: e.target.value })}
+                  placeholder="https://..."
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-700">Categories (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.categories}
+                  onChange={(e) => setFormData({ ...formData, categories: e.target.value })}
+                  placeholder="e.g. Electronics, Fashion, Home"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700">Manual Rating Override (1-5)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="5"
+                  value={formData.rating}
+                  onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                  placeholder="e.g. 4.8"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700">Average Savings</label>
+                <input
+                  type="text"
+                  value={formData.avgSavings}
+                  onChange={(e) => setFormData({ ...formData, avgSavings: e.target.value })}
+                  placeholder="e.g. 15%"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
             </div>
           </div>
 

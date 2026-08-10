@@ -36,6 +36,14 @@ export interface Advertiser {
   logoUrl: string | null;
   status: string | null;
   relationship: string | null;
+
+  // Manual Store Meta overrides
+  description?: string;
+  categories?: string[];
+  bannerUrl?: string;
+  avgSavings?: string;
+  rating?: number;
+
   region: string | null;
   countryCode: string | null;
   currencyCode: string | null;

@@ -15,7 +15,7 @@ import {
   slugifyAdvertiserName,
 } from "@/lib/db/advertisers";
 import { getDealsFromDb } from "@/lib/db/deals";
-import { getStoreMetaByAdvertiserId } from "@/lib/db/storeMeta";
+
 import { getProductsFromDb } from "@/lib/db/products";
 import { getReviewsFromDb } from "@/lib/db/reviews";
 import { getFAQsFromDb } from "@/lib/db/faqs";
@@ -228,8 +228,16 @@ export async function loadStoreData(slug: string): Promise<StoreData | null> {
   const canonicalSlug = slugifyAdvertiserName(advertiser.name);
   const websiteUrl = advertiser.url || "#";
 
-  const storeMeta = await getStoreMetaByAdvertiserId(advertiser.id);
-  const finalSlug = storeMeta?.slug || canonicalSlug;
+  const storeMeta = {
+    slug: slugifyAdvertiserName(advertiser.name),
+    rating: advertiser.rating || 0,
+    bannerUrl: advertiser.bannerUrl || null,
+    avgSavings: advertiser.avgSavings || null,
+    description: advertiser.description || "",
+    categories: advertiser.categories || [],
+  };
+
+  const finalSlug = storeMeta.slug;
 
   // Pull every deal for this advertiser (bounded per store).
   const dealsResult = await getDealsFromDb({
@@ -280,7 +288,7 @@ export async function loadStoreData(slug: string): Promise<StoreData | null> {
     verifiedBuyer: r.verifiedBuyer,
   }));
 
-  let finalRating = storeMeta?.rating || 0;
+  let finalRating = storeMeta.rating || 0;
   if (reviews.length > 0) {
     const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
     finalRating = Number((sum / reviews.length).toFixed(1));
@@ -307,15 +315,15 @@ export async function loadStoreData(slug: string): Promise<StoreData | null> {
     slug: finalSlug,
     name: advertiser.name,
     logoUrl: advertiser.logoUrl,
-    bannerUrl: storeMeta?.bannerUrl || null,
+    bannerUrl: storeMeta.bannerUrl,
     rating: finalRating,
     totalReviews: reviews.length,
     activeCouponsCount: coupons.length,
     activeDealsCount: deals.length,
-    avgSavings: storeMeta?.avgSavings || null,
-    description: storeMeta?.description || "",
+    avgSavings: storeMeta.avgSavings,
+    description: storeMeta.description,
     websiteUrl,
-    categories: storeMeta?.categories || [],
+    categories: storeMeta.categories,
     coupons,
     deals,
     products,

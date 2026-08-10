@@ -39,6 +39,11 @@ export async function POST(request: NextRequest) {
       currencyCode: body.currencyCode ? String(body.currencyCode).trim().toUpperCase() : null,
       commission: body.commission ? String(body.commission).trim() : null,
       url: body.url ? String(body.url).trim() : null,
+      description: body.description ? String(body.description).trim() : undefined,
+      bannerUrl: body.bannerUrl ? String(body.bannerUrl).trim() : undefined,
+      categories: Array.isArray(body.categories) ? body.categories : undefined,
+      avgSavings: body.avgSavings ? String(body.avgSavings).trim() : undefined,
+      rating: body.rating !== undefined ? Number(body.rating) : undefined,
     };
 
     const created = await createAdvertiser(advertiser);
@@ -79,6 +84,11 @@ export async function PUT(request: NextRequest) {
     if (body.currencyCode !== undefined) updateData.currencyCode = body.currencyCode ? String(body.currencyCode).trim().toUpperCase() : null;
     if (body.commission !== undefined) updateData.commission = body.commission ? String(body.commission).trim() : null;
     if (body.url !== undefined) updateData.url = body.url ? String(body.url).trim() : null;
+    if (body.description !== undefined) updateData.description = body.description ? String(body.description).trim() : undefined;
+    if (body.bannerUrl !== undefined) updateData.bannerUrl = body.bannerUrl ? String(body.bannerUrl).trim() : undefined;
+    if (body.categories !== undefined) updateData.categories = Array.isArray(body.categories) ? body.categories : undefined;
+    if (body.avgSavings !== undefined) updateData.avgSavings = body.avgSavings ? String(body.avgSavings).trim() : undefined;
+    if (body.rating !== undefined) updateData.rating = body.rating !== null ? Number(body.rating) : undefined;
 
     const success = await updateAdvertiser(id, updateData);
     if (!success) {
