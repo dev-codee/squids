@@ -5,9 +5,57 @@ import {
   deleteDeal,
   getNextDealId,
 } from "@/lib/db/deals";
-import type { Deal } from "@/lib/deals";
+import type { Deal, CouponSubtype, DealPlacement } from "@/lib/deals";
 
 export const dynamic = "force-dynamic";
+
+const COUPON_SUBTYPES: CouponSubtype[] = ["code", "student", "cashback"];
+const DEAL_PLACEMENTS: DealPlacement[] = ["todays", "lightning", "limited", "trending"];
+
+/** Parse a value into a finite number, or null. */
+function toNumberOrNull(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toTrimmedOrNull(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s ? s : null;
+}
+
+/**
+ * Pull the optional admin-managed enrichment fields off a request body.
+ * Only keys present on `body` are returned, so this is safe for PATCH-style updates.
+ */
+function parseEnrichment(body: Record<string, unknown>): Partial<Deal> {
+  const out: Partial<Deal> = {};
+
+  if ("discountText" in body) out.discountText = toTrimmedOrNull(body.discountText);
+  if ("imageUrl" in body) out.imageUrl = toTrimmedOrNull(body.imageUrl);
+  if ("originalPrice" in body) out.originalPrice = toNumberOrNull(body.originalPrice);
+  if ("salePrice" in body) out.salePrice = toNumberOrNull(body.salePrice);
+  if ("isExclusive" in body) out.isExclusive = Boolean(body.isExclusive);
+  if ("cashbackRate" in body) out.cashbackRate = toTrimmedOrNull(body.cashbackRate);
+  if ("studentVerificationReq" in body) {
+    out.studentVerificationReq = toTrimmedOrNull(body.studentVerificationReq);
+  }
+  if ("stockPercentage" in body) {
+    const n = toNumberOrNull(body.stockPercentage);
+    out.stockPercentage = n === null ? null : Math.max(0, Math.min(100, n));
+  }
+  if ("subtype" in body) {
+    const s = toTrimmedOrNull(body.subtype);
+    out.subtype = s && COUPON_SUBTYPES.includes(s as CouponSubtype) ? (s as CouponSubtype) : null;
+  }
+  if ("placement" in body) {
+    const p = toTrimmedOrNull(body.placement);
+    out.placement = p && DEAL_PLACEMENTS.includes(p as DealPlacement) ? (p as DealPlacement) : null;
+  }
+
+  return out;
+}
 
 /**
  * POST /api/admin/deals
@@ -56,6 +104,7 @@ export async function POST(request: NextRequest) {
       status: body.status ? String(body.status).trim() : "active",
       trackingUrl: body.trackingUrl ? String(body.trackingUrl).trim() : null,
       regionCodes,
+      ...parseEnrichment(body),
     };
 
     const created = await createDeal(deal);
@@ -111,6 +160,8 @@ export async function PUT(request: NextRequest) {
         ? body.regionCodes.split(",").map((r: string) => r.trim().toUpperCase())
         : [];
     }
+
+    Object.assign(updateData, parseEnrichment(body));
 
     const success = await updateDeal(id, updateData);
     if (!success) {

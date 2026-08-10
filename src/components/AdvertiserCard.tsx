@@ -131,7 +131,8 @@ export default function AdvertiserCard({
     );
   }
 
-  // Wrap in Link when country is provided (public pages)
+  // Wrap in Link when country is provided (public pages). Advertisers now open
+  // their dedicated store page (coupons, deals, products) at `/[store]`.
   if (country) {
     const slug = advertiser.name
       .toLowerCase()
@@ -139,10 +140,7 @@ export default function AdvertiserCard({
       .replace(/(^-|-$)/g, "");
 
     return (
-      <Link
-        href={`/${country.toLowerCase()}/advertisers/${slug}`}
-        className="block h-full"
-      >
+      <Link href={`/${slug}`} className="block h-full">
         {content}
       </Link>
     );

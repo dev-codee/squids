@@ -155,6 +155,59 @@ export async function getAdvertiserByIdFromDb(id: number): Promise<Advertiser | 
   return (doc as unknown as Advertiser) || null;
 }
 
+/** Turn an advertiser name into a URL slug (lowercase, hyphenated). */
+export function slugifyAdvertiserName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+/** Escape a string for safe use inside a RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Resolve a store slug (e.g. "amazon", "best-buy") to an advertiser.
+ *
+ * Advertisers have no dedicated slug field, so we match the slug against the
+ * slugified `name` using a loose, anchored, case-insensitive regex where each
+ * hyphen tolerates any run of non-alphanumeric characters ("best-buy" ↔ "Best Buy").
+ * A JS slug re-check disambiguates when the regex has multiple hits.
+ */
+export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | null> {
+  const normalized = slug.trim().toLowerCase();
+  if (!normalized) return null;
+
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+
+  const pattern =
+    "^" +
+    normalized
+      .split("-")
+      .map((part) => escapeRegExp(part))
+      .join("[^a-z0-9]*") +
+    "$";
+
+  const candidates = await col
+    .find(
+      { name: { $regex: pattern, $options: "i" } },
+      { projection: { _id: 0, syncedAt: 0 } },
+    )
+    .limit(25)
+    .toArray();
+
+  if (candidates.length === 0) return null;
+
+  // Prefer an exact slug match; otherwise take the first regex candidate.
+  const exact = candidates.find(
+    (a) => slugifyAdvertiserName((a as unknown as Advertiser).name) === normalized,
+  );
+  return (exact ?? candidates[0]) as unknown as Advertiser;
+}
+
 /**
  * Check if there is any data in the advertisers collection.
  */

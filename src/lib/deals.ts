@@ -50,6 +50,12 @@ export interface DealAdvertiser {
   logoUrl: string | null;
 }
 
+/** Which public "deals" section a promotion is placed in. */
+export type DealPlacement = "todays" | "lightning" | "limited" | "trending";
+
+/** Coupon sub-category shown on the public coupons page. */
+export type CouponSubtype = "code" | "student" | "cashback";
+
 export interface Deal {
   id: number;
   title: string;
@@ -62,6 +68,32 @@ export interface Deal {
   status: string;
   trackingUrl: string | null;
   regionCodes: string[];
+
+  // --- Admin-managed enrichment (all optional; absent = not set) -----------
+  /** Short discount label e.g. "20% OFF", "$15 OFF", "8% CASHBACK". */
+  discountText?: string | null;
+  /** Product/hero image for deal cards. */
+  imageUrl?: string | null;
+  /** Original (pre-discount) price for promotions. */
+  originalPrice?: number | null;
+  /** Sale price for promotions. */
+  salePrice?: number | null;
+  /** Marks a hand-picked / exclusive offer. */
+  isExclusive?: boolean;
+
+  // Voucher/coupon-only enrichment
+  /** Coupon sub-category for the coupons page grouping. Defaults to "code". */
+  subtype?: CouponSubtype | null;
+  /** Cashback rate label e.g. "8% Flat Cashback". */
+  cashbackRate?: string | null;
+  /** Student verification requirement note. */
+  studentVerificationReq?: string | null;
+
+  // Promotion/deal-only enrichment
+  /** Which deals section this promotion belongs to. Defaults to "todays". */
+  placement?: DealPlacement | null;
+  /** Percent of stock already claimed (lightning deals), 0–100. */
+  stockPercentage?: number | null;
 }
 
 export interface PagedDeals {
@@ -129,6 +161,7 @@ function normalisePromotion(p: AwinPromotion): Deal {
     status: normaliseDealStatus(p.status),
     trackingUrl: p.urlTracking || p.url || null,
     regionCodes: p.regionCodes ?? [],
+    isExclusive: Boolean(p.exclusiveOnly),
   };
 }
 

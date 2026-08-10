@@ -18,16 +18,9 @@ interface PageData {
 }
 
 interface AdvertisersClientProps {
-  /** 2-letter ISO country code (uppercase) taken from the URL, e.g. "PK". */
   country: string;
 }
 
-/**
- * Public advertisers view — locked to a single region (the `country` prop,
- * which comes from the URL). End users can only browse and search the
- * merchants for their own region; the region switcher and status filter live
- * on the admin side, not here.
- */
 export default function AdvertisersClient({ country }: AdvertisersClientProps) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -44,8 +37,8 @@ export default function AdvertisersClient({ country }: AdvertisersClientProps) {
         const params = new URLSearchParams({
           page: String(currentPage),
           pageSize: String(PAGE_SIZE),
-          country, // region is fixed to the URL — never user-changeable here
-          relationship: "joined", // only show joined advertisers to end users
+          country,
+          relationship: "joined",
         });
         if (currentSearch) params.set("search", currentSearch);
 
@@ -64,7 +57,6 @@ export default function AdvertisersClient({ country }: AdvertisersClientProps) {
     [country],
   );
 
-  // Debounce the search box and always reset to page 1.
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -113,7 +105,6 @@ export default function AdvertisersClient({ country }: AdvertisersClientProps) {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Search only — no region switch, no status filter for end users. */}
             <div className="relative">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

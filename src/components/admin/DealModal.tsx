@@ -18,7 +18,7 @@ export default function DealModal({
 }: DealModalProps) {
   const isEditing = Boolean(deal);
 
-  const [formData, setFormData] = useState({
+  const emptyForm = {
     id: "",
     title: "",
     description: "",
@@ -32,7 +32,22 @@ export default function DealModal({
     status: "active",
     trackingUrl: "",
     regionCodes: "",
-  });
+    // Enrichment (shared)
+    discountText: "",
+    isExclusive: false,
+    // Coupon-only
+    subtype: "code",
+    cashbackRate: "",
+    studentVerificationReq: "",
+    // Promotion-only
+    placement: "todays",
+    imageUrl: "",
+    originalPrice: "",
+    salePrice: "",
+    stockPercentage: "",
+  };
+
+  const [formData, setFormData] = useState(emptyForm);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,25 +68,22 @@ export default function DealModal({
         status: deal.status || "active",
         trackingUrl: deal.trackingUrl || "",
         regionCodes: deal.regionCodes ? deal.regionCodes.join(", ") : "",
+        discountText: deal.discountText || "",
+        isExclusive: Boolean(deal.isExclusive),
+        subtype: deal.subtype || "code",
+        cashbackRate: deal.cashbackRate || "",
+        studentVerificationReq: deal.studentVerificationReq || "",
+        placement: deal.placement || "todays",
+        imageUrl: deal.imageUrl || "",
+        originalPrice: deal.originalPrice != null ? String(deal.originalPrice) : "",
+        salePrice: deal.salePrice != null ? String(deal.salePrice) : "",
+        stockPercentage: deal.stockPercentage != null ? String(deal.stockPercentage) : "",
       });
     } else {
-      setFormData({
-        id: "",
-        title: "",
-        description: "",
-        advertiserId: "",
-        advertiserName: "",
-        advertiserLogoUrl: "",
-        type: "voucher",
-        code: "",
-        startDate: "",
-        endDate: "",
-        status: "active",
-        trackingUrl: "",
-        regionCodes: "",
-      });
+      setFormData(emptyForm);
     }
     setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal, isOpen]);
 
   if (!isOpen) return null;
@@ -84,6 +96,8 @@ export default function DealModal({
     try {
       const url = "/api/admin/deals";
       const method = isEditing ? "PUT" : "POST";
+
+      const isVoucher = formData.type === "voucher";
 
       const payload = {
         id: formData.id ? Number(formData.id) : undefined,
@@ -103,6 +117,22 @@ export default function DealModal({
         regionCodes: formData.regionCodes
           ? formData.regionCodes.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
           : [],
+
+        // Shared enrichment
+        discountText: formData.discountText || null,
+        isExclusive: formData.isExclusive,
+
+        // Voucher/coupon-only
+        subtype: isVoucher ? formData.subtype : null,
+        cashbackRate: isVoucher ? formData.cashbackRate || null : null,
+        studentVerificationReq: isVoucher ? formData.studentVerificationReq || null : null,
+
+        // Promotion/deal-only
+        placement: !isVoucher ? formData.placement : null,
+        imageUrl: !isVoucher ? formData.imageUrl || null : null,
+        originalPrice: !isVoucher ? formData.originalPrice || null : null,
+        salePrice: !isVoucher ? formData.salePrice || null : null,
+        stockPercentage: !isVoucher ? formData.stockPercentage || null : null,
       };
 
       const res = await fetch(url, {
@@ -312,6 +342,154 @@ export default function DealModal({
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent uppercase"
               />
             </div>
+
+            {/* -------- Public page enrichment -------- */}
+            <div className="sm:col-span-2 mt-2 border-t border-gray-100 pt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Public Page Display
+              </p>
+              <p className="mt-0.5 text-[11px] text-gray-400">
+                Controls how this offer looks on the public store pages.
+              </p>
+            </div>
+
+            {/* Discount label (shared) */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700">Discount Label</label>
+              <input
+                type="text"
+                value={formData.discountText}
+                onChange={(e) => setFormData({ ...formData, discountText: e.target.value })}
+                placeholder="e.g. 20% OFF, $15 OFF"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+            </div>
+
+            {/* Exclusive flag (shared) */}
+            <div className="flex items-end">
+              <label className="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={formData.isExclusive}
+                  onChange={(e) => setFormData({ ...formData, isExclusive: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
+                />
+                Mark as Exclusive
+              </label>
+            </div>
+
+            {formData.type === "voucher" ? (
+              <>
+                {/* Coupon subtype */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700">Coupon Category</label>
+                  <select
+                    value={formData.subtype}
+                    onChange={(e) => setFormData({ ...formData, subtype: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  >
+                    <option value="code">Standard Promo Code</option>
+                    <option value="student">Student Discount</option>
+                    <option value="cashback">Cashback Offer</option>
+                  </select>
+                </div>
+
+                {/* Cashback rate (only meaningful for cashback) */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700">Cashback Rate</label>
+                  <input
+                    type="text"
+                    value={formData.cashbackRate}
+                    onChange={(e) => setFormData({ ...formData, cashbackRate: e.target.value })}
+                    placeholder="e.g. 8% Flat Cashback"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+
+                {/* Student verification requirement */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700">Student Verification Requirement</label>
+                  <input
+                    type="text"
+                    value={formData.studentVerificationReq}
+                    onChange={(e) => setFormData({ ...formData, studentVerificationReq: e.target.value })}
+                    placeholder="e.g. Valid .edu email or UNiDAYS verification"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Deal placement */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700">Deal Section</label>
+                  <select
+                    value={formData.placement}
+                    onChange={(e) => setFormData({ ...formData, placement: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  >
+                    <option value="todays">Today&apos;s Deals</option>
+                    <option value="lightning">Lightning Deal</option>
+                    <option value="limited">Limited-Time Offer</option>
+                    <option value="trending">Trending Discount</option>
+                  </select>
+                </div>
+
+                {/* Stock percentage (lightning) */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700">Stock Claimed % (lightning)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={formData.stockPercentage}
+                    onChange={(e) => setFormData({ ...formData, stockPercentage: e.target.value })}
+                    placeholder="0 – 100"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+
+                {/* Product image */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-700">Product Image URL</label>
+                  <input
+                    type="url"
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    placeholder="https://..."
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+
+                {/* Original price */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700">Original Price</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    value={formData.originalPrice}
+                    onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
+                    placeholder="e.g. 249.00"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+
+                {/* Sale price */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700">Sale Price</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    value={formData.salePrice}
+                    onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
+                    placeholder="e.g. 189.00"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Footer Actions */}
