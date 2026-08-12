@@ -79,6 +79,7 @@ function buildFilter(query: AdvertiserQuery): Record<string, unknown> {
     const cc = query.country.trim().toUpperCase();
     filter.$or = [
       { countryCode: cc },
+      { isGlobal: true },
       { countryCode: { $in: ["WW", "GLOBAL", "INT"] } },
       { region: { $regex: /^(global|worldwide)$/i } },
     ];

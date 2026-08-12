@@ -44,6 +44,7 @@ export interface Advertiser {
   avgSavings?: string;
   rating?: number;
   isFlagship?: boolean;
+  isGlobal?: boolean;
 
   region: string | null;
   countryCode: string | null;
@@ -278,6 +279,7 @@ export function queryAdvertisers(
       return false;
     if (country) {
       const isGlobal = 
+        a.isGlobal === true ||
         a.region?.toLowerCase() === "global" || 
         a.region?.toLowerCase() === "worldwide" || 
         ["WW", "GLOBAL", "INT"].includes(a.countryCode?.toUpperCase() || "");

@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       avgSavings: body.avgSavings ? String(body.avgSavings).trim() : undefined,
       rating: body.rating !== undefined ? Number(body.rating) : undefined,
       isFlagship: body.isFlagship === true,
+      isGlobal: body.isGlobal === true,
     };
 
     const created = await createAdvertiser(advertiser);
@@ -91,6 +92,7 @@ export async function PUT(request: NextRequest) {
     if (body.avgSavings !== undefined) updateData.avgSavings = body.avgSavings ? String(body.avgSavings).trim() : undefined;
     if (body.rating !== undefined) updateData.rating = body.rating !== null ? Number(body.rating) : undefined;
     if (body.isFlagship !== undefined) updateData.isFlagship = Boolean(body.isFlagship);
+    if (body.isGlobal !== undefined) updateData.isGlobal = Boolean(body.isGlobal);
 
     const success = await updateAdvertiser(id, updateData);
     if (!success) {

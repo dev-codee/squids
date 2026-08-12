@@ -35,6 +35,7 @@ export default function AdvertiserModal({
     avgSavings: "",
     rating: "",
     isFlagship: false,
+    isGlobal: false,
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -59,6 +60,7 @@ export default function AdvertiserModal({
         avgSavings: advertiser.avgSavings || "",
         rating: advertiser.rating !== undefined ? String(advertiser.rating) : "",
         isFlagship: advertiser.isFlagship || false,
+        isGlobal: advertiser.isGlobal || false,
       });
     } else {
       setFormData({
@@ -78,6 +80,7 @@ export default function AdvertiserModal({
         avgSavings: "",
         rating: "",
         isFlagship: false,
+        isGlobal: false,
       });
     }
     setError(null);
@@ -101,6 +104,7 @@ export default function AdvertiserModal({
           : [],
         rating: formData.rating ? Number(formData.rating) : undefined,
         isFlagship: formData.isFlagship,
+        isGlobal: formData.isGlobal,
       };
 
       const res = await fetch(url, {
@@ -346,6 +350,20 @@ export default function AdvertiserModal({
                 <label htmlFor="isFlagship" className="text-sm font-medium text-gray-900 cursor-pointer">
                   ⭐ Mark as Flagship Store
                   <span className="block text-xs text-gray-500 font-normal">Flagship stores always appear at the top of the region&apos;s home page.</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3 sm:col-span-2 pt-2 border-t border-gray-100">
+                <input
+                  type="checkbox"
+                  id="isGlobal"
+                  checked={formData.isGlobal}
+                  onChange={(e) => setFormData({ ...formData, isGlobal: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent cursor-pointer"
+                />
+                <label htmlFor="isGlobal" className="text-sm font-medium text-gray-900 cursor-pointer">
+                  🌍 Mark as Global Advertiser
+                  <span className="block text-xs text-gray-500 font-normal">Global advertisers will automatically appear on all country pages (e.g. /pk, /de) regardless of their specific country code.</span>
                 </label>
               </div>
             </div>
