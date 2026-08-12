@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function PublicHeader() {
   const [query, setQuery] = useState("");
@@ -20,8 +21,8 @@ export default function PublicHeader() {
       <div className="mx-auto max-w-7xl px-4 h-16 flex items-center justify-between sm:px-6 lg:px-8">
         
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="Foxzil Logo" className="h-8 w-8 object-contain" />
+        <Link href="/" className="flex items-center gap-2" suppressHydrationWarning>
+          <Image src="/logo.png" alt="Foxzil Logo" width={32} height={32} className="object-contain" priority />
           <span className="text-2xl font-black tracking-tight text-amber-500">Foxzil</span>
         </Link>
 

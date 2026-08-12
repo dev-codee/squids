@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Advertiser } from "@/lib/awin";
 import { countryFlag, countryName } from "@/lib/countries";
 import AdvertiserCard from "@/components/AdvertiserCard";
+import Image from "next/image";
 import Pagination from "@/components/Pagination";
 import SkeletonGrid from "@/components/SkeletonGrid";
 import type { HomeSettings } from "@/lib/db/homeSettings";
@@ -90,10 +91,13 @@ export default function AdvertisersClient({ country, initialSearch = "", homeSet
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-12 flex flex-col md:flex-row items-center justify-between gap-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
           <div className="w-full md:w-1/2 flex justify-center">
-            <img 
+            <Image 
               src="/hero-foxzil.png" 
               alt="Foxzil Deals" 
+              width={500}
+              height={300}
               className="max-w-full h-auto max-h-[300px] object-contain"
+              priority
             />
           </div>
           <div className="w-full md:w-1/2 text-center md:text-left">
