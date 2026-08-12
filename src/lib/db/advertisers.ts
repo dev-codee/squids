@@ -224,12 +224,12 @@ export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | nu
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
   const pattern =
-    "^" +
+    "^[^a-z0-9]*" +
     normalized
       .split("-")
       .map((part) => escapeRegExp(part))
       .join("[^a-z0-9]*") +
-    "$";
+    "[^a-z0-9]*$";
 
   const candidates = await col
     .find(
