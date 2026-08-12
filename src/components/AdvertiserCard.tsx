@@ -140,7 +140,16 @@ export default function AdvertiserCard({
 
     return (
       <Link href={`/${slug}`} className="block h-full">
-        <div className="group flex flex-col items-center justify-center rounded border border-gray-200 bg-white p-4 shadow-sm hover:border-amber-300 hover:shadow-md transition cursor-pointer h-24 sm:h-28">
+        <div className={`relative group flex flex-col items-center justify-center rounded border bg-white p-4 shadow-sm transition cursor-pointer h-24 sm:h-28 ${
+          advertiser.isFlagship 
+            ? "border-amber-400 hover:border-amber-500 shadow-md hover:shadow-lg bg-amber-50/10" 
+            : "border-gray-200 hover:border-amber-300 hover:shadow-md"
+        }`}>
+          {advertiser.isFlagship && (
+            <div className="absolute -top-2.5 right-2 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+              ⭐ FLAGSHIP
+            </div>
+          )}
           {advertiser.logoUrl ? (
             <img
               src={advertiser.logoUrl}

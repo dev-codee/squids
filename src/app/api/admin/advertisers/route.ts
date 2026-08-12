@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       categories: Array.isArray(body.categories) ? body.categories : undefined,
       avgSavings: body.avgSavings ? String(body.avgSavings).trim() : undefined,
       rating: body.rating !== undefined ? Number(body.rating) : undefined,
+      isFlagship: body.isFlagship === true,
     };
 
     const created = await createAdvertiser(advertiser);
@@ -89,6 +90,7 @@ export async function PUT(request: NextRequest) {
     if (body.categories !== undefined) updateData.categories = Array.isArray(body.categories) ? body.categories : undefined;
     if (body.avgSavings !== undefined) updateData.avgSavings = body.avgSavings ? String(body.avgSavings).trim() : undefined;
     if (body.rating !== undefined) updateData.rating = body.rating !== null ? Number(body.rating) : undefined;
+    if (body.isFlagship !== undefined) updateData.isFlagship = Boolean(body.isFlagship);
 
     const success = await updateAdvertiser(id, updateData);
     if (!success) {

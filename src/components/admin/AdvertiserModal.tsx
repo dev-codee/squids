@@ -34,6 +34,7 @@ export default function AdvertiserModal({
     categories: "",
     avgSavings: "",
     rating: "",
+    isFlagship: false,
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -57,6 +58,7 @@ export default function AdvertiserModal({
         categories: advertiser.categories?.join(", ") || "",
         avgSavings: advertiser.avgSavings || "",
         rating: advertiser.rating !== undefined ? String(advertiser.rating) : "",
+        isFlagship: advertiser.isFlagship || false,
       });
     } else {
       setFormData({
@@ -75,6 +77,7 @@ export default function AdvertiserModal({
         categories: "",
         avgSavings: "",
         rating: "",
+        isFlagship: false,
       });
     }
     setError(null);
@@ -97,6 +100,7 @@ export default function AdvertiserModal({
           ? formData.categories.split(",").map((c) => c.trim()).filter(Boolean)
           : [],
         rating: formData.rating ? Number(formData.rating) : undefined,
+        isFlagship: formData.isFlagship,
       };
 
       const res = await fetch(url, {
@@ -329,6 +333,20 @@ export default function AdvertiserModal({
                   placeholder="e.g. 15%"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                 />
+              </div>
+
+              <div className="flex items-center gap-3 sm:col-span-2 pt-2 border-t border-gray-100">
+                <input
+                  type="checkbox"
+                  id="isFlagship"
+                  checked={formData.isFlagship}
+                  onChange={(e) => setFormData({ ...formData, isFlagship: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent cursor-pointer"
+                />
+                <label htmlFor="isFlagship" className="text-sm font-medium text-gray-900 cursor-pointer">
+                  ⭐ Mark as Flagship Store
+                  <span className="block text-xs text-gray-500 font-normal">Flagship stores always appear at the top of the region&apos;s home page.</span>
+                </label>
               </div>
             </div>
           </div>

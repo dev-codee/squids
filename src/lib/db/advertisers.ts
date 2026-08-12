@@ -161,7 +161,7 @@ export async function getAdvertisersFromDb(
         },
       },
       { $match: { "activeDeals.0": { $exists: true } } },
-      { $sort: { name: 1 } },
+      { $sort: { isFlagship: -1, name: 1 } },
       { $skip: skip },
       { $limit: pageSize },
       { $project: { _id: 0, syncedAt: 0, activeDeals: 0 } },
@@ -169,7 +169,7 @@ export async function getAdvertisersFromDb(
   } else {
     docs = await col
       .find(filter, { projection: { _id: 0, syncedAt: 0 } })
-      .sort({ name: 1 })
+      .sort({ isFlagship: -1, name: 1 })
       .skip(skip)
       .limit(pageSize)
       .toArray();

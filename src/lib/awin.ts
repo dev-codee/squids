@@ -43,6 +43,7 @@ export interface Advertiser {
   bannerUrl?: string;
   avgSavings?: string;
   rating?: number;
+  isFlagship?: boolean;
 
   region: string | null;
   countryCode: string | null;
