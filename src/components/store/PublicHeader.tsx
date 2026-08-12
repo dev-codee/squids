@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 export default function PublicHeader() {
   const [query, setQuery] = useState("");
   const router = useRouter();
+  const dict = useDictionary();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +38,7 @@ export default function PublicHeader() {
             </span>
             <input
               type="text"
-              placeholder="Search stores, coupons, deals..."
+              placeholder={dict.home.searchPlaceholder}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full rounded-full border border-gray-300 bg-gray-50 py-2 pl-10 pr-4 text-sm text-gray-900 transition focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400/20"

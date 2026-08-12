@@ -3,6 +3,7 @@ import { loadStoreData } from "@/lib/storeData";
 import StoreSidebar from "@/components/store/StoreSidebar";
 import HorizontalCouponCard from "@/components/store/HorizontalCouponCard";
 import LightningDealCard from "@/components/store/LightningDealCard";
+import { getDictionary } from "@/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function StoreMainPage({
 
   const currentMonth = new Date().toLocaleString('default', { month: 'long' });
   const currentYear = new Date().getFullYear();
+  const dict = await getDictionary(params.country);
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-16">
@@ -40,7 +42,7 @@ export default async function StoreMainPage({
             {/* Top Header */}
             <div className="bg-white p-6 rounded border border-gray-200">
               <h1 className="text-2xl font-bold text-gray-900">
-                {store.name} promo code - {currentMonth} {currentYear} - Foxzil
+                {dict.store.promoCodeTitle.replace("{store}", store.name).replace("{month}", currentMonth).replace("{year}", String(currentYear))}
               </h1>
             </div>
 
@@ -48,7 +50,7 @@ export default async function StoreMainPage({
             {store.coupons.length > 0 && (
               <section>
                 <h2 className="text-lg font-medium text-gray-700 mb-4">
-                  Verified {store.name} promo codes and offers by Foxzil Team
+                  {dict.store.verifiedOffersTitle.replace("{store}", store.name)}
                 </h2>
 
                 <div className="flex flex-col gap-4">
@@ -64,7 +66,7 @@ export default async function StoreMainPage({
             {store.deals && store.deals.length > 0 && (
               <section className="mt-8">
                 <h2 className="text-lg font-medium text-gray-700 mb-4">
-                  Top Deals & Promotions for {store.name}
+                  {dict.store.topDealsTitle.replace("{store}", store.name)}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {store.deals.map((deal) => (
@@ -78,10 +80,10 @@ export default async function StoreMainPage({
             {store.coupons.length === 0 && (
               <div className="rounded border border-dashed border-gray-300 bg-white p-12 text-center">
                 <p className="text-sm font-semibold text-gray-700">
-                  No offers published for {store.name} yet
+                  {dict.store.noOffersYet.replace("{store}", store.name)}
                 </p>
                 <p className="mt-1 text-sm text-gray-500">
-                  Coupons and deals will appear here once they&apos;re added.
+                  {dict.store.couponsAppearHere}
                 </p>
               </div>
             )}

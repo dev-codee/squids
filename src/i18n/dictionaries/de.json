@@ -1,0 +1,47 @@
+{
+  "home": {
+    "heroTitle": "Gutscheincodes und Angebote - sie funktionieren wirklich!",
+    "heroSubtitle": "Händler und Geschäfte verfügbar in",
+    "categories": "Kategorien",
+    "searchPlaceholder": "Suche nach Geschäften oder Kategorien...",
+    "popularStores": "Beliebte Geschäfte"
+  },
+  "store": {
+    "promoCodeTitle": "{store} Gutscheincode - {month} {year} - Foxzil",
+    "verifiedOffersTitle": "Verifizierte {store} Gutscheincodes und Angebote vom Foxzil Team",
+    "topDealsTitle": "Top Angebote & Aktionen für {store}",
+    "noOffersYet": "Noch keine Angebote für {store} veröffentlicht",
+    "couponsAppearHere": "Gutscheine und Angebote werden hier angezeigt, sobald sie hinzugefügt wurden."
+  },
+  "sidebar": {
+    "dealsDetails": "Angebotsdetails",
+    "promoCodes": "Gutscheincodes",
+    "avgSavings": "Durchschn. Ersparnis",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "affiliateDisclaimer": "Wir verwenden Affiliate-Links und erhalten möglicherweise eine Provision.",
+    "discountCodesRating": "Gutscheincode-Bewertung für {store}",
+    "averageRating": "Durchschnittliche Bewertung: {rating}, basierend auf {votes} Stimmen",
+    "contact": "{store} Kontakt:",
+    "similarCategories": "Ähnliche Kategorien ansehen",
+    "productsFeed": "Produkt-Feed",
+    "noProducts": "Keine Produkte verfügbar.",
+    "priceComparison": "Preisvergleich",
+    "noPriceComparisons": "Noch keine Preisvergleiche.",
+    "liveUpdates": "Live-Updates",
+    "noLiveUpdates": "Momentan keine Live-Updates.",
+    "buyingGuides": "Kaufberatungen",
+    "noBuyingGuides": "Keine Kaufberatungen verfügbar.",
+    "faqs": "Häufig gestellte Fragen (FAQs)",
+    "noFaqs": "Keine FAQs verfügbar.",
+    "reviews": "Bewertungen",
+    "noReviews": "Noch keine Bewertungen."
+  },
+  "cards": {
+    "showCouponCode": "Gutscheincode anzeigen",
+    "getDeal": "Angebot sichern",
+    "verified": "Verifiziert",
+    "grabThisDeal": "Dieses Angebot schnappen",
+    "endsIn": "Endet in:",
+    "claimed": "Beansprucht"
+  }
+}

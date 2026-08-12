@@ -1,0 +1,47 @@
+{
+  "home": {
+    "heroTitle": "Promo codes and deals - they really work!",
+    "heroSubtitle": "Merchants and stores available in",
+    "categories": "Categories",
+    "searchPlaceholder": "Search for stores or categories...",
+    "popularStores": "Popular Stores"
+  },
+  "store": {
+    "promoCodeTitle": "{store} promo code - {month} {year} - Foxzil",
+    "verifiedOffersTitle": "Verified {store} promo codes and offers by Foxzil Team",
+    "topDealsTitle": "Top Deals & Promotions for {store}",
+    "noOffersYet": "No offers published for {store} yet",
+    "couponsAppearHere": "Coupons and deals will appear here once they're added."
+  },
+  "sidebar": {
+    "dealsDetails": "Deals Details",
+    "promoCodes": "Promo Codes",
+    "avgSavings": "Avg Savings",
+    "lastUpdated": "Last Updated",
+    "affiliateDisclaimer": "We use affiliate links and may receive a commission.",
+    "discountCodesRating": "Discount codes rating for {store}",
+    "averageRating": "Average rating: {rating}, based on {votes} votes",
+    "contact": "{store} contact:",
+    "similarCategories": "Check out similar categories",
+    "productsFeed": "Products Feed",
+    "noProducts": "No products available.",
+    "priceComparison": "Price Comparison",
+    "noPriceComparisons": "No price comparisons yet.",
+    "liveUpdates": "Live Updates",
+    "noLiveUpdates": "No live updates at the moment.",
+    "buyingGuides": "Buying Guides",
+    "noBuyingGuides": "No buying guides available.",
+    "faqs": "FAQs",
+    "noFaqs": "No FAQs available.",
+    "reviews": "Reviews",
+    "noReviews": "No reviews yet."
+  },
+  "cards": {
+    "showCouponCode": "Show Coupon Code",
+    "getDeal": "Get Deal",
+    "verified": "Verified",
+    "grabThisDeal": "Grab This Deal",
+    "endsIn": "Ends in:",
+    "claimed": "Claimed"
+  }
+}

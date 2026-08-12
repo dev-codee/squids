@@ -12,6 +12,7 @@ import HomeReviews from "@/components/home/HomeReviews";
 import HomePopularShops from "@/components/home/HomePopularShops";
 import HomeCategories from "@/components/home/HomeCategories";
 import HomeFaqs from "@/components/home/HomeFaqs";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 const PAGE_SIZE = 35;
 
@@ -30,6 +31,7 @@ interface AdvertisersClientProps {
 }
 
 export default function AdvertisersClient({ country, initialSearch = "", homeSettings }: AdvertisersClientProps) {
+  const dict = useDictionary();
   const [search, setSearch] = useState(initialSearch);
   const [page, setPage] = useState(1);
 
@@ -102,10 +104,10 @@ export default function AdvertisersClient({ country, initialSearch = "", homeSet
           </div>
           <div className="w-full md:w-1/2 text-center md:text-left">
             <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-              Promo codes and deals - they really work!
+              {dict.home.heroTitle}
             </h1>
             <p className="mt-4 text-base text-gray-500">
-              Merchants and stores available in {countryName(country)}.
+              {dict.home.heroSubtitle} {countryName(country)}.
             </p>
           </div>
         </header>

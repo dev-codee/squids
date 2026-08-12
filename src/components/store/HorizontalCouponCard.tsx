@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CouponItem } from "@/lib/storeData";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 interface HorizontalCouponCardProps {
   coupon: CouponItem;
@@ -9,6 +10,7 @@ interface HorizontalCouponCardProps {
 }
 
 export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCouponCardProps) {
+  const dict = useDictionary();
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [revealed, setRevealed] = useState(false);
@@ -60,7 +62,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
                 <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                Verified
+                {dict.cards.verified}
               </span>
             )}
             {coupon.isExclusive && (
@@ -78,7 +80,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
               onClick={handleReveal}
               className="w-full relative inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600 shadow-sm overflow-hidden"
             >
-              <span className="relative z-10">{copied ? "Copied!" : revealed ? coupon.code : "Reveal the Code"}</span>
+              <span className="relative z-10">{copied ? "Copied!" : revealed ? coupon.code : dict.cards.showCouponCode}</span>
               {!revealed && (
                 <div className="absolute right-0 top-0 h-full w-8 bg-emerald-700 clip-reveal flex items-center justify-center">
                   <span className="text-[10px]">*</span>
@@ -92,7 +94,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
               rel="noopener noreferrer"
               className="w-full inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600 shadow-sm"
             >
-              Get the Deal
+              {dict.cards.getDeal}
             </a>
           )}
           

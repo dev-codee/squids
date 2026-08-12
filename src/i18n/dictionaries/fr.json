@@ -1,0 +1,47 @@
+{
+  "home": {
+    "heroTitle": "Codes promo et bons plans - ils marchent vraiment !",
+    "heroSubtitle": "Commerçants et magasins disponibles en",
+    "categories": "Catégories",
+    "searchPlaceholder": "Rechercher des magasins ou catégories...",
+    "popularStores": "Magasins Populaires"
+  },
+  "store": {
+    "promoCodeTitle": "Code promo {store} - {month} {year} - Foxzil",
+    "verifiedOffersTitle": "Codes promo et offres {store} vérifiés par l'équipe Foxzil",
+    "topDealsTitle": "Meilleurs Bons Plans & Promotions pour {store}",
+    "noOffersYet": "Aucune offre publiée pour {store} pour le moment",
+    "couponsAppearHere": "Les coupons et bons plans apparaîtront ici une fois ajoutés."
+  },
+  "sidebar": {
+    "dealsDetails": "Détails des Offres",
+    "promoCodes": "Codes Promo",
+    "avgSavings": "Économie Moyenne",
+    "lastUpdated": "Dernière Mise à Jour",
+    "affiliateDisclaimer": "Nous utilisons des liens d'affiliation et pouvons recevoir une commission.",
+    "discountCodesRating": "Évaluation des codes de réduction pour {store}",
+    "averageRating": "Note moyenne : {rating}, sur {votes} votes",
+    "contact": "Contact {store} :",
+    "similarCategories": "Découvrez des catégories similaires",
+    "productsFeed": "Flux de Produits",
+    "noProducts": "Aucun produit disponible.",
+    "priceComparison": "Comparateur de Prix",
+    "noPriceComparisons": "Aucune comparaison de prix pour le moment.",
+    "liveUpdates": "Mises à jour en direct",
+    "noLiveUpdates": "Aucune mise à jour en direct pour le moment.",
+    "buyingGuides": "Guides d'achat",
+    "noBuyingGuides": "Aucun guide d'achat disponible.",
+    "faqs": "FAQ",
+    "noFaqs": "Aucune FAQ disponible.",
+    "reviews": "Avis",
+    "noReviews": "Aucun avis pour le moment."
+  },
+  "cards": {
+    "showCouponCode": "Voir le code promo",
+    "getDeal": "Voir l'offre",
+    "verified": "Vérifié",
+    "grabThisDeal": "Profiter de l'offre",
+    "endsIn": "Se termine dans :",
+    "claimed": "Réclamé"
+  }
+}

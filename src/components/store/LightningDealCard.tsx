@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import type { DealItem } from "@/lib/storeData";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 interface LightningDealCardProps {
   deal: DealItem;
 }
 
 export default function LightningDealCard({ deal }: LightningDealCardProps) {
+  const dict = useDictionary();
   const [timeLeft, setTimeLeft] = useState<number>(deal.endsInSeconds || 14400);
 
   useEffect(() => {
@@ -76,7 +78,7 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
         {deal.stockPercentage !== undefined && (
           <div className="mt-4">
             <div className="flex justify-between text-xs font-medium text-gray-600 mb-1">
-              <span>Claimed</span>
+              <span>{dict.cards.claimed}</span>
               <span className="font-bold text-amber-600">{deal.stockPercentage}%</span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
@@ -95,7 +97,7 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
               <svg className="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Ends in:
+              {dict.cards.endsIn}
             </span>
             <span className="font-mono font-bold text-red-900 tracking-wider">
               {formatTime(timeLeft)}
@@ -111,7 +113,7 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
         rel="noopener noreferrer"
         className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-amber-600 active:scale-95"
       >
-        Grab This Deal
+        {dict.cards.grabThisDeal}
         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
         </svg>

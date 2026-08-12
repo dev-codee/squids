@@ -1,0 +1,47 @@
+{
+  "home": {
+    "heroTitle": "Códigos promocionales y ofertas - ¡realmente funcionan!",
+    "heroSubtitle": "Comerciantes y tiendas disponibles en",
+    "categories": "Categorías",
+    "searchPlaceholder": "Buscar tiendas o categorías...",
+    "popularStores": "Tiendas Populares"
+  },
+  "store": {
+    "promoCodeTitle": "Código promocional {store} - {month} {year} - Foxzil",
+    "verifiedOffersTitle": "Códigos promocionales y ofertas de {store} verificados por el equipo Foxzil",
+    "topDealsTitle": "Mejores Ofertas y Promociones para {store}",
+    "noOffersYet": "Aún no hay ofertas publicadas para {store}",
+    "couponsAppearHere": "Los cupones y ofertas aparecerán aquí una vez agregados."
+  },
+  "sidebar": {
+    "dealsDetails": "Detalles de Ofertas",
+    "promoCodes": "Códigos Promocionales",
+    "avgSavings": "Ahorro Medio",
+    "lastUpdated": "Última Actualización",
+    "affiliateDisclaimer": "Usamos enlaces de afiliados y podemos recibir una comisión.",
+    "discountCodesRating": "Calificación de códigos de descuento para {store}",
+    "averageRating": "Calificación promedio: {rating}, basada en {votes} votos",
+    "contact": "Contacto de {store}:",
+    "similarCategories": "Mira categorías similares",
+    "productsFeed": "Feed de Productos",
+    "noProducts": "No hay productos disponibles.",
+    "priceComparison": "Comparación de Precios",
+    "noPriceComparisons": "Aún no hay comparaciones de precios.",
+    "liveUpdates": "Actualizaciones en Vivo",
+    "noLiveUpdates": "No hay actualizaciones en este momento.",
+    "buyingGuides": "Guías de Compra",
+    "noBuyingGuides": "No hay guías de compra disponibles.",
+    "faqs": "Preguntas Frecuentes",
+    "noFaqs": "No hay preguntas frecuentes disponibles.",
+    "reviews": "Reseñas",
+    "noReviews": "Aún no hay reseñas."
+  },
+  "cards": {
+    "showCouponCode": "Ver Código",
+    "getDeal": "Obtener Oferta",
+    "verified": "Verificado",
+    "grabThisDeal": "Aprovechar Oferta",
+    "endsIn": "Termina en:",
+    "claimed": "Reclamado"
+  }
+}

@@ -6,12 +6,15 @@ import ProductFeedCard from "./ProductFeedCard";
 import PriceComparisonWidget from "./PriceComparisonWidget";
 import FaqAccordion from "./FaqAccordion";
 import ReviewsWidget from "./ReviewsWidget";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 interface StoreSidebarProps {
   store: StoreData;
 }
 
 export default function StoreSidebar({ store }: StoreSidebarProps) {
+  const dict = useDictionary();
+
   return (
     <aside className="w-full space-y-6">
       {/* Logo & Brand */}
@@ -35,47 +38,47 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
 
       {/* Deals Details */}
       <div className="bg-white border border-gray-200 p-5 rounded">
-        <h3 className="font-bold text-gray-900 mb-4">Deals Details</h3>
+        <h3 className="font-bold text-gray-900 mb-4">{dict.sidebar.dealsDetails}</h3>
         <div className="space-y-3 text-sm">
           <div className="flex justify-between border-b border-gray-100 pb-2">
-            <span className="text-gray-600">Promo Codes</span>
+            <span className="text-gray-600">{dict.sidebar.promoCodes}</span>
             <span className="font-semibold">{store.activeCouponsCount}</span>
           </div>
           {store.avgSavings && (
             <div className="flex justify-between border-b border-gray-100 pb-2">
-              <span className="text-gray-600">Avg Savings</span>
+              <span className="text-gray-600">{dict.sidebar.avgSavings}</span>
               <span className="font-semibold">{store.avgSavings}</span>
             </div>
           )}
           <div className="flex justify-between border-b border-gray-100 pb-2">
-            <span className="text-gray-600">Last Updated</span>
+            <span className="text-gray-600">{dict.sidebar.lastUpdated}</span>
             <span className="font-semibold">
               {new Date().toLocaleDateString("en-GB")}
             </span>
           </div>
         </div>
         <p className="text-[10px] text-gray-400 mt-4 leading-tight">
-          We use affiliate links and may receive a commission.
+          {dict.sidebar.affiliateDisclaimer}
         </p>
       </div>
 
       {/* Discount codes rating */}
       <div className="bg-white border border-gray-200 p-5 rounded">
         <h3 className="font-bold text-gray-900 mb-3">
-          Discount codes rating for {store.name}
+          {dict.sidebar.discountCodesRating.replace("{store}", store.name)}
         </h3>
         <div className="flex items-center gap-1 text-amber-400 text-lg mb-2">
           {"★".repeat(Math.floor(store.rating || 5))}
           {"☆".repeat(5 - Math.floor(store.rating || 5))}
         </div>
         <p className="text-xs text-gray-500">
-          Average rating: {store.rating || "5.0"}, based on {store.totalReviews || 120} votes
+          {dict.sidebar.averageRating.replace("{rating}", String(store.rating || "5.0")).replace("{votes}", String(store.totalReviews || 120))}
         </p>
       </div>
 
       {/* Contact */}
       <div className="bg-white border border-gray-200 p-5 rounded">
-        <h3 className="font-bold text-gray-900 mb-3">{store.name} contact:</h3>
+        <h3 className="font-bold text-gray-900 mb-3">{dict.sidebar.contact.replace("{store}", store.name)}</h3>
         <a
           href={store.websiteUrl}
           target="_blank"
@@ -92,7 +95,7 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
       {/* Categories Filter Pills */}
       {store.categories.length > 0 && (
         <div className="bg-white p-5 rounded border border-gray-200">
-          <h3 className="font-bold text-gray-900 mb-3">Check out similar categories</h3>
+          <h3 className="font-bold text-gray-900 mb-3">{dict.sidebar.similarCategories}</h3>
           <div className="flex flex-wrap gap-2">
             {store.categories.map((cat, idx) => (
               <span
@@ -109,7 +112,7 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
       {/* Products Feed */}
       <div className="bg-white p-5 rounded border border-gray-200">
         <div className="mb-4">
-          <h2 className="font-bold text-gray-900">Products Feed</h2>
+          <h2 className="font-bold text-gray-900">{dict.sidebar.productsFeed}</h2>
         </div>
         {store.products && store.products.length > 0 ? (
           <div className="flex flex-col gap-4">
@@ -118,21 +121,21 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No products available.</p>
+          <p className="text-sm text-gray-500">{dict.sidebar.noProducts}</p>
         )}
       </div>
 
       {/* Price Comparison */}
       <div className="bg-white p-5 rounded border border-gray-200">
         <div className="mb-4">
-          <h2 className="font-bold text-gray-900">Price Comparison</h2>
+          <h2 className="font-bold text-gray-900">{dict.sidebar.priceComparison}</h2>
         </div>
         {store.priceComparisons && store.priceComparisons.length > 0 ? (
           <div className="overflow-x-auto pb-2">
             <PriceComparisonWidget items={store.priceComparisons} storeName={store.name} />
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No price comparisons yet.</p>
+          <p className="text-sm text-gray-500">{dict.sidebar.noPriceComparisons}</p>
         )}
       </div>
 
@@ -143,7 +146,7 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
           </span>
-          <h3 className="font-bold text-gray-900">Live Updates</h3>
+          <h3 className="font-bold text-gray-900">{dict.sidebar.liveUpdates}</h3>
         </div>
         {store.latestDiscounts && store.latestDiscounts.length > 0 ? (
           <div className="flex flex-col gap-3">
@@ -159,14 +162,14 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No live updates at the moment.</p>
+          <p className="text-sm text-gray-500">{dict.sidebar.noLiveUpdates}</p>
         )}
       </div>
 
       {/* Buying Guides */}
       <div className="bg-white p-5 rounded border border-gray-200">
         <div className="mb-4">
-          <h2 className="font-bold text-gray-900">Buying Guides</h2>
+          <h2 className="font-bold text-gray-900">{dict.sidebar.buyingGuides}</h2>
         </div>
         {store.buyingGuides && store.buyingGuides.length > 0 ? (
           <div className="flex flex-col gap-4">
@@ -180,19 +183,19 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No buying guides available.</p>
+          <p className="text-sm text-gray-500">{dict.sidebar.noBuyingGuides}</p>
         )}
       </div>
 
       {/* FAQs */}
       <div className="bg-white p-5 rounded border border-gray-200">
         <div className="mb-4">
-          <h2 className="font-bold text-gray-900">FAQs</h2>
+          <h2 className="font-bold text-gray-900">{dict.sidebar.faqs}</h2>
         </div>
         {store.faqs && store.faqs.length > 0 ? (
           <FaqAccordion faqs={store.faqs} storeName={store.name} />
         ) : (
-          <p className="text-sm text-gray-500">No FAQs available.</p>
+          <p className="text-sm text-gray-500">{dict.sidebar.noFaqs}</p>
         )}
       </div>
 
@@ -207,8 +210,8 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
           />
         ) : (
           <div>
-            <h2 className="font-bold text-gray-900 mb-2">Reviews</h2>
-            <p className="text-sm text-gray-500">No reviews yet.</p>
+            <h2 className="font-bold text-gray-900 mb-2">{dict.sidebar.reviews}</h2>
+            <p className="text-sm text-gray-500">{dict.sidebar.noReviews}</p>
           </div>
         )}
       </div>

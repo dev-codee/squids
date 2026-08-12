@@ -1,0 +1,47 @@
+{
+  "home": {
+    "heroTitle": "Codici sconto e offerte - funzionano davvero!",
+    "heroSubtitle": "Commercianti e negozi disponibili in",
+    "categories": "Categorie",
+    "searchPlaceholder": "Cerca negozi o categorie...",
+    "popularStores": "Negozi Popolari"
+  },
+  "store": {
+    "promoCodeTitle": "Codice sconto {store} - {month} {year} - Foxzil",
+    "verifiedOffersTitle": "Codici sconto e offerte {store} verificati dal team Foxzil",
+    "topDealsTitle": "Migliori Offerte e Promozioni per {store}",
+    "noOffersYet": "Nessuna offerta ancora pubblicata per {store}",
+    "couponsAppearHere": "I coupon e le offerte appariranno qui una volta aggiunti."
+  },
+  "sidebar": {
+    "dealsDetails": "Dettagli Offerte",
+    "promoCodes": "Codici Sconto",
+    "avgSavings": "Risparmio Medio",
+    "lastUpdated": "Ultimo Aggiornamento",
+    "affiliateDisclaimer": "Utilizziamo link di affiliazione e potremmo ricevere una commissione.",
+    "discountCodesRating": "Valutazione codici sconto per {store}",
+    "averageRating": "Valutazione media: {rating}, basata su {votes} voti",
+    "contact": "Contatto {store}:",
+    "similarCategories": "Scopri categorie simili",
+    "productsFeed": "Feed Prodotti",
+    "noProducts": "Nessun prodotto disponibile.",
+    "priceComparison": "Confronto Prezzi",
+    "noPriceComparisons": "Ancora nessun confronto prezzi.",
+    "liveUpdates": "Aggiornamenti in tempo reale",
+    "noLiveUpdates": "Nessun aggiornamento al momento.",
+    "buyingGuides": "Guide all'acquisto",
+    "noBuyingGuides": "Nessuna guida all'acquisto disponibile.",
+    "faqs": "Domande Frequenti",
+    "noFaqs": "Nessuna FAQ disponibile.",
+    "reviews": "Recensioni",
+    "noReviews": "Ancora nessuna recensione."
+  },
+  "cards": {
+    "showCouponCode": "Mostra Codice",
+    "getDeal": "Ottieni Offerta",
+    "verified": "Verificato",
+    "grabThisDeal": "Approfitta dell'Offerta",
+    "endsIn": "Termina in:",
+    "claimed": "Richiesto"
+  }
+}
