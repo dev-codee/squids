@@ -1,35 +1,21 @@
 import { notFound, redirect } from "next/navigation";
 import { loadStoreData } from "@/lib/storeData";
-import { getHomeSettings } from "@/lib/db/homeSettings";
-import AdvertisersClient from "./AdvertisersClient";
 import StoreSidebar from "@/components/store/StoreSidebar";
 import HorizontalCouponCard from "@/components/store/HorizontalCouponCard";
 import LightningDealCard from "@/components/store/LightningDealCard";
 
 export const dynamic = "force-dynamic";
 
-// 2-letter country code check
-const COUNTRY_CODE_RE = /^[A-Za-z]{2}$/;
-
 export default async function StoreMainPage({
   params,
-  searchParams,
 }: {
-  params: { store: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: { country: string; store: string };
 }) {
   const rawSlug = params.store;
 
-  // Handle country route backward compatibility (e.g. /us, /pk)
-  if (COUNTRY_CODE_RE.test(rawSlug)) {
-    const search = typeof searchParams.search === "string" ? searchParams.search : "";
-    const homeSettings = await getHomeSettings();
-    return <AdvertisersClient country={rawSlug.toUpperCase()} initialSearch={search} homeSettings={homeSettings} />;
-  }
-
   // Canonicalize store slug to lowercase (e.g. /Amazon -> /amazon)
   if (rawSlug !== rawSlug.toLowerCase()) {
-    redirect(`/${rawSlug.toLowerCase()}`);
+    redirect(`/${params.country}/${rawSlug.toLowerCase()}`);
   }
 
   const store = await loadStoreData(rawSlug);

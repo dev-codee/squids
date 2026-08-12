@@ -139,7 +139,7 @@ export default function AdvertiserCard({
       .replace(/(^-|-$)/g, "");
 
     return (
-      <Link href={`/${slug}`} className="block h-full">
+      <Link href={`/${country.toLowerCase()}/${slug}`} className="block h-full">
         <div className={`relative group flex flex-col items-center justify-center rounded border bg-white p-4 shadow-sm transition cursor-pointer h-24 sm:h-28 ${
           advertiser.isFlagship 
             ? "border-amber-400 hover:border-amber-500 shadow-md hover:shadow-lg bg-amber-50/10" 
