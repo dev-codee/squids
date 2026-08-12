@@ -4,6 +4,7 @@ import { getHomeSettings } from "@/lib/db/homeSettings";
 import AdvertisersClient from "./AdvertisersClient";
 import StoreSidebar from "@/components/store/StoreSidebar";
 import HorizontalCouponCard from "@/components/store/HorizontalCouponCard";
+import LightningDealCard from "@/components/store/LightningDealCard";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,20 @@ export default async function StoreMainPage({
                   {/* Coupon List */}
                   {store.coupons.map((coupon) => (
                     <HorizontalCouponCard key={coupon.id} coupon={coupon} storeName={store.name} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Deals Section */}
+            {store.deals && store.deals.length > 0 && (
+              <section className="mt-8">
+                <h2 className="text-lg font-medium text-gray-700 mb-4">
+                  Top Deals & Promotions for {store.name}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {store.deals.map((deal) => (
+                    <LightningDealCard key={deal.id} deal={deal} />
                   ))}
                 </div>
               </section>

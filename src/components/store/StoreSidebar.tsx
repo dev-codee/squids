@@ -2,7 +2,6 @@
 
 import React from "react";
 import type { StoreData } from "@/lib/storeData";
-import LightningDealCard from "./LightningDealCard";
 import ProductFeedCard from "./ProductFeedCard";
 import PriceComparisonWidget from "./PriceComparisonWidget";
 import FaqAccordion from "./FaqAccordion";
@@ -106,22 +105,6 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
           </div>
         </div>
       )}
-
-      {/* Deals Section */}
-      <div className="bg-white p-5 rounded border border-gray-200">
-        <div className="mb-4">
-          <h2 className="font-bold text-gray-900">Deals &amp; Promotions</h2>
-        </div>
-        {store.deals && store.deals.length > 0 ? (
-          <div className="flex flex-col gap-4">
-            {store.deals.map((deal) => (
-              <LightningDealCard key={deal.id} deal={deal} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500">No active deals right now.</p>
-        )}
-      </div>
 
       {/* Products Feed */}
       <div className="bg-white p-5 rounded border border-gray-200">
