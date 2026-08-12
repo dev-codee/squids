@@ -21,6 +21,7 @@ export default function PublicHeader() {
         
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
+          <img src="/logo.png" alt="Foxzil Logo" className="h-8 w-8 object-contain" />
           <span className="text-2xl font-black tracking-tight text-amber-500">Foxzil</span>
         </Link>
 

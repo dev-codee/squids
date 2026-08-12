@@ -88,13 +88,22 @@ export default function AdvertisersClient({ country, initialSearch = "", homeSet
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-10 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Promo codes and deals - they really work!
-          </h1>
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-sm text-gray-500">
-            Merchants and stores available in {countryName(country)}.
-          </p>
+        <header className="mb-12 flex flex-col md:flex-row items-center justify-between gap-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+          <div className="w-full md:w-1/2 flex justify-center">
+            <img 
+              src="/hero-foxzil.png" 
+              alt="Foxzil Deals" 
+              className="max-w-full h-auto max-h-[300px] object-contain"
+            />
+          </div>
+          <div className="w-full md:w-1/2 text-center md:text-left">
+            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+              Promo codes and deals - they really work!
+            </h1>
+            <p className="mt-4 text-base text-gray-500">
+              Merchants and stores available in {countryName(country)}.
+            </p>
+          </div>
         </header>
 
         {error ? (

@@ -7,6 +7,9 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata: Metadata = {
   title: "Foxzil - Promo codes and deals",
   description: "Browse verified deals, vouchers, and promo codes from top advertisers on Foxzil.",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({
