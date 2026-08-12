@@ -12,7 +12,7 @@ import HomePopularShops from "@/components/home/HomePopularShops";
 import HomeCategories from "@/components/home/HomeCategories";
 import HomeFaqs from "@/components/home/HomeFaqs";
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 35;
 
 interface PageData {
   advertisers: Advertiser[];
