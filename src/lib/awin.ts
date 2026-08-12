@@ -220,6 +220,7 @@ export interface AdvertiserQuery {
   country?: string;
   page?: number;
   pageSize?: number;
+  requireDeals?: boolean;
 }
 
 export interface AdvertiserFacets {

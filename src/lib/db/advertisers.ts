@@ -123,17 +123,57 @@ export async function getAdvertisersFromDb(
     Math.max(1, query.pageSize || DEFAULT_PAGE_SIZE),
     MAX_PAGE_SIZE,
   );
-  const total = await col.countDocuments(filter);
+
+  let total: number;
+  if (query.requireDeals) {
+    const countRes = await col.aggregate([
+      { $match: filter },
+      {
+        $lookup: {
+          from: "deals",
+          localField: "id",
+          foreignField: "advertiser.id",
+          as: "activeDeals",
+        },
+      },
+      { $match: { "activeDeals.0": { $exists: true } } },
+      { $count: "total" }
+    ]).toArray();
+    total = countRes.length > 0 ? countRes[0].total : 0;
+  } else {
+    total = await col.countDocuments(filter);
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const page = Math.min(Math.max(1, query.page || 1), totalPages);
   const skip = (page - 1) * pageSize;
 
-  const docs = await col
-    .find(filter, { projection: { _id: 0, syncedAt: 0 } })
-    .sort({ name: 1 })
-    .skip(skip)
-    .limit(pageSize)
-    .toArray();
+  let docs: any[];
+  if (query.requireDeals) {
+    docs = await col.aggregate([
+      { $match: filter },
+      {
+        $lookup: {
+          from: "deals",
+          localField: "id",
+          foreignField: "advertiser.id",
+          as: "activeDeals",
+        },
+      },
+      { $match: { "activeDeals.0": { $exists: true } } },
+      { $sort: { name: 1 } },
+      { $skip: skip },
+      { $limit: pageSize },
+      { $project: { _id: 0, syncedAt: 0, activeDeals: 0 } },
+    ]).toArray();
+  } else {
+    docs = await col
+      .find(filter, { projection: { _id: 0, syncedAt: 0 } })
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(pageSize)
+      .toArray();
+  }
 
   return {
     advertisers: docs as unknown as Advertiser[],

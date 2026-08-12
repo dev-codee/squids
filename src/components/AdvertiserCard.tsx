@@ -131,8 +131,7 @@ export default function AdvertiserCard({
     );
   }
 
-  // Wrap in Link when country is provided (public pages). Advertisers now open
-  // their dedicated store page (coupons, deals, products) at `/[store]`.
+  // Public pages view
   if (country) {
     const slug = advertiser.name
       .toLowerCase()
@@ -141,7 +140,20 @@ export default function AdvertiserCard({
 
     return (
       <Link href={`/${slug}`} className="block h-full">
-        {content}
+        <div className="group flex flex-col items-center justify-center rounded border border-gray-200 bg-white p-4 shadow-sm hover:border-amber-300 hover:shadow-md transition cursor-pointer h-24 sm:h-28">
+          {advertiser.logoUrl ? (
+            <img
+              src={advertiser.logoUrl}
+              alt={`${advertiser.name} logo`}
+              className="h-10 w-full object-contain filter group-hover:scale-105 transition-transform"
+              loading="lazy"
+            />
+          ) : (
+            <span className="text-center text-sm font-bold text-gray-800 line-clamp-2 w-full">
+              {advertiser.name}
+            </span>
+          )}
+        </div>
       </Link>
     );
   }

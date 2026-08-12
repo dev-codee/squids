@@ -6,6 +6,11 @@ import { countryFlag, countryName } from "@/lib/countries";
 import AdvertiserCard from "@/components/AdvertiserCard";
 import Pagination from "@/components/Pagination";
 import SkeletonGrid from "@/components/SkeletonGrid";
+import type { HomeSettings } from "@/lib/db/homeSettings";
+import HomeReviews from "@/components/home/HomeReviews";
+import HomePopularShops from "@/components/home/HomePopularShops";
+import HomeCategories from "@/components/home/HomeCategories";
+import HomeFaqs from "@/components/home/HomeFaqs";
 
 const PAGE_SIZE = 24;
 
@@ -19,10 +24,12 @@ interface PageData {
 
 interface AdvertisersClientProps {
   country: string;
+  initialSearch?: string;
+  homeSettings: HomeSettings;
 }
 
-export default function AdvertisersClient({ country }: AdvertisersClientProps) {
-  const [search, setSearch] = useState("");
+export default function AdvertisersClient({ country, initialSearch = "", homeSettings }: AdvertisersClientProps) {
+  const [search, setSearch] = useState(initialSearch);
   const [page, setPage] = useState(1);
 
   const [data, setData] = useState<PageData | null>(null);
@@ -39,6 +46,7 @@ export default function AdvertisersClient({ country }: AdvertisersClientProps) {
           pageSize: String(PAGE_SIZE),
           country,
           relationship: "joined",
+          requireDeals: "true",
         });
         if (currentSearch) params.set("search", currentSearch);
 
@@ -80,11 +88,11 @@ export default function AdvertisersClient({ country }: AdvertisersClientProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-            Advertisers
+        <header className="mb-10 text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            Promo codes and deals - they really work!
           </h1>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
+          <p className="mt-3 flex items-center justify-center gap-1.5 text-sm text-gray-500">
             <span aria-hidden>{countryFlag(country)}</span>
             Merchants and stores available in {countryName(country)}.
           </p>
@@ -142,7 +150,7 @@ export default function AdvertisersClient({ country }: AdvertisersClientProps) {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
                   {data.advertisers.map((a) => (
                     <AdvertiserCard key={a.id} advertiser={a} country={country} />
                   ))}
@@ -160,6 +168,12 @@ export default function AdvertisersClient({ country }: AdvertisersClientProps) {
           </div>
         )}
       </main>
+
+      {/* New Home Page Sections */}
+      <HomeReviews reviews={homeSettings.reviews} />
+      <HomePopularShops shops={homeSettings.popularShops} />
+      <HomeCategories categories={homeSettings.categories} />
+      <HomeFaqs faqs={homeSettings.faqs} />
     </div>
   );
 }
