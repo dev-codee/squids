@@ -93,7 +93,6 @@ export default function AdvertisersClient({ country, initialSearch = "", homeSet
             Promo codes and deals - they really work!
           </h1>
           <p className="mt-3 flex items-center justify-center gap-1.5 text-sm text-gray-500">
-            <span aria-hidden>{countryFlag(country)}</span>
             Merchants and stores available in {countryName(country)}.
           </p>
         </header>

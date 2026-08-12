@@ -41,11 +41,7 @@ export default function Pagination({
   const to = Math.min(page * pageSize, total);
 
   return (
-    <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
-      <p className="text-xs text-gray-500">
-        Showing <span className="font-medium text-gray-700">{from}</span>–
-        <span className="font-medium text-gray-700">{to}</span> of {total}
-      </p>
+    <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
 
       <nav className="flex items-center gap-1" aria-label="Pagination">
         <button
