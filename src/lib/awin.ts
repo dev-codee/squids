@@ -276,7 +276,15 @@ export function queryAdvertisers(
     if (query.region && a.region !== query.region) return false;
     if (query.relationship && a.relationship !== query.relationship)
       return false;
-    if (country && a.countryCode?.toUpperCase() !== country) return false;
+    if (country) {
+      const isGlobal = 
+        a.region?.toLowerCase() === "global" || 
+        a.region?.toLowerCase() === "worldwide" || 
+        ["WW", "GLOBAL", "INT"].includes(a.countryCode?.toUpperCase() || "");
+      if (a.countryCode?.toUpperCase() !== country && !isGlobal) {
+        return false;
+      }
+    }
     return true;
   });
 
