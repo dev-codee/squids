@@ -17,9 +17,64 @@ import type {
 import { buildSummary } from "@/lib/transactions";
 
 const COLLECTION = "transactions";
+const ADVERTISERS_COLLECTION = "advertisers";
 
 interface TransactionDoc extends Transaction {
   syncedAt: Date;
+}
+
+/** Escape a string for safe use inside a RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Awin's transaction feed doesn't include the advertiser's name (only its id),
+ * so we resolve names from the synced `advertisers` collection at read time.
+ * This repairs both legacy rows (which stored our publisher site name) and any
+ * future rows without needing to re-sync.
+ */
+async function buildAdvertiserNameMap(ids: number[]): Promise<Map<number, string>> {
+  const map = new Map<number, string>();
+  const uniqueIds = Array.from(new Set(ids)).filter((id) => Number.isFinite(id));
+  if (uniqueIds.length === 0) return map;
+
+  const db = await getDb();
+  const docs = await db
+    .collection(ADVERTISERS_COLLECTION)
+    .find({ id: { $in: uniqueIds } }, { projection: { _id: 0, id: 1, name: 1 } })
+    .toArray();
+
+  for (const d of docs) {
+    if (d && typeof d.name === "string" && d.name.trim()) {
+      map.set(d.id as number, d.name);
+    }
+  }
+  return map;
+}
+
+/** Overlay resolved advertiser names onto a batch of transactions. */
+function applyAdvertiserNames(
+  transactions: Transaction[],
+  nameMap: Map<number, string>,
+): Transaction[] {
+  return transactions.map((tx) => ({
+    ...tx,
+    advertiserName: nameMap.get(tx.advertiserId) ?? `Advertiser #${tx.advertiserId}`,
+  }));
+}
+
+/** Advertiser ids whose (real) name matches a search term. */
+async function resolveAdvertiserIdsByName(search: string): Promise<number[]> {
+  const db = await getDb();
+  const docs = await db
+    .collection(ADVERTISERS_COLLECTION)
+    .find(
+      { name: { $regex: escapeRegExp(search), $options: "i" } },
+      { projection: { _id: 0, id: 1 } },
+    )
+    .toArray();
+  return docs.map((d) => d.id as number);
 }
 
 // ---------------------------------------------------------------------------
@@ -69,7 +124,10 @@ export async function upsertTransactions(
 /**
  * Build MongoDB filter from the query parameters.
  */
-function buildFilter(query: TransactionQuery): Record<string, unknown> {
+function buildFilter(
+  query: TransactionQuery,
+  searchAdvertiserIds: number[] = [],
+): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
 
   // Date range filter
@@ -88,10 +146,19 @@ function buildFilter(query: TransactionQuery): Record<string, unknown> {
   }
   if (query.search?.trim()) {
     const search = query.search.trim();
-    filter.$or = [
-      { advertiserName: { $regex: search, $options: "i" } },
-      { id: isNaN(Number(search)) ? -1 : Number(search) },
+    const numeric = Number(search);
+    const or: Record<string, unknown>[] = [
+      // Legacy stored name (may still hold a URL) — kept for completeness.
+      { advertiserName: { $regex: escapeRegExp(search), $options: "i" } },
     ];
+    if (!isNaN(numeric)) {
+      or.push({ id: numeric }, { advertiserId: numeric });
+    }
+    // Match against real advertiser names resolved from the advertisers collection.
+    if (searchAdvertiserIds.length > 0) {
+      or.push({ advertiserId: { $in: searchAdvertiserIds } });
+    }
+    filter.$or = or;
   }
 
   return filter;
@@ -106,25 +173,20 @@ async function getFacets(
   const db = await getDb();
   const col = db.collection<TransactionDoc>(COLLECTION);
 
-  const [statuses, advertiserDocs] = await Promise.all([
+  const [statuses, advertiserIds] = await Promise.all([
     col.distinct("status", dateFilter),
-    col
-      .aggregate<{ _id: number; name: string }>([
-        { $match: dateFilter },
-        {
-          $group: {
-            _id: "$advertiserId",
-            name: { $first: "$advertiserName" },
-          },
-        },
-        { $sort: { name: 1 } },
-      ])
-      .toArray(),
+    col.distinct("advertiserId", dateFilter),
   ]);
+
+  // Resolve real advertiser names (Awin transactions carry only the id).
+  const nameMap = await buildAdvertiserNameMap(advertiserIds as number[]);
+  const advertisers = (advertiserIds as number[])
+    .map((id) => ({ id, name: nameMap.get(id) ?? `Advertiser #${id}` }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return {
     statuses: (statuses as string[]).sort(),
-    advertisers: advertiserDocs.map((d) => ({ id: d._id, name: d.name })),
+    advertisers,
   };
 }
 
@@ -153,7 +215,12 @@ export async function getTransactionsFromDb(
   const count = await col.estimatedDocumentCount();
   if (count === 0) return null;
 
-  const filter = buildFilter(query);
+  // Resolve advertiser ids matching a name search so the search box works
+  // against the real advertiser names, not the (legacy) stored value.
+  const searchAdvertiserIds = query.search?.trim()
+    ? await resolveAdvertiserIdsByName(query.search.trim())
+    : [];
+  const filter = buildFilter(query, searchAdvertiserIds);
 
   // Facets use only the date filter so all statuses/advertisers are shown
   const dateFilter: Record<string, unknown> = {};
@@ -189,7 +256,14 @@ export async function getTransactionsFromDb(
     .limit(pageSize)
     .toArray();
 
-  const transactions = docs as unknown as Transaction[];
+  // Overlay real advertiser names (transactions store only the id).
+  const nameMap = await buildAdvertiserNameMap(
+    docs.map((d) => (d as unknown as Transaction).advertiserId),
+  );
+  const transactions = applyAdvertiserNames(
+    docs as unknown as Transaction[],
+    nameMap,
+  );
 
   // Build summary from ALL matching transactions (not just the page)
   // For performance, we aggregate in MongoDB
@@ -279,7 +353,10 @@ export async function getAllTransactionsFromDb(
   const count = await col.estimatedDocumentCount();
   if (count === 0) return null;
 
-  const filter = buildFilter(query);
+  const searchAdvertiserIds = query.search?.trim()
+    ? await resolveAdvertiserIdsByName(query.search.trim())
+    : [];
+  const filter = buildFilter(query, searchAdvertiserIds);
   const sort = buildSort(query);
 
   const docs = await col
@@ -287,7 +364,10 @@ export async function getAllTransactionsFromDb(
     .sort(sort)
     .toArray();
 
-  return docs as unknown as Transaction[];
+  const nameMap = await buildAdvertiserNameMap(
+    docs.map((d) => (d as unknown as Transaction).advertiserId),
+  );
+  return applyAdvertiserNames(docs as unknown as Transaction[], nameMap);
 }
 
 /**

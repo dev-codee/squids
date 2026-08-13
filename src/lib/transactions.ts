@@ -248,7 +248,10 @@ function normaliseTransaction(raw: AwinTransaction): Transaction {
   return {
     id: raw.id,
     advertiserId: raw.advertiserId,
-    advertiserName: raw.advertiserName || raw.siteName || `Advertiser #${raw.advertiserId}`,
+    // Awin's transaction feed omits the advertiser name (siteName is OUR
+    // publisher site, not the advertiser). The real name is resolved from the
+    // advertisers collection at read time — see db/transactions.ts.
+    advertiserName: raw.advertiserName || `Advertiser #${raw.advertiserId}`,
     status: (raw.commissionStatus || "unknown").toLowerCase(),
     commission: raw.commissionAmount?.amount ?? 0,
     commissionCurrency: raw.commissionAmount?.currency ?? "USD",
