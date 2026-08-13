@@ -5,9 +5,11 @@ import ModuleScaffold from "@/components/admin/ModuleScaffold";
 
 export const dynamic = "force-dynamic";
 
-/** Pre-generate the scaffold network routes. Awin and Admitad have their own explicit routes. */
+/** Pre-generate the scaffold network routes. Awin, Admitad, and Commission Factory have their own explicit routes. */
 export function generateStaticParams() {
-  return NETWORKS.filter((n) => n.slug !== "awin" && n.slug !== "admitad").map((n) => ({ network: n.slug }));
+  return NETWORKS.filter(
+    (n) => n.slug !== "awin" && n.slug !== "admitad" && n.slug !== "commission-factory"
+  ).map((n) => ({ network: n.slug }));
 }
 
 const KPIS = ["Earnings", "Clicks", "Conversions", "Conversion Rate"];

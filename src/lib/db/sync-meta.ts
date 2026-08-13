@@ -29,7 +29,10 @@ export type SyncEntity =
   | "awin:transactions"
   | "admitad:advertisers"
   | "admitad:deals"
-  | "admitad:transactions";
+  | "admitad:transactions"
+  | "commission-factory:advertisers"
+  | "commission-factory:deals"
+  | "commission-factory:transactions";
 
 interface SyncMetaDoc {
   entity: string;

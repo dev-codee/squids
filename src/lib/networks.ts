@@ -46,7 +46,7 @@ export const NETWORKS: NetworkConfig[] = [
     slug: "commission-factory",
     name: "Commission Factory",
     description: "Commission Factory merchants and performance reporting.",
-    integrated: false,
+    integrated: true,
     accent: "bg-blue-100 text-blue-700",
   },
   {

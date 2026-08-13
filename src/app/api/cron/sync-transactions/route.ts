@@ -123,6 +123,49 @@ export async function GET(request: NextRequest) {
     results.admitad = { error: msg };
   }
 
+  // ── Commission Factory ───────────────────────────────────────────────────
+  try {
+    const { fetchCfTransactions } = await import("@/lib/commission-factory");
+
+    const lastCfSync = await getLastSyncTime("commission-factory:transactions");
+    let cfStartDate: Date;
+
+    if (lastCfSync) {
+      cfStartDate = new Date(lastCfSync.getTime() - 2 * 60 * 60 * 1000);
+    } else {
+      cfStartDate = new Date();
+      cfStartDate.setUTCDate(cfStartDate.getUTCDate() - 31);
+    }
+
+    const cfTx = await fetchCfTransactions(
+      cfStartDate.toISOString(),
+      endDate.toISOString(),
+    );
+    const cfResult = await upsertTransactions(cfTx);
+    await updateSyncTime("commission-factory:transactions", cfTx.length);
+
+    results.cf = {
+      mode: lastCfSync ? "incremental" : "full",
+      count: cfTx.length,
+      upserted: cfResult.upserted,
+      modified: cfResult.modified,
+      dateRange: {
+        from: cfStartDate.toISOString(),
+        to: endDate.toISOString(),
+      },
+    };
+
+    console.log(
+      `[cron/sync-transactions] CF: ${cfTx.length} transactions ` +
+        `(${cfResult.upserted} new, ${cfResult.modified} updated)`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[cron/sync-transactions] CF sync failed (non-fatal):", msg);
+    await recordSyncError("commission-factory:transactions", msg).catch(() => {});
+    results.cf = { error: msg };
+  }
+
   return NextResponse.json({
     ok: true,
     syncedAt: new Date().toISOString(),

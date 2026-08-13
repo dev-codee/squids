@@ -106,6 +106,36 @@ export async function GET(request: NextRequest) {
     results.admitad = { error: msg };
   }
 
+  // ── Commission Factory ───────────────────────────────────────────────────
+  try {
+    const { fetchCfMerchants } = await import("@/lib/commission-factory");
+    const cfAdvertisers = await fetchCfMerchants();
+
+    const cfResult = await upsertAdvertisers(cfAdvertisers);
+    const cfRemoved = await removeStaleAdvertisers(
+      cfAdvertisers.map((a) => a.id),
+      "commission-factory",
+    );
+    await updateSyncTime("commission-factory:advertisers", cfAdvertisers.length);
+
+    results.cf = {
+      count: cfAdvertisers.length,
+      upserted: cfResult.upserted,
+      modified: cfResult.modified,
+      removed: cfRemoved,
+    };
+
+    console.log(
+      `[cron/sync-advertisers] CF: ${cfAdvertisers.length} advertisers ` +
+        `(${cfResult.upserted} new, ${cfResult.modified} updated, ${cfRemoved} removed)`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[cron/sync-advertisers] CF sync failed (non-fatal):", msg);
+    await recordSyncError("commission-factory:advertisers", msg).catch(() => {});
+    results.cf = { error: msg };
+  }
+
   return NextResponse.json({
     ok: true,
     syncedAt: new Date().toISOString(),
