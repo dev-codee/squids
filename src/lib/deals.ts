@@ -58,6 +58,8 @@ export type CouponSubtype = "code" | "student" | "cashback";
 
 export interface Deal {
   id: number;
+  /** Affiliate network this deal belongs to ("awin" | "admitad"). */
+  network: string;
   title: string;
   description: string | null;
   advertiser: DealAdvertiser;
@@ -147,6 +149,7 @@ function normaliseDealType(raw?: string): "voucher" | "promotion" {
 function normalisePromotion(p: AwinPromotion): Deal {
   return {
     id: p.promotionId,
+    network: "awin",
     title: p.title,
     description: p.description || null,
     advertiser: {

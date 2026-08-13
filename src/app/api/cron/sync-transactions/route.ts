@@ -26,72 +26,106 @@ function isAuthorised(request: NextRequest): boolean {
 /**
  * GET /api/cron/sync-transactions
  *
- * Incrementally syncs transactions from Awin to MongoDB.
- *
- * - First run (no sync metadata): fetches the last 31 days.
- * - Subsequent runs: fetches only since the last successful sync, with a
- *   2-hour overlap to catch any late-arriving transactions.
+ * Incrementally syncs transactions from both Awin and Admitad to MongoDB.
+ * Each network uses its own sync-meta key for incremental tracking.
  */
 export async function GET(request: NextRequest) {
   if (!isAuthorised(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const results: Record<string, unknown> = {};
+  const endDate = new Date();
+
+  // ── Awin ─────────────────────────────────────────────────────────────────
   try {
-    const endDate = new Date();
+    const lastAwinSync =
+      (await getLastSyncTime("awin:transactions")) ??
+      (await getLastSyncTime("transactions"));
+    let awinStartDate: Date;
 
-    // Determine start date: use last sync time or fall back to 31 days ago
-    const lastSync = await getLastSyncTime("transactions");
-    let startDate: Date;
-
-    if (lastSync) {
-      // Fetch from 2 hours before the last sync to catch any late arrivals
-      startDate = new Date(lastSync.getTime() - 2 * 60 * 60 * 1000);
+    if (lastAwinSync) {
+      awinStartDate = new Date(lastAwinSync.getTime() - 2 * 60 * 60 * 1000);
     } else {
-      // First run — fetch the full 31 days
-      startDate = new Date();
-      startDate.setUTCDate(startDate.getUTCDate() - 31);
+      awinStartDate = new Date();
+      awinStartDate.setUTCDate(awinStartDate.getUTCDate() - 31);
     }
 
-    const transactions = await fetchTransactions(
-      startDate.toISOString(),
+    const awinTx = await fetchTransactions(
+      awinStartDate.toISOString(),
       endDate.toISOString(),
     );
+    const awinResult = await upsertTransactions(awinTx);
+    await updateSyncTime("awin:transactions", awinTx.length);
 
-    // Persist to MongoDB (upsert handles deduplication by id)
-    const result = await upsertTransactions(transactions);
-
-    // Update sync metadata
-    await updateSyncTime("transactions", transactions.length);
-
-    const isIncremental = !!lastSync;
-
-    console.log(
-      `[cron/sync-transactions] ${isIncremental ? "Incremental" : "Full"} sync: ` +
-        `${transactions.length} transactions ` +
-        `(${result.upserted} new, ${result.modified} updated) ` +
-        `at ${new Date().toISOString()}`,
-    );
-
-    return NextResponse.json({
-      ok: true,
-      syncedAt: new Date().toISOString(),
-      mode: isIncremental ? "incremental" : "full",
-      count: transactions.length,
-      upserted: result.upserted,
-      modified: result.modified,
+    results.awin = {
+      mode: lastAwinSync ? "incremental" : "full",
+      count: awinTx.length,
+      upserted: awinResult.upserted,
+      modified: awinResult.modified,
       dateRange: {
-        from: startDate.toISOString(),
+        from: awinStartDate.toISOString(),
         to: endDate.toISOString(),
       },
-    });
+    };
+
+    console.log(
+      `[cron/sync-transactions] Awin: ${awinTx.length} transactions ` +
+        `(${awinResult.upserted} new, ${awinResult.modified} updated)`,
+    );
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
-    console.error("[cron/sync-transactions] Sync failed:", error);
-    await recordSyncError("transactions", msg).catch(() => {});
-    return NextResponse.json(
-      { ok: false, error: "Sync failed." },
-      { status: 500 },
-    );
+    console.error("[cron/sync-transactions] Awin sync failed:", error);
+    await recordSyncError("awin:transactions", msg).catch(() => {});
+    results.awin = { error: msg };
   }
+
+  // ── Admitad ──────────────────────────────────────────────────────────────
+  try {
+    const { fetchAdmitadActions } = await import("@/lib/admitad");
+
+    const lastAdmitadSync = await getLastSyncTime("admitad:transactions");
+    let admitadStartDate: Date;
+
+    if (lastAdmitadSync) {
+      admitadStartDate = new Date(lastAdmitadSync.getTime() - 2 * 60 * 60 * 1000);
+    } else {
+      admitadStartDate = new Date();
+      admitadStartDate.setUTCDate(admitadStartDate.getUTCDate() - 31);
+    }
+
+    const admitadTx = await fetchAdmitadActions(
+      admitadStartDate.toISOString(),
+      endDate.toISOString(),
+    );
+    const admitadResult = await upsertTransactions(admitadTx);
+    await updateSyncTime("admitad:transactions", admitadTx.length);
+
+    results.admitad = {
+      mode: lastAdmitadSync ? "incremental" : "full",
+      count: admitadTx.length,
+      upserted: admitadResult.upserted,
+      modified: admitadResult.modified,
+      dateRange: {
+        from: admitadStartDate.toISOString(),
+        to: endDate.toISOString(),
+      },
+    };
+
+    console.log(
+      `[cron/sync-transactions] Admitad: ${admitadTx.length} transactions ` +
+        `(${admitadResult.upserted} new, ${admitadResult.modified} updated)`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[cron/sync-transactions] Admitad sync failed (non-fatal):", msg);
+    await recordSyncError("admitad:transactions", msg).catch(() => {});
+    results.admitad = { error: msg };
+  }
+
+  return NextResponse.json({
+    ok: true,
+    syncedAt: new Date().toISOString(),
+    results,
+  });
 }

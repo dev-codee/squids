@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
 
     const advertiser: Advertiser = {
       id,
+      network: body.network ? String(body.network).trim() : "awin",
       name: String(body.name).trim(),
       logoUrl: body.logoUrl ? String(body.logoUrl).trim() : null,
       status: body.status ? String(body.status).trim() : "active",

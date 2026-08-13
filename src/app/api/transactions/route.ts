@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const query: TransactionQuery = {
+  const query: TransactionQuery & { network?: string } = {
     startDate,
     endDate,
     status: params.get("status") || undefined,
@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
       : undefined,
     sortBy: params.get("sortBy") || undefined,
     sortDir: (params.get("sortDir") as "asc" | "desc") || undefined,
+    network: params.get("network") || undefined,
   };
 
   const isCsvExport = params.get("format") === "csv";

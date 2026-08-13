@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
     region: params.get("region") ?? undefined,
     relationship: params.get("relationship") ?? undefined,
     country: params.get("country") ?? undefined,
+    network: params.get("network") ?? undefined,
     page: Number.parseInt(params.get("page") ?? "1", 10) || 1,
     pageSize: Number.parseInt(params.get("pageSize") ?? "", 10) || undefined,
     requireDeals: params.get("requireDeals") === "true",

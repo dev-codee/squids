@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
   const type = params.get("type") ?? "all";
   const country = params.get("country") ?? undefined;
   const search = params.get("search") ?? undefined;
+  const network = params.get("network") ?? undefined;
   const page = Number.parseInt(params.get("page") ?? "1", 10) || 1;
   const pageSize =
     Number.parseInt(params.get("pageSize") ?? "", 10) || undefined;
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
         status,
         type,
         country,
+        network,
         page,
         pageSize,
       });
@@ -65,6 +67,7 @@ export async function GET(request: NextRequest) {
               status,
               type,
               country,
+              network,
               page,
               pageSize,
             });

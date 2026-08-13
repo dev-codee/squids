@@ -32,6 +32,8 @@ export interface AwinProgramme {
 /** Normalised advertiser shape sent to the client. */
 export interface Advertiser {
   id: number;
+  /** Affiliate network this advertiser belongs to ("awin" | "admitad"). */
+  network: string;
   name: string;
   logoUrl: string | null;
   status: string | null;
@@ -112,6 +114,7 @@ export function normaliseProgramme(
 ): Advertiser {
   return {
     id: programme.id,
+    network: "awin",
     name: programme.name,
     logoUrl: programme.logoUrl || null,
     status: programme.status || null,

@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
 
     const deal: Deal = {
       id,
+      network: body.network ? String(body.network).trim() : "awin",
       title: String(body.title).trim(),
       description: body.description ? String(body.description).trim() : null,
       advertiser: {

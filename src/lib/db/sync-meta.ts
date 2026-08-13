@@ -2,21 +2,51 @@
  * Sync metadata tracking.
  *
  * Stores the last successful sync timestamp for each entity type
- * (advertisers, deals, transactions) so cron jobs can do incremental syncs.
+ * (advertisers, deals, transactions) per network so cron jobs can do
+ * incremental syncs.
+ *
+ * Entity keys are network-prefixed: "awin:advertisers", "admitad:deals", etc.
+ * The old bare keys ("advertisers", "deals", "transactions") are treated as
+ * aliases for the "awin:*" equivalents for backwards compatibility.
  */
 
 import { getDb } from "@/lib/mongodb";
 
 const COLLECTION = "sync_meta";
 
-export type SyncEntity = "advertisers" | "deals" | "transactions";
+/**
+ * Sync entity keys.
+ *
+ * Bare keys ("advertisers", etc.) are legacy aliases for "awin:*".
+ * New code should always use the network-prefixed form.
+ */
+export type SyncEntity =
+  | "advertisers"
+  | "deals"
+  | "transactions"
+  | "awin:advertisers"
+  | "awin:deals"
+  | "awin:transactions"
+  | "admitad:advertisers"
+  | "admitad:deals"
+  | "admitad:transactions";
 
 interface SyncMetaDoc {
-  entity: SyncEntity;
+  entity: string;
   lastSyncedAt: Date;
   lastCount: number;
   status: "success" | "error";
   errorMessage?: string;
+}
+
+/**
+ * Normalise a sync entity key so bare keys map to "awin:*".
+ */
+function normaliseEntity(entity: SyncEntity): string {
+  if (entity === "advertisers") return "awin:advertisers";
+  if (entity === "deals") return "awin:deals";
+  if (entity === "transactions") return "awin:transactions";
+  return entity;
 }
 
 /**
@@ -28,9 +58,10 @@ export async function getLastSyncTime(
 ): Promise<Date | null> {
   const db = await getDb();
   const col = db.collection<SyncMetaDoc>(COLLECTION);
+  const key = normaliseEntity(entity);
 
   const doc = await col.findOne(
-    { entity, status: "success" },
+    { entity: key, status: "success" },
     { sort: { lastSyncedAt: -1 } },
   );
 
@@ -46,12 +77,13 @@ export async function updateSyncTime(
 ): Promise<void> {
   const db = await getDb();
   const col = db.collection<SyncMetaDoc>(COLLECTION);
+  const key = normaliseEntity(entity);
 
   await col.updateOne(
-    { entity },
+    { entity: key },
     {
       $set: {
-        entity,
+        entity: key,
         lastSyncedAt: new Date(),
         lastCount: count,
         status: "success" as const,
@@ -71,12 +103,13 @@ export async function recordSyncError(
 ): Promise<void> {
   const db = await getDb();
   const col = db.collection<SyncMetaDoc>(COLLECTION);
+  const key = normaliseEntity(entity);
 
   await col.updateOne(
-    { entity },
+    { entity: key },
     {
       $set: {
-        entity,
+        entity: key,
         lastSyncedAt: new Date(),
         lastCount: 0,
         status: "error" as const,

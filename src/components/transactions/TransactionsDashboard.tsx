@@ -47,6 +47,8 @@ export interface TransactionsDashboardProps {
   backHref?: { href: string; label: string };
   /** Optional badge shown next to the title. */
   badge?: { label: string; className: string };
+  /** When set, filters transactions to a specific affiliate network. */
+  network?: string;
 }
 
 /**
@@ -55,9 +57,10 @@ export interface TransactionsDashboardProps {
  */
 export default function TransactionsDashboard({
   title = "Transactions Dashboard",
-  subtitle = "View and analyse your Awin transaction data, commissions, and performance.",
+  subtitle = "View and analyse your transaction data, commissions, and performance.",
   backHref,
   badge,
+  network,
 }: TransactionsDashboardProps) {
   const { startDate: defStart, endDate: defEnd } = defaultDates();
 
@@ -107,6 +110,7 @@ export default function TransactionsDashboard({
         if (st) params.set("status", st);
         if (adv) params.set("advertiserId", adv);
         if (srch) params.set("search", srch);
+        if (network) params.set("network", network);
 
         const res = await fetch(`/api/transactions?${params}`);
         const json = await res.json();
@@ -128,6 +132,7 @@ export default function TransactionsDashboard({
         if (st) allParams.set("status", st);
         if (adv) allParams.set("advertiserId", adv);
         if (srch) allParams.set("search", srch);
+        if (network) allParams.set("network", network);
 
         const allRes = await fetch(`/api/transactions?${allParams}`);
         const allJson = await allRes.json();

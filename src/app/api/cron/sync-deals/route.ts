@@ -26,72 +26,103 @@ function isAuthorised(request: NextRequest): boolean {
 /**
  * GET /api/cron/sync-deals
  *
- * Fetches all pages of deals/promotions from Awin, persists them to MongoDB,
- * removes expired deals, and removes deals no longer returned by Awin.
+ * Fetches deals from both Awin and Admitad, persists them to MongoDB,
+ * removes expired deals, and removes stale entries per network.
  */
 export async function GET(request: NextRequest) {
   if (!isAuthorised(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const results: Record<string, unknown> = {};
+
+  // Remove expired deals across all networks first
+  const expired = await removeExpiredDeals();
+
+  // ── Awin ─────────────────────────────────────────────────────────────────
   try {
-    const allDeals: Deal[] = [];
+    const awinDeals: Deal[] = [];
     let page = 1;
     const pageSize = 100;
 
-    // Fetch all pages of deals from Awin
-    while (page <= 10) { // Safety limit of 10 pages (1000 deals max)
+    while (page <= 10) {
       try {
         const { deals } = await fetchDeals({ page, pageSize });
         if (!deals || deals.length === 0) break;
-        allDeals.push(...deals);
+        awinDeals.push(...deals);
         if (deals.length < pageSize) break;
         page++;
       } catch (pageErr) {
-        console.warn(`[cron/sync-deals] Error fetching page ${page}:`, pageErr);
+        console.warn(`[cron/sync-deals] Awin page ${page} error:`, pageErr);
         break;
       }
     }
 
-    // Persist to MongoDB
-    const result = await upsertDeals(allDeals);
-
-    // Remove expired deals (endDate has passed)
-    const expired = await removeExpiredDeals();
-
-    // Remove deals no longer in the Awin response (only if we fetched successfully)
-    let stale = 0;
-    if (allDeals.length > 0) {
-      const currentIds = allDeals.map((d) => d.id);
-      stale = await removeStaleDeals(currentIds);
+    const awinResult = await upsertDeals(awinDeals);
+    let awinStale = 0;
+    if (awinDeals.length > 0) {
+      awinStale = await removeStaleDeals(
+        awinDeals.map((d) => d.id),
+        "awin",
+      );
     }
+    await updateSyncTime("awin:deals", awinDeals.length);
 
-    // Update sync metadata
-    await updateSyncTime("deals", allDeals.length);
+    results.awin = {
+      count: awinDeals.length,
+      upserted: awinResult.upserted,
+      modified: awinResult.modified,
+      staleRemoved: awinStale,
+    };
 
     console.log(
-      `[cron/sync-deals] Synced ${allDeals.length} deals ` +
-        `(${result.upserted} new, ${result.modified} updated, ` +
-        `${expired} expired removed, ${stale} stale removed) ` +
-        `at ${new Date().toISOString()}`,
+      `[cron/sync-deals] Awin: ${awinDeals.length} deals ` +
+        `(${awinResult.upserted} new, ${awinResult.modified} updated, ${awinStale} stale removed)`,
     );
-
-    return NextResponse.json({
-      ok: true,
-      syncedAt: new Date().toISOString(),
-      count: allDeals.length,
-      upserted: result.upserted,
-      modified: result.modified,
-      expiredRemoved: expired,
-      staleRemoved: stale,
-    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
-    console.error("[cron/sync-deals] Sync failed:", error);
-    await recordSyncError("deals", msg).catch(() => {});
-    return NextResponse.json(
-      { ok: false, error: "Sync failed." },
-      { status: 500 },
-    );
+    console.error("[cron/sync-deals] Awin sync failed:", error);
+    await recordSyncError("awin:deals", msg).catch(() => {});
+    results.awin = { error: msg };
   }
+
+  // ── Admitad ──────────────────────────────────────────────────────────────
+  try {
+    const { fetchAdmitadCoupons } = await import("@/lib/admitad");
+    const admitadDeals = await fetchAdmitadCoupons();
+
+    const admitadResult = await upsertDeals(admitadDeals);
+    let admitadStale = 0;
+    if (admitadDeals.length > 0) {
+      admitadStale = await removeStaleDeals(
+        admitadDeals.map((d) => d.id),
+        "admitad",
+      );
+    }
+    await updateSyncTime("admitad:deals", admitadDeals.length);
+
+    results.admitad = {
+      count: admitadDeals.length,
+      upserted: admitadResult.upserted,
+      modified: admitadResult.modified,
+      staleRemoved: admitadStale,
+    };
+
+    console.log(
+      `[cron/sync-deals] Admitad: ${admitadDeals.length} deals ` +
+        `(${admitadResult.upserted} new, ${admitadResult.modified} updated, ${admitadStale} stale removed)`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[cron/sync-deals] Admitad sync failed (non-fatal):", msg);
+    await recordSyncError("admitad:deals", msg).catch(() => {});
+    results.admitad = { error: msg };
+  }
+
+  return NextResponse.json({
+    ok: true,
+    syncedAt: new Date().toISOString(),
+    expiredRemoved: expired,
+    results,
+  });
 }

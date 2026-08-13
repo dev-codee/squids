@@ -4,6 +4,9 @@
  * Stores the normalised `Advertiser` type from `@/lib/awin` with a
  * `syncedAt` timestamp. Provides bulk upsert (for cron sync) and
  * query/filter/paginate (for the API route).
+ *
+ * Multi-network: keyed on composite `(network, id)` to avoid ID collisions
+ * between Awin and Admitad (or future networks).
  */
 
 import { getDb } from "@/lib/mongodb";
@@ -27,7 +30,7 @@ interface AdvertiserDoc extends Advertiser {
 
 /**
  * Upsert a batch of advertisers into MongoDB.
- * Uses bulk `updateOne` with `upsert: true` keyed on advertiser `id`.
+ * Uses bulk `updateOne` with `upsert: true` keyed on `(network, id)`.
  */
 export async function upsertAdvertisers(
   advertisers: Advertiser[],
@@ -35,14 +38,14 @@ export async function upsertAdvertisers(
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
-  // Ensure an index on `id` for fast lookups and upserts
-  await col.createIndex({ id: 1 }, { unique: true });
+  // Ensure composite unique index for multi-network support
+  await col.createIndex({ network: 1, id: 1 }, { unique: true });
 
   const now = new Date();
   const ops = advertisers.map((a) => ({
     updateOne: {
-      filter: { id: a.id },
-      update: { $setOnInsert: { ...a, syncedAt: now } },
+      filter: { network: a.network ?? "awin", id: a.id },
+      update: { $setOnInsert: { ...a, network: a.network ?? "awin", syncedAt: now } },
       upsert: true,
     },
   }));
@@ -63,8 +66,12 @@ export async function upsertAdvertisers(
 /**
  * Build MongoDB filter from the query parameters.
  */
-function buildFilter(query: AdvertiserQuery): Record<string, unknown> {
+function buildFilter(query: AdvertiserQuery & { network?: string }): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
+
+  if (query.network) {
+    filter.network = query.network;
+  }
 
   if (query.search?.trim()) {
     filter.name = { $regex: query.search.trim(), $options: "i" };
@@ -113,7 +120,7 @@ export async function getAdvertiserFacets(): Promise<AdvertiserFacets> {
  * Returns the same `PagedAdvertisers` shape the API route expects.
  */
 export async function getAdvertisersFromDb(
-  query: AdvertiserQuery,
+  query: AdvertiserQuery & { network?: string },
 ): Promise<PagedAdvertisers | null> {
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
@@ -137,8 +144,20 @@ export async function getAdvertisersFromDb(
       {
         $lookup: {
           from: "deals",
-          localField: "id",
-          foreignField: "advertiser.id",
+          let: { advId: "$id", advNetwork: "$network" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$advertiser.id", "$$advId"] },
+                    { $eq: ["$network", "$$advNetwork"] },
+                  ],
+                },
+              },
+            },
+            { $limit: 1 },
+          ],
           as: "activeDeals",
         },
       },
@@ -161,8 +180,20 @@ export async function getAdvertisersFromDb(
       {
         $lookup: {
           from: "deals",
-          localField: "id",
-          foreignField: "advertiser.id",
+          let: { advId: "$id", advNetwork: "$network" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$advertiser.id", "$$advId"] },
+                    { $eq: ["$network", "$$advNetwork"] },
+                  ],
+                },
+              },
+            },
+            { $limit: 1 },
+          ],
           as: "activeDeals",
         },
       },
@@ -193,11 +224,17 @@ export async function getAdvertisersFromDb(
 
 /**
  * Get a single advertiser by ID from MongoDB.
+ * Optionally scoped by network; defaults to any network.
  */
-export async function getAdvertiserByIdFromDb(id: number): Promise<Advertiser | null> {
+export async function getAdvertiserByIdFromDb(
+  id: number,
+  network?: string,
+): Promise<Advertiser | null> {
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
-  const doc = await col.findOne({ id }, { projection: { _id: 0, syncedAt: 0 } });
+  const filter: Record<string, unknown> = { id };
+  if (network) filter.network = network;
+  const doc = await col.findOne(filter, { projection: { _id: 0, syncedAt: 0 } });
   return (doc as unknown as Advertiser) || null;
 }
 
@@ -221,6 +258,9 @@ function escapeRegExp(s: string): string {
  * slugified `name` using a loose, anchored, case-insensitive regex where each
  * hyphen tolerates any run of non-alphanumeric characters ("best-buy" ↔ "Best Buy").
  * A JS slug re-check disambiguates when the regex has multiple hits.
+ *
+ * When multiple networks match, prefer the one with active deals, then the
+ * first found (deterministic by sort order).
  */
 export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | null> {
   const normalized = slug.trim().toLowerCase();
@@ -265,14 +305,17 @@ export async function hasAdvertiserData(): Promise<boolean> {
 }
 
 /**
- * Remove advertisers that are no longer present in the Awin API response.
- * Called after upserting the fresh data — any advertiser whose `id` is NOT
- * in `currentIds` gets deleted (e.g. relationship changed to "not joined").
+ * Remove advertisers that are no longer present in the API response
+ * **for a specific network**. Called after upserting the fresh data — any
+ * advertiser in that network whose `id` is NOT in `currentIds` gets deleted.
  *
+ * @param currentIds IDs that are still valid for this network.
+ * @param network The network to scope the removal to (e.g. "awin", "admitad").
  * @returns Number of documents removed.
  */
 export async function removeStaleAdvertisers(
   currentIds: number[],
+  network: string = "awin",
 ): Promise<number> {
   if (currentIds.length === 0) return 0;
 
@@ -280,6 +323,7 @@ export async function removeStaleAdvertisers(
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
   const result = await col.deleteMany({
+    network,
     id: { $nin: currentIds },
   });
 
@@ -304,15 +348,16 @@ export async function createAdvertiser(advertiser: Advertiser): Promise<Advertis
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
-  await col.createIndex({ id: 1 }, { unique: true });
+  await col.createIndex({ network: 1, id: 1 }, { unique: true });
 
   const doc: AdvertiserDoc = {
     ...advertiser,
+    network: advertiser.network ?? "awin",
     syncedAt: new Date(),
   };
 
   await col.updateOne(
-    { id: advertiser.id },
+    { network: doc.network, id: advertiser.id },
     { $set: doc },
     { upsert: true }
   );
@@ -326,12 +371,13 @@ export async function createAdvertiser(advertiser: Advertiser): Promise<Advertis
 export async function updateAdvertiser(
   id: number,
   data: Partial<Advertiser>,
+  network: string = "awin",
 ): Promise<boolean> {
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
   const result = await col.updateOne(
-    { id },
+    { network, id },
     { $set: { ...data, syncedAt: new Date() } }
   );
 
@@ -341,11 +387,13 @@ export async function updateAdvertiser(
 /**
  * Delete an advertiser from MongoDB by ID.
  */
-export async function deleteAdvertiser(id: number): Promise<boolean> {
+export async function deleteAdvertiser(
+  id: number,
+  network: string = "awin",
+): Promise<boolean> {
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
-  const result = await col.deleteOne({ id });
+  const result = await col.deleteOne({ network, id });
   return result.deletedCount > 0;
 }
-

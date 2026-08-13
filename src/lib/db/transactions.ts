@@ -4,6 +4,9 @@
  * Stores the normalised `Transaction` type from `@/lib/transactions` with a
  * `syncedAt` timestamp. Provides bulk upsert (for cron sync) and
  * query/filter/sort/paginate (for the API route).
+ *
+ * Multi-network: keyed on composite `(network, id)` to avoid ID collisions
+ * between Awin and Admitad (or future networks).
  */
 
 import { getDb } from "@/lib/mongodb";
@@ -33,6 +36,9 @@ function escapeRegExp(s: string): string {
  * so we resolve names from the synced `advertisers` collection at read time.
  * This repairs both legacy rows (which stored our publisher site name) and any
  * future rows without needing to re-sync.
+ *
+ * For Admitad, the campaign name is stored directly on the transaction, so this
+ * lookup only enriches entries that don't already have a meaningful name.
  */
 async function buildAdvertiserNameMap(ids: number[]): Promise<Map<number, string>> {
   const map = new Map<number, string>();
@@ -60,7 +66,7 @@ function applyAdvertiserNames(
 ): Transaction[] {
   return transactions.map((tx) => ({
     ...tx,
-    advertiserName: nameMap.get(tx.advertiserId) ?? `Advertiser #${tx.advertiserId}`,
+    advertiserName: nameMap.get(tx.advertiserId) ?? tx.advertiserName ?? `Advertiser #${tx.advertiserId}`,
   }));
 }
 
@@ -83,7 +89,7 @@ async function resolveAdvertiserIdsByName(search: string): Promise<number[]> {
 
 /**
  * Upsert a batch of transactions into MongoDB.
- * Uses bulk `updateOne` with `upsert: true` keyed on transaction `id`.
+ * Uses bulk `updateOne` with `upsert: true` keyed on `(network, id)`.
  */
 export async function upsertTransactions(
   transactions: Transaction[],
@@ -93,17 +99,18 @@ export async function upsertTransactions(
 
   // Ensure indexes for common queries
   await Promise.all([
-    col.createIndex({ id: 1 }, { unique: true }),
+    col.createIndex({ network: 1, id: 1 }, { unique: true }),
     col.createIndex({ transactionDate: -1 }),
     col.createIndex({ advertiserId: 1 }),
     col.createIndex({ status: 1 }),
+    col.createIndex({ network: 1 }),
   ]);
 
   const now = new Date();
   const ops = transactions.map((tx) => ({
     updateOne: {
-      filter: { id: tx.id },
-      update: { $setOnInsert: { ...tx, syncedAt: now } },
+      filter: { network: tx.network ?? "awin", id: tx.id },
+      update: { $setOnInsert: { ...tx, network: tx.network ?? "awin", syncedAt: now } },
       upsert: true,
     },
   }));
@@ -121,14 +128,21 @@ export async function upsertTransactions(
 // Read — used by the API route
 // ---------------------------------------------------------------------------
 
+/** Extended query type with optional network filter. */
+type NetworkTransactionQuery = TransactionQuery & { network?: string };
+
 /**
  * Build MongoDB filter from the query parameters.
  */
 function buildFilter(
-  query: TransactionQuery,
+  query: NetworkTransactionQuery,
   searchAdvertiserIds: number[] = [],
 ): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
+
+  if (query.network) {
+    filter.network = query.network;
+  }
 
   // Date range filter
   if (query.startDate || query.endDate) {
@@ -194,7 +208,7 @@ async function getFacets(
  * Build sort specification from query parameters.
  */
 function buildSort(
-  query: TransactionQuery,
+  query: NetworkTransactionQuery,
 ): Record<string, 1 | -1> {
   const sortBy = query.sortBy || "transactionDate";
   const sortDir = query.sortDir === "asc" ? 1 : -1;
@@ -206,7 +220,7 @@ function buildSort(
  * Returns the same `PagedTransactions` shape the API route expects.
  */
 export async function getTransactionsFromDb(
-  query: TransactionQuery,
+  query: NetworkTransactionQuery,
 ): Promise<PagedTransactions | null> {
   const db = await getDb();
   const col = db.collection<TransactionDoc>(COLLECTION);
@@ -224,6 +238,7 @@ export async function getTransactionsFromDb(
 
   // Facets use only the date filter so all statuses/advertisers are shown
   const dateFilter: Record<string, unknown> = {};
+  if (query.network) dateFilter.network = query.network;
   if (query.startDate || query.endDate) {
     const df: Record<string, string> = {};
     if (query.startDate) df.$gte = query.startDate;
@@ -256,7 +271,9 @@ export async function getTransactionsFromDb(
     .limit(pageSize)
     .toArray();
 
-  // Overlay real advertiser names (transactions store only the id).
+  // Overlay real advertiser names (Awin transactions store only the id;
+  // Admitad transactions may already have a name — applyAdvertiserNames
+  // preserves the existing name if the lookup misses).
   const nameMap = await buildAdvertiserNameMap(
     docs.map((d) => (d as unknown as Transaction).advertiserId),
   );
@@ -345,7 +362,7 @@ export async function getTransactionsFromDb(
  * Get all transactions in a date range (for CSV export).
  */
 export async function getAllTransactionsFromDb(
-  query: TransactionQuery,
+  query: NetworkTransactionQuery,
 ): Promise<Transaction[] | null> {
   const db = await getDb();
   const col = db.collection<TransactionDoc>(COLLECTION);

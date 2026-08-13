@@ -1,9 +1,7 @@
 import TransactionsDashboard from "@/components/transactions/TransactionsDashboard";
 
 /**
- * Networks → Awin: the live Awin dashboard. Awin is the only integrated network
- * today, so it gets the real transaction analytics; the other networks render a
- * scaffold under the shared /dashboard/networks/[network] route until connected.
+ * Networks → Awin: the live Awin dashboard, scoped to Awin transactions only.
  */
 export default function AwinNetworkPage() {
   return (
@@ -12,6 +10,7 @@ export default function AwinNetworkPage() {
       subtitle="Awin transactions, commissions and performance with date & month-wise reporting."
       backHref={{ href: "/dashboard/networks", label: "All Networks" }}
       badge={{ label: "Connected", className: "bg-emerald-100 text-emerald-700" }}
+      network="awin"
     />
   );
 }

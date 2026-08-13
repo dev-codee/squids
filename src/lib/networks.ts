@@ -29,6 +29,13 @@ export const NETWORKS: NetworkConfig[] = [
     accent: "bg-orange-100 text-orange-700",
   },
   {
+    slug: "admitad",
+    name: "Admitad",
+    description: "Admitad (Mitgo) campaigns, coupons and action-level commission reporting.",
+    integrated: true,
+    accent: "bg-indigo-100 text-indigo-700",
+  },
+  {
     slug: "cj",
     name: "CJ",
     description: "CJ Affiliate (Commission Junction) advertisers and earnings.",

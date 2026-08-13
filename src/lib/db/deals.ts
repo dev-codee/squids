@@ -4,6 +4,9 @@
  * Stores the normalised `Deal` type from `@/lib/deals` with a
  * `syncedAt` timestamp. Provides bulk upsert (for cron sync) and
  * query/filter/paginate (for the API route).
+ *
+ * Multi-network: keyed on composite `(network, id)` to avoid ID collisions
+ * between Awin and Admitad (or future networks).
  */
 
 import { getDb } from "@/lib/mongodb";
@@ -22,7 +25,7 @@ interface DealDoc extends Deal {
 
 /**
  * Upsert a batch of deals into MongoDB.
- * Uses bulk `updateOne` with `upsert: true` keyed on deal `id`.
+ * Uses bulk `updateOne` with `upsert: true` keyed on `(network, id)`.
  */
 export async function upsertDeals(
   deals: Deal[],
@@ -30,14 +33,14 @@ export async function upsertDeals(
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
 
-  // Ensure an index on `id` for fast lookups and upserts
-  await col.createIndex({ id: 1 }, { unique: true });
+  // Ensure composite unique index for multi-network support
+  await col.createIndex({ network: 1, id: 1 }, { unique: true });
 
   const now = new Date();
   const ops = deals.map((d) => ({
     updateOne: {
-      filter: { id: d.id },
-      update: { $setOnInsert: { ...d, syncedAt: now } },
+      filter: { network: d.network ?? "awin", id: d.id },
+      update: { $setOnInsert: { ...d, network: d.network ?? "awin", syncedAt: now } },
       upsert: true,
     },
   }));
@@ -58,8 +61,12 @@ export async function upsertDeals(
 /**
  * Build MongoDB filter from the query parameters.
  */
-function buildFilter(query: DealQuery): Record<string, unknown> {
+function buildFilter(query: DealQuery & { network?: string }): Record<string, unknown> {
   const conditions: Record<string, unknown>[] = [];
+
+  if (query.network) {
+    conditions.push({ network: query.network });
+  }
 
   if (query.search?.trim()) {
     const searchRegex = { $regex: query.search.trim(), $options: "i" };
@@ -106,7 +113,7 @@ function buildFilter(query: DealQuery): Record<string, unknown> {
  * Returns the same `PagedDeals` shape the API route expects.
  */
 export async function getDealsFromDb(
-  query: DealQuery,
+  query: DealQuery & { network?: string },
 ): Promise<PagedDeals | null> {
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
@@ -172,14 +179,17 @@ export async function removeExpiredDeals(): Promise<number> {
 }
 
 /**
- * Remove deals that are no longer present in the Awin API response.
- * Called after upserting fresh data — any deal whose `id` is NOT in
- * `currentIds` gets deleted (e.g. advertiser removed the promotion).
+ * Remove deals that are no longer present in the API response
+ * **for a specific network**. Called after upserting fresh data — any deal
+ * in that network whose `id` is NOT in `currentIds` gets deleted.
  *
+ * @param currentIds IDs that are still valid for this network.
+ * @param network The network to scope the removal to (e.g. "awin", "admitad").
  * @returns Number of stale deals removed.
  */
 export async function removeStaleDeals(
   currentIds: number[],
+  network: string = "awin",
 ): Promise<number> {
   if (currentIds.length === 0) return 0;
 
@@ -187,6 +197,7 @@ export async function removeStaleDeals(
   const col = db.collection<DealDoc>(COLLECTION);
 
   const result = await col.deleteMany({
+    network,
     id: { $nin: currentIds },
   });
 
@@ -211,15 +222,16 @@ export async function createDeal(deal: Deal): Promise<Deal> {
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
 
-  await col.createIndex({ id: 1 }, { unique: true });
+  await col.createIndex({ network: 1, id: 1 }, { unique: true });
 
   const doc: DealDoc = {
     ...deal,
+    network: deal.network ?? "awin",
     syncedAt: new Date(),
   };
 
   await col.updateOne(
-    { id: deal.id },
+    { network: doc.network, id: deal.id },
     { $set: doc },
     { upsert: true }
   );
@@ -233,12 +245,13 @@ export async function createDeal(deal: Deal): Promise<Deal> {
 export async function updateDeal(
   id: number,
   data: Partial<Deal>,
+  network: string = "awin",
 ): Promise<boolean> {
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
 
   const result = await col.updateOne(
-    { id },
+    { network, id },
     { $set: { ...data, syncedAt: new Date() } }
   );
 
@@ -248,11 +261,13 @@ export async function updateDeal(
 /**
  * Delete a deal from MongoDB by ID.
  */
-export async function deleteDeal(id: number): Promise<boolean> {
+export async function deleteDeal(
+  id: number,
+  network: string = "awin",
+): Promise<boolean> {
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
 
-  const result = await col.deleteOne({ id });
+  const result = await col.deleteOne({ network, id });
   return result.deletedCount > 0;
 }
-

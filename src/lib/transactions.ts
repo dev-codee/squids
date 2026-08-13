@@ -46,6 +46,8 @@ export interface AwinTransaction {
 
 export interface Transaction {
   id: number;
+  /** Affiliate network this transaction belongs to ("awin" | "admitad"). */
+  network: string;
   advertiserId: number;
   advertiserName: string;
   status: string;
@@ -247,6 +249,7 @@ export async function fetchTransactions(
 function normaliseTransaction(raw: AwinTransaction): Transaction {
   return {
     id: raw.id,
+    network: "awin",
     advertiserId: raw.advertiserId,
     // Awin's transaction feed omits the advertiser name (siteName is OUR
     // publisher site, not the advertiser). The real name is resolved from the

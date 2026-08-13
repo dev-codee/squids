@@ -22,65 +22,93 @@ function isAuthorised(request: NextRequest): boolean {
 /**
  * GET /api/cron/sync-advertisers
  *
- * Fetches joined + pending advertisers from Awin, persists them to MongoDB,
- * and removes any advertisers that are no longer in the Awin response.
+ * Fetches advertisers from both Awin and Admitad, persists them to MongoDB,
+ * and removes stale entries per network.
  */
 export async function GET(request: NextRequest) {
   if (!isAuthorised(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const results: Record<string, unknown> = {};
+
+  // ── Awin ─────────────────────────────────────────────────────────────────
   try {
-    // Fetch both joined and pending advertisers
     const [joined, pending] = await Promise.all([
       fetchProgrammes("joined").catch((err) => {
-        console.warn("[cron/sync-advertisers] Failed to fetch joined:", err);
+        console.warn("[cron/sync-advertisers] Failed to fetch Awin joined:", err);
         return [];
       }),
       fetchProgrammes("pending").catch((err) => {
-        console.warn("[cron/sync-advertisers] Failed to fetch pending:", err);
+        console.warn("[cron/sync-advertisers] Failed to fetch Awin pending:", err);
         return [];
       }),
     ]);
 
-    // Merge, de-duplicating by id (joined wins)
     const byId = new Map<number, (typeof joined)[0]>();
     for (const a of [...joined, ...pending]) {
       if (!byId.has(a.id)) byId.set(a.id, a);
     }
-    const allAdvertisers = Array.from(byId.values());
+    const awinAdvertisers = Array.from(byId.values());
 
-    // Persist to MongoDB
-    const result = await upsertAdvertisers(allAdvertisers);
+    const awinResult = await upsertAdvertisers(awinAdvertisers);
+    const awinRemoved = await removeStaleAdvertisers(
+      awinAdvertisers.map((a) => a.id),
+      "awin",
+    );
+    await updateSyncTime("awin:advertisers", awinAdvertisers.length);
 
-    // Remove advertisers no longer in the Awin response
-    const currentIds = allAdvertisers.map((a) => a.id);
-    const removed = await removeStaleAdvertisers(currentIds);
-
-    // Update sync metadata
-    await updateSyncTime("advertisers", allAdvertisers.length);
+    results.awin = {
+      count: awinAdvertisers.length,
+      upserted: awinResult.upserted,
+      modified: awinResult.modified,
+      removed: awinRemoved,
+    };
 
     console.log(
-      `[cron/sync-advertisers] Synced ${allAdvertisers.length} advertisers ` +
-        `(${result.upserted} new, ${result.modified} updated, ${removed} removed) ` +
-        `at ${new Date().toISOString()}`,
+      `[cron/sync-advertisers] Awin: ${awinAdvertisers.length} advertisers ` +
+        `(${awinResult.upserted} new, ${awinResult.modified} updated, ${awinRemoved} removed)`,
     );
-
-    return NextResponse.json({
-      ok: true,
-      syncedAt: new Date().toISOString(),
-      count: allAdvertisers.length,
-      upserted: result.upserted,
-      modified: result.modified,
-      removed,
-    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
-    console.error("[cron/sync-advertisers] Sync failed:", error);
-    await recordSyncError("advertisers", msg).catch(() => {});
-    return NextResponse.json(
-      { ok: false, error: "Sync failed." },
-      { status: 500 },
-    );
+    console.error("[cron/sync-advertisers] Awin sync failed:", error);
+    await recordSyncError("awin:advertisers", msg).catch(() => {});
+    results.awin = { error: msg };
   }
+
+  // ── Admitad ──────────────────────────────────────────────────────────────
+  try {
+    const { fetchAdmitadCampaigns } = await import("@/lib/admitad");
+    const admitadAdvertisers = await fetchAdmitadCampaigns();
+
+    const admitadResult = await upsertAdvertisers(admitadAdvertisers);
+    const admitadRemoved = await removeStaleAdvertisers(
+      admitadAdvertisers.map((a) => a.id),
+      "admitad",
+    );
+    await updateSyncTime("admitad:advertisers", admitadAdvertisers.length);
+
+    results.admitad = {
+      count: admitadAdvertisers.length,
+      upserted: admitadResult.upserted,
+      modified: admitadResult.modified,
+      removed: admitadRemoved,
+    };
+
+    console.log(
+      `[cron/sync-advertisers] Admitad: ${admitadAdvertisers.length} advertisers ` +
+        `(${admitadResult.upserted} new, ${admitadResult.modified} updated, ${admitadRemoved} removed)`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[cron/sync-advertisers] Admitad sync failed (non-fatal):", msg);
+    await recordSyncError("admitad:advertisers", msg).catch(() => {});
+    results.admitad = { error: msg };
+  }
+
+  return NextResponse.json({
+    ok: true,
+    syncedAt: new Date().toISOString(),
+    results,
+  });
 }
