@@ -5,9 +5,9 @@ import ModuleScaffold from "@/components/admin/ModuleScaffold";
 
 export const dynamic = "force-dynamic";
 
-/** Pre-generate the six known network routes. */
+/** Pre-generate the scaffold network routes. Awin has its own explicit route. */
 export function generateStaticParams() {
-  return NETWORKS.map((n) => ({ network: n.slug }));
+  return NETWORKS.filter((n) => n.slug !== "awin").map((n) => ({ network: n.slug }));
 }
 
 const KPIS = ["Earnings", "Clicks", "Conversions", "Conversion Rate"];
