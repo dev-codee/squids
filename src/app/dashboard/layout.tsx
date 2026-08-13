@@ -1,4 +1,4 @@
-import DashboardNav from "@/components/DashboardNav";
+import AdminSidebar from "@/components/admin/AdminSidebar";
 
 export default function DashboardLayout({
   children,
@@ -7,8 +7,9 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardNav />
-      {children}
+      <AdminSidebar />
+      {/* Offset by the fixed sidebar width on desktop. */}
+      <div className="lg:pl-60">{children}</div>
     </div>
   );
 }

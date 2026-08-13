@@ -254,6 +254,13 @@ export default function AdminAdvertisersPage() {
                   <div key={a.id} className="relative group">
                     <AdvertiserCard advertiser={a} adminHref={`/dashboard/advertisers/${a.id}`} />
 
+                    {/* Internal-only PPC tag (admin dashboard only) */}
+                    {a.isPPC && (
+                      <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 rounded-md bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
+                        🏷️ PPC
+                      </span>
+                    )}
+
                     {/* Admin Action Overlay Bar */}
                     <div
                       className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-lg bg-white/95 p-1 shadow-md border border-gray-200 backdrop-blur-sm transition opacity-90 group-hover:opacity-100"

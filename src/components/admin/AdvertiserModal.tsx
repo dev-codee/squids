@@ -36,6 +36,7 @@ export default function AdvertiserModal({
     rating: "",
     isFlagship: false,
     isGlobal: false,
+    isPPC: false,
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -61,6 +62,7 @@ export default function AdvertiserModal({
         rating: advertiser.rating !== undefined ? String(advertiser.rating) : "",
         isFlagship: advertiser.isFlagship || false,
         isGlobal: advertiser.isGlobal || false,
+        isPPC: advertiser.isPPC || false,
       });
     } else {
       setFormData({
@@ -81,6 +83,7 @@ export default function AdvertiserModal({
         rating: "",
         isFlagship: false,
         isGlobal: false,
+        isPPC: false,
       });
     }
     setError(null);
@@ -105,6 +108,7 @@ export default function AdvertiserModal({
         rating: formData.rating ? Number(formData.rating) : undefined,
         isFlagship: formData.isFlagship,
         isGlobal: formData.isGlobal,
+        isPPC: formData.isPPC,
       };
 
       const res = await fetch(url, {
@@ -364,6 +368,20 @@ export default function AdvertiserModal({
                 <label htmlFor="isGlobal" className="text-sm font-medium text-gray-900 cursor-pointer">
                   🌍 Mark as Global Advertiser
                   <span className="block text-xs text-gray-500 font-normal">Global advertisers will automatically appear on all country pages (e.g. /pk, /de) regardless of their specific country code.</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3 sm:col-span-2 mt-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+                <input
+                  type="checkbox"
+                  id="isPPC"
+                  checked={formData.isPPC}
+                  onChange={(e) => setFormData({ ...formData, isPPC: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent cursor-pointer"
+                />
+                <label htmlFor="isPPC" className="text-sm font-medium text-gray-900 cursor-pointer">
+                  🏷️ PPC Advertiser
+                  <span className="block text-xs text-amber-700 font-normal">Internal use only — flags this advertiser as PPC in the admin dashboard. Never shown on public pages.</span>
                 </label>
               </div>
             </div>

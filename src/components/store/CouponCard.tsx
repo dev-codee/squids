@@ -35,7 +35,21 @@ export default function CouponCard({ coupon, storeName }: CouponCardProps) {
 
   return (
     <>
-      <div className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-amber-300">
+      <div
+        className={`group relative flex flex-col justify-between rounded-2xl border p-6 shadow-sm transition hover:shadow-md ${
+          coupon.isExclusive
+            ? "border-purple-300 bg-gradient-to-br from-purple-50/70 to-white ring-2 ring-purple-300/60 hover:border-purple-400"
+            : "border-gray-200 bg-white hover:border-amber-300"
+        }`}
+      >
+        {coupon.isExclusive && (
+          <span className="absolute -top-3 left-6 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-md">
+            <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.364 1.118l1.287 3.958c.3.922-.755 1.688-1.54 1.118l-3.367-2.447a1 1 0 00-1.176 0l-3.367 2.447c-.784.57-1.838-.196-1.539-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.343 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.285-3.958z" />
+            </svg>
+            Exclusive
+          </span>
+        )}
         <div>
           {/* Header Badges */}
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -43,11 +57,6 @@ export default function CouponCard({ coupon, storeName }: CouponCardProps) {
               {coupon.discount && (
                 <span className="inline-flex items-center rounded-lg bg-amber-50 px-3 py-1 text-sm font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20">
                   {coupon.discount}
-                </span>
-              )}
-              {coupon.isExclusive && (
-                <span className="inline-flex items-center rounded-lg bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 ring-1 ring-inset ring-purple-600/20">
-                  Exclusive
                 </span>
               )}
               {coupon.type === "student" && (

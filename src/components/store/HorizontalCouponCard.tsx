@@ -35,8 +35,22 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm transition hover:shadow-md hover:border-emerald-300 group">
-        
+      <div
+        className={`relative flex flex-col sm:flex-row rounded-lg border overflow-hidden shadow-sm transition hover:shadow-md group ${
+          coupon.isExclusive
+            ? "border-purple-300 bg-gradient-to-r from-purple-50/70 to-white ring-2 ring-purple-300/60 hover:border-purple-400"
+            : "border-gray-200 bg-white hover:border-emerald-300"
+        }`}
+      >
+        {coupon.isExclusive && (
+          <span className="absolute top-0 left-0 z-10 inline-flex items-center gap-1 rounded-br-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
+            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.364 1.118l1.287 3.958c.3.922-.755 1.688-1.54 1.118l-3.367-2.447a1 1 0 00-1.176 0l-3.367 2.447c-.784.57-1.838-.196-1.539-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.343 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.285-3.958z" />
+            </svg>
+            Exclusive
+          </span>
+        )}
+
         {/* Left Section - Discount Indicator */}
         <div className="sm:w-[15%] w-full bg-red-50/50 border-b sm:border-b-0 sm:border-r border-gray-100 flex flex-col items-center justify-center p-4 min-w-[120px]">
           <span className="text-xl font-extrabold text-gray-800 text-center leading-tight mb-2">
@@ -66,7 +80,10 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
               </span>
             )}
             {coupon.isExclusive && (
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-600">
+              <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.364 1.118l1.287 3.958c.3.922-.755 1.688-1.54 1.118l-3.367-2.447a1 1 0 00-1.176 0l-3.367 2.447c-.784.57-1.838-.196-1.539-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.343 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.285-3.958z" />
+                </svg>
                 Exclusive
               </span>
             )}

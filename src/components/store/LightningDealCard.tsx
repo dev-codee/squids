@@ -28,7 +28,13 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
   };
 
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md hover:border-amber-300">
+    <div
+      className={`relative flex flex-col justify-between rounded-2xl border p-5 shadow-sm transition hover:shadow-md ${
+        deal.isExclusive
+          ? "border-purple-300 bg-gradient-to-br from-purple-50/70 to-white ring-2 ring-purple-300/60 hover:border-purple-400"
+          : "border-gray-200 bg-white hover:border-amber-300"
+      }`}
+    >
       <div>
         {/* Deal Image & Badge Header */}
         <div className="relative mb-4 h-48 w-full overflow-hidden rounded-xl bg-gray-100">
@@ -50,10 +56,19 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
                 {deal.discount}
               </span>
             )}
-            {deal.badge && (
-              <span className="inline-flex rounded-lg bg-gray-900/90 px-2 py-0.5 text-[10px] font-semibold text-amber-300 backdrop-blur-sm">
-                {deal.badge}
+            {deal.isExclusive ? (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow">
+                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.364 1.118l1.287 3.958c.3.922-.755 1.688-1.54 1.118l-3.367-2.447a1 1 0 00-1.176 0l-3.367 2.447c-.784.57-1.838-.196-1.539-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.343 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.285-3.958z" />
+                </svg>
+                Exclusive
               </span>
+            ) : (
+              deal.badge && (
+                <span className="inline-flex rounded-lg bg-gray-900/90 px-2 py-0.5 text-[10px] font-semibold text-amber-300 backdrop-blur-sm">
+                  {deal.badge}
+                </span>
+              )
             )}
           </div>
         </div>

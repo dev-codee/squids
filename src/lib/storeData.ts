@@ -56,6 +56,7 @@ export interface DealItem {
   imageUrl?: string;
   expiryDate: string | null;
   badge?: string;
+  isExclusive?: boolean;
   stockPercentage?: number;
   endsInSeconds?: number;
   affiliateUrl: string;
@@ -216,6 +217,7 @@ function dealFromDeal(
     imageUrl: deal.imageUrl || undefined,
     expiryDate: deal.endDate,
     badge,
+    isExclusive: Boolean(deal.isExclusive),
     stockPercentage: deal.stockPercentage ?? undefined,
     endsInSeconds: placement === "lightning" ? secondsUntil(deal.endDate) : undefined,
     affiliateUrl: deal.trackingUrl || fallbackUrl,
@@ -280,12 +282,19 @@ export async function loadStoreData(
   );
   const allDeals: Deal[] = dealsResult?.deals ?? [];
 
+  // Exclusive offers float to the top; Array.sort is stable so everything else
+  // keeps its original order.
+  const exclusiveFirst = (a: Deal, b: Deal) =>
+    Number(Boolean(b.isExclusive)) - Number(Boolean(a.isExclusive));
+
   const coupons = allDeals
     .filter((d) => d.type === "voucher")
+    .sort(exclusiveFirst)
     .map((d) => couponFromDeal(d, websiteUrl));
 
   const deals = allDeals
     .filter((d) => d.type === "promotion")
+    .sort(exclusiveFirst)
     .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode, region, rates));
 
   const productsResult = await safeQuery(

@@ -45,6 +45,8 @@ export interface Advertiser {
   rating?: number;
   isFlagship?: boolean;
   isGlobal?: boolean;
+  /** Internal-only flag marking an advertiser as PPC. Never shown publicly. */
+  isPPC?: boolean;
 
   region: string | null;
   countryCode: string | null;
