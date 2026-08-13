@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useDictionary } from "@/i18n/DictionaryProvider";
+import RegionMenu from "@/components/store/RegionMenu";
 
-export default function PublicHeader() {
+export default function PublicHeader({ country = "" }: { country?: string }) {
   const [query, setQuery] = useState("");
   const router = useRouter();
   const dict = useDictionary();
@@ -29,7 +30,7 @@ export default function PublicHeader() {
         </Link>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-md ml-8">
+        <div className="flex-1 max-w-md ml-4 sm:ml-8">
           <form onSubmit={handleSearch} className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,6 +45,11 @@ export default function PublicHeader() {
               className="w-full rounded-full border border-gray-300 bg-gray-50 py-2 pl-10 pr-4 text-sm text-gray-900 transition focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400/20"
             />
           </form>
+        </div>
+
+        {/* Region switcher */}
+        <div className="ml-3 sm:ml-4">
+          <RegionMenu current={country} />
         </div>
       </div>
     </header>

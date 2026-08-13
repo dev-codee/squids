@@ -77,7 +77,7 @@ export default async function StoreLayout({
   return (
     <DictionaryProvider dictionary={dictionary}>
       <CurrencyProvider region={region} usdRate={usdRate}>
-        <PublicHeader />
+        <PublicHeader country={region.country} />
         {children}
       </CurrencyProvider>
     </DictionaryProvider>

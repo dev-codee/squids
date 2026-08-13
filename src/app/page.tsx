@@ -1,6 +1,7 @@
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getUserCountry } from "@/lib/geo";
+import { REGION_COOKIE, isValidRegionCode } from "@/lib/regions";
 
 // Detection depends on the request (IP / geo headers), so never prerender.
 export const dynamic = "force-dynamic";
@@ -17,9 +18,13 @@ export default async function RootPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const headersList = headers();
-  const { country } = await getUserCountry({ headers: headersList });
-  
+  // Prefer the visitor's explicitly chosen region (cookie); otherwise detect
+  // it from their IP so the region is still sensible on a first visit.
+  const preferred = cookies().get(REGION_COOKIE)?.value;
+  const country = isValidRegionCode(preferred)
+    ? preferred
+    : (await getUserCountry({ headers: headers() })).country;
+
   const search = searchParams.search;
   if (search && typeof search === "string") {
     redirect(`/${country.toLowerCase()}?search=${encodeURIComponent(search)}`);

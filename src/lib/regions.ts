@@ -19,6 +19,18 @@ export interface RegionConfig {
 
 const CODE_RE = /^[A-Za-z]{2}$/;
 
+/**
+ * Cookie that remembers the visitor's explicitly chosen region so the root `/`
+ * redirect can honour it instead of falling back to IP geolocation.
+ */
+export const REGION_COOKIE = "preferred_region";
+export const REGION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+
+/** True when `code` is a syntactically valid 2-letter region code. */
+export function isValidRegionCode(code: string | null | undefined): code is string {
+  return typeof code === "string" && CODE_RE.test(code);
+}
+
 /** Fallback when a region isn't in the table below. */
 const DEFAULT_REGION: Omit<RegionConfig, "country"> = {
   currency: "USD",
