@@ -9,15 +9,15 @@ export const dynamic = "force-dynamic";
 export default async function StoreDealsPage({
   params,
 }: {
-  params: { store: string };
+  params: { country: string; store: string };
 }) {
   const rawSlug = params.store;
 
   if (rawSlug !== rawSlug.toLowerCase()) {
-    redirect(`/${rawSlug.toLowerCase()}/deals`);
+    redirect(`/${params.country}/${rawSlug.toLowerCase()}/deals`);
   }
 
-  const store = await loadStoreData(rawSlug);
+  const store = await loadStoreData(rawSlug, params.country);
   if (!store) notFound();
 
   const todaysDeals = store.deals.filter((d) => d.type === "todays");

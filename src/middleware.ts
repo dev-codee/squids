@@ -27,8 +27,21 @@ async function isValidSession(request: NextRequest): Promise<boolean> {
   }
 }
 
+/** First path segment when it's a 2-letter region code, else "". */
+function regionFromPath(pathname: string): string {
+  const first = pathname.split("/")[1] || "";
+  return /^[a-z]{2}$/i.test(first) ? first.toLowerCase() : "";
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Expose the URL region to server components (used to set <html lang>).
+  const region = regionFromPath(pathname);
+  const forwardHeaders = new Headers(request.headers);
+  if (region) forwardHeaders.set("x-region-country", region);
+  const pass = () =>
+    NextResponse.next({ request: { headers: forwardHeaders } });
 
   const isProtectedRoute =
     pathname.startsWith("/dashboard") ||
@@ -52,7 +65,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  return pass();
 }
 
 /**

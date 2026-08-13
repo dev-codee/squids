@@ -9,15 +9,15 @@ export const dynamic = "force-dynamic";
 export default async function StoreCouponsPage({
   params,
 }: {
-  params: { store: string };
+  params: { country: string; store: string };
 }) {
   const rawSlug = params.store;
 
   if (rawSlug !== rawSlug.toLowerCase()) {
-    redirect(`/${rawSlug.toLowerCase()}/coupons`);
+    redirect(`/${params.country}/${rawSlug.toLowerCase()}/coupons`);
   }
 
-  const store = await loadStoreData(rawSlug);
+  const store = await loadStoreData(rawSlug, params.country);
   if (!store) notFound();
 
   const verifiedCoupons = store.coupons.filter((c) => c.verified);

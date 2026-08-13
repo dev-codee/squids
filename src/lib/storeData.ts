@@ -23,6 +23,8 @@ import { getGuidesFromDb } from "@/lib/db/buyingGuides";
 import type { Advertiser } from "@/lib/awin";
 import type { Deal } from "@/lib/deals";
 import type { Product } from "@/lib/products";
+import { getRegionConfig, formatMoney, type RegionConfig } from "@/lib/regions";
+import { convert, getUsdRates, type UsdRates } from "@/lib/fx";
 
 // ---------------------------------------------------------------------------
 // Public view-model types (consumed by src/components/store/*)
@@ -145,18 +147,19 @@ export interface StoreData {
 // Mapping helpers (DB Deal -> public view models)
 // ---------------------------------------------------------------------------
 
-function formatPrice(value: number, currencyCode?: string | null): string {
-  if (currencyCode) {
-    try {
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: currencyCode,
-      }).format(value);
-    } catch {
-      /* fall through to plain formatting */
-    }
-  }
-  return `$${value.toFixed(2)}`;
+/**
+ * Convert a stored deal price (in the advertiser's `sourceCurrency`) into the
+ * visitor's region currency and format it for that region's locale.
+ */
+function formatPrice(
+  value: number,
+  sourceCurrency: string | null | undefined,
+  region: RegionConfig,
+  rates: UsdRates,
+): string {
+  const from = sourceCurrency || "USD";
+  const converted = convert(value, from, region.currency, rates);
+  return formatMoney(converted, region);
 }
 
 /** Seconds remaining until an ISO end date, or undefined if past/absent. */
@@ -186,7 +189,9 @@ function couponFromDeal(deal: Deal, fallbackUrl: string): CouponItem {
 function dealFromDeal(
   deal: Deal,
   fallbackUrl: string,
-  currencyCode?: string | null,
+  sourceCurrency: string | null | undefined,
+  region: RegionConfig,
+  rates: UsdRates,
 ): DealItem {
   const placement = deal.placement || "todays";
 
@@ -200,9 +205,13 @@ function dealFromDeal(
     description: deal.description || "",
     discount: deal.discountText || "",
     originalPrice:
-      deal.originalPrice != null ? formatPrice(deal.originalPrice, currencyCode) : undefined,
+      deal.originalPrice != null
+        ? formatPrice(deal.originalPrice, sourceCurrency, region, rates)
+        : undefined,
     salePrice:
-      deal.salePrice != null ? formatPrice(deal.salePrice, currencyCode) : undefined,
+      deal.salePrice != null
+        ? formatPrice(deal.salePrice, sourceCurrency, region, rates)
+        : undefined,
     type: placement,
     imageUrl: deal.imageUrl || undefined,
     expiryDate: deal.endDate,
@@ -221,7 +230,10 @@ function dealFromDeal(
  * Load a store's public data from MongoDB. Returns `null` when the slug does
  * not resolve to a known advertiser (caller should render `notFound()`).
  */
-export async function loadStoreData(slug: string): Promise<StoreData | null> {
+export async function loadStoreData(
+  slug: string,
+  country?: string,
+): Promise<StoreData | null> {
   let advertiser: Advertiser | null = null;
   try {
     advertiser = await getAdvertiserBySlug(slug);
@@ -231,6 +243,11 @@ export async function loadStoreData(slug: string): Promise<StoreData | null> {
   }
 
   if (!advertiser) return null;
+
+  // Region context: prices are converted from the advertiser's native currency
+  // into the URL region's currency (e.g. /de -> EUR) and formatted for its locale.
+  const region = getRegionConfig(country);
+  const rates = await getUsdRates();
 
   const canonicalSlug = slugifyAdvertiserName(advertiser.name);
   const websiteUrl = advertiser.url || "#";
@@ -269,7 +286,7 @@ export async function loadStoreData(slug: string): Promise<StoreData | null> {
 
   const deals = allDeals
     .filter((d) => d.type === "promotion")
-    .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode));
+    .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode, region, rates));
 
   const productsResult = await safeQuery(
     () => getProductsFromDb({ advertiserId: advertiser!.id, page: 1, pageSize: 50 }),

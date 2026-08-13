@@ -1,12 +1,14 @@
 "use client";
 
 import type { ProductFeedItem } from "@/lib/storeData";
+import { useCurrency } from "@/i18n/CurrencyProvider";
 
 interface ProductFeedCardProps {
   product: ProductFeedItem;
 }
 
 export default function ProductFeedCard({ product }: ProductFeedCardProps) {
+  const { format } = useCurrency();
   return (
     <div className="group flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-amber-400 hover:shadow-md">
       <div>
@@ -39,10 +41,10 @@ export default function ProductFeedCard({ product }: ProductFeedCardProps) {
         {/* Price */}
         <div className="mt-3 flex items-baseline gap-2">
           <span className="text-lg font-extrabold text-gray-900">
-            ${product.salePrice.toFixed(2)}
+            {format(product.salePrice)}
           </span>
           <span className="text-xs text-gray-400 line-through">
-            ${product.originalPrice.toFixed(2)}
+            {format(product.originalPrice)}
           </span>
         </div>
       </div>

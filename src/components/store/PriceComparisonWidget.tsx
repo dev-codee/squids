@@ -1,6 +1,7 @@
 "use client";
 
 import type { PriceComparisonItem } from "@/lib/storeData";
+import { useCurrency } from "@/i18n/CurrencyProvider";
 
 interface PriceComparisonWidgetProps {
   items: PriceComparisonItem[];
@@ -8,6 +9,7 @@ interface PriceComparisonWidgetProps {
 }
 
 export default function PriceComparisonWidget({ items, storeName }: PriceComparisonWidgetProps) {
+  const { format } = useCurrency();
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -64,7 +66,7 @@ export default function PriceComparisonWidget({ items, storeName }: PriceCompari
                   >
                     <span className="text-gray-500">{comp.storeName}:</span>
                     <span className={isBestPrice ? "text-emerald-700 font-extrabold" : "font-semibold"}>
-                      ${comp.price.toFixed(2)}
+                      {format(comp.price)}
                     </span>
                     {isBestPrice && (
                       <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase">

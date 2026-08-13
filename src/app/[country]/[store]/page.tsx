@@ -19,7 +19,7 @@ export default async function StoreMainPage({
     redirect(`/${params.country}/${rawSlug.toLowerCase()}`);
   }
 
-  const store = await loadStoreData(rawSlug);
+  const store = await loadStoreData(rawSlug, params.country);
   if (!store) notFound();
 
   const currentMonth = new Date().toLocaleString('default', { month: 'long' });
