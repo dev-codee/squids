@@ -207,13 +207,20 @@ export function normaliseKwankoConversion(c: KwankoConversion): Transaction {
   };
 }
 
+// The Kwanko API strictly requires ISO 8601 WITHOUT milliseconds and WITH +00:00 instead of Z.
+function formatKwankoDate(isoString: string): string {
+  // 1. Remove milliseconds if they exist (e.g. .123Z -> Z)
+  // 2. Replace Z with +00:00
+  return isoString.replace(/\.\d{3}Z$/, "Z").replace("Z", "+00:00");
+}
+
 export async function fetchKwankoConversions(
   fromDate: string,
   toDate: string,
 ): Promise<Transaction[]> {
   const params = {
-    completion_date_from: fromDate,
-    completion_date_to: toDate,
+    completion_date_from: formatKwankoDate(fromDate),
+    completion_date_to: formatKwankoDate(toDate),
   };
   const raw = await kwankoFetch<KwankoConversion>("publishers/conversions", params, "conversions");
 
