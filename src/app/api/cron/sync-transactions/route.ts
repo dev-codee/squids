@@ -166,6 +166,49 @@ export async function GET(request: NextRequest) {
     results.cf = { error: msg };
   }
 
+  // ── Kwanko ───────────────────────────────────────────────────────────────
+  try {
+    const { fetchKwankoConversions } = await import("@/lib/kwanko");
+
+    const lastKwankoSync = await getLastSyncTime("kwanko:transactions");
+    let kwankoStartDate: Date;
+
+    if (lastKwankoSync) {
+      kwankoStartDate = new Date(lastKwankoSync.getTime() - 2 * 60 * 60 * 1000);
+    } else {
+      kwankoStartDate = new Date();
+      kwankoStartDate.setUTCDate(kwankoStartDate.getUTCDate() - 31);
+    }
+
+    const kwankoTx = await fetchKwankoConversions(
+      kwankoStartDate.toISOString(),
+      endDate.toISOString(),
+    );
+    const kwankoResult = await upsertTransactions(kwankoTx);
+    await updateSyncTime("kwanko:transactions", kwankoTx.length);
+
+    results.kwanko = {
+      mode: lastKwankoSync ? "incremental" : "full",
+      count: kwankoTx.length,
+      upserted: kwankoResult.upserted,
+      modified: kwankoResult.modified,
+      dateRange: {
+        from: kwankoStartDate.toISOString(),
+        to: endDate.toISOString(),
+      },
+    };
+
+    console.log(
+      `[cron/sync-transactions] Kwanko: ${kwankoTx.length} transactions ` +
+        `(${kwankoResult.upserted} new, ${kwankoResult.modified} updated)`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[cron/sync-transactions] Kwanko sync failed (non-fatal):", msg);
+    await recordSyncError("kwanko:transactions", msg).catch(() => {});
+    results.kwanko = { error: msg };
+  }
+
   return NextResponse.json({
     ok: true,
     syncedAt: new Date().toISOString(),

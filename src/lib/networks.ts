@@ -53,7 +53,7 @@ export const NETWORKS: NetworkConfig[] = [
     slug: "kwanko",
     name: "Kwanko",
     description: "Kwanko campaigns and conversion reporting.",
-    integrated: false,
+    integrated: true,
     accent: "bg-rose-100 text-rose-700",
   },
   {

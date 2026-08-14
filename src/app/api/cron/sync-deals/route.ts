@@ -152,6 +152,39 @@ export async function GET(request: NextRequest) {
     results.cf = { error: msg };
   }
 
+  // ── Kwanko ───────────────────────────────────────────────────────────────
+  try {
+    const { fetchKwankoPromotions } = await import("@/lib/kwanko");
+    const kwankoDeals = await fetchKwankoPromotions();
+
+    const kwankoResult = await upsertDeals(kwankoDeals);
+    let kwankoStale = 0;
+    if (kwankoDeals.length > 0) {
+      kwankoStale = await removeStaleDeals(
+        kwankoDeals.map((d) => d.id),
+        "kwanko",
+      );
+    }
+    await updateSyncTime("kwanko:deals", kwankoDeals.length);
+
+    results.kwanko = {
+      count: kwankoDeals.length,
+      upserted: kwankoResult.upserted,
+      modified: kwankoResult.modified,
+      staleRemoved: kwankoStale,
+    };
+
+    console.log(
+      `[cron/sync-deals] Kwanko: ${kwankoDeals.length} deals ` +
+        `(${kwankoResult.upserted} new, ${kwankoResult.modified} updated, ${kwankoStale} stale removed)`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[cron/sync-deals] Kwanko sync failed (non-fatal):", msg);
+    await recordSyncError("kwanko:deals", msg).catch(() => {});
+    results.kwanko = { error: msg };
+  }
+
   return NextResponse.json({
     ok: true,
     syncedAt: new Date().toISOString(),
