@@ -46,12 +46,12 @@ export interface Advertiser {
   avgSavings?: string;
   rating?: number;
   isFlagship?: boolean;
-  isGlobal?: boolean;
   /** Internal-only flag marking an advertiser as PPC. Never shown publicly. */
   isPPC?: boolean;
 
   region: string | null;
   countryCode: string | null;
+  countryCodes?: string[];
   currencyCode: string | null;
   commission: string | null;
   url: string | null;
@@ -121,6 +121,7 @@ export function normaliseProgramme(
     relationship: programme.relationship || fallbackRelationship || null,
     region: programme.primaryRegion?.name || null,
     countryCode: programme.primaryRegion?.countryCode || null,
+    countryCodes: programme.primaryRegion?.countryCode ? [programme.primaryRegion.countryCode] : [],
     currencyCode: programme.currencyCode || null,
     commission: formatCommission(programme),
     url: programme.clickThroughUrl || programme.displayUrl || null,
@@ -283,12 +284,16 @@ export function queryAdvertisers(
     if (query.relationship && a.relationship !== query.relationship)
       return false;
     if (country) {
-      const isGlobal = 
-        a.isGlobal === true ||
-        a.region?.toLowerCase() === "global" || 
-        a.region?.toLowerCase() === "worldwide" || 
+      const isGlobal =
+        a.region?.toLowerCase() === "global" ||
+        a.region?.toLowerCase() === "worldwide" ||
         ["WW", "GLOBAL", "INT"].includes(a.countryCode?.toUpperCase() || "");
-      if (a.countryCode?.toUpperCase() !== country && !isGlobal) {
+
+      const hasCountry = a.countryCodes
+        ? a.countryCodes.some((c) => c.toUpperCase() === country)
+        : a.countryCode?.toUpperCase() === country;
+
+      if (!hasCountry && !isGlobal) {
         return false;
       }
     }

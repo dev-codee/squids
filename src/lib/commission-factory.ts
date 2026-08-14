@@ -95,7 +95,7 @@ export function normaliseCfMerchant(m: CFMerchant): Advertiser {
     commission: null, // CF base merchant list doesn't readily expose a simplified commission string without the rates endpoint.
     url: m.TargetUrl || m.DisplayUrl || null,
     description: m.Description || undefined,
-    isGlobal: false,
+    countryCodes: ["AU"],
   };
 }
 

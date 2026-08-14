@@ -348,7 +348,7 @@ export function normaliseAdmitadCampaign(c: AdmitadCampaign): Advertiser {
     url: c.gotolink || c.site_url || null,
     description: c.description ?? undefined,
     categories: c.categories?.map((cat) => cat.name) ?? undefined,
-    isGlobal: (c.regions?.length ?? 0) > 3, // heuristic: >3 regions ≈ global
+    countryCodes: c.regions?.map((r) => r.region).filter(Boolean) as string[],
   };
 }
 

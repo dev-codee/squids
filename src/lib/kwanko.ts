@@ -93,7 +93,7 @@ export function normaliseKwankoCampaign(c: KwankoCampaign): Advertiser {
     commission: null,
     url: c.url || null,
     description: c.description || undefined,
-    isGlobal: false,
+    countryCodes: [c.languages?.[0] || "EU"],
   };
 }
 

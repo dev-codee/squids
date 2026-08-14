@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       avgSavings: body.avgSavings ? String(body.avgSavings).trim() : undefined,
       rating: body.rating !== undefined ? Number(body.rating) : undefined,
       isFlagship: body.isFlagship === true,
-      isGlobal: body.isGlobal === true,
+      countryCodes: Array.isArray(body.countryCodes) ? body.countryCodes : [],
       isPPC: body.isPPC === true,
     };
 
@@ -94,7 +94,7 @@ export async function PUT(request: NextRequest) {
     if (body.avgSavings !== undefined) updateData.avgSavings = body.avgSavings ? String(body.avgSavings).trim() : undefined;
     if (body.rating !== undefined) updateData.rating = body.rating !== null ? Number(body.rating) : undefined;
     if (body.isFlagship !== undefined) updateData.isFlagship = Boolean(body.isFlagship);
-    if (body.isGlobal !== undefined) updateData.isGlobal = Boolean(body.isGlobal);
+    if (body.countryCodes !== undefined) updateData.countryCodes = Array.isArray(body.countryCodes) ? body.countryCodes : [];
     if (body.isPPC !== undefined) updateData.isPPC = Boolean(body.isPPC);
 
     const success = await updateAdvertiser(id, updateData);

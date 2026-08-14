@@ -35,8 +35,8 @@ export default function AdvertiserModal({
     avgSavings: "",
     rating: "",
     isFlagship: false,
-    isGlobal: false,
     isPPC: false,
+    countryCodes: "",
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -61,8 +61,8 @@ export default function AdvertiserModal({
         avgSavings: advertiser.avgSavings || "",
         rating: advertiser.rating !== undefined ? String(advertiser.rating) : "",
         isFlagship: advertiser.isFlagship || false,
-        isGlobal: advertiser.isGlobal || false,
         isPPC: advertiser.isPPC || false,
+        countryCodes: advertiser.countryCodes?.join(", ") || "",
       });
     } else {
       setFormData({
@@ -82,8 +82,8 @@ export default function AdvertiserModal({
         avgSavings: "",
         rating: "",
         isFlagship: false,
-        isGlobal: false,
         isPPC: false,
+        countryCodes: "",
       });
     }
     setError(null);
@@ -107,8 +107,10 @@ export default function AdvertiserModal({
           : [],
         rating: formData.rating ? Number(formData.rating) : undefined,
         isFlagship: formData.isFlagship,
-        isGlobal: formData.isGlobal,
         isPPC: formData.isPPC,
+        countryCodes: formData.countryCodes
+          ? formData.countryCodes.split(",").map((c) => c.trim().toUpperCase()).filter(Boolean)
+          : [],
       };
 
       const res = await fetch(url, {
@@ -246,13 +248,24 @@ export default function AdvertiserModal({
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-700">Country Code (2 letters)</label>
+              <label className="block text-xs font-medium text-gray-700">Primary Country Code</label>
               <input
                 type="text"
                 maxLength={2}
                 value={formData.countryCode}
                 onChange={(e) => setFormData({ ...formData, countryCode: e.target.value.toUpperCase() })}
                 placeholder="e.g. US, PK, GB"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent uppercase"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700">Supported Countries (comma-separated)</label>
+              <input
+                type="text"
+                value={formData.countryCodes}
+                onChange={(e) => setFormData({ ...formData, countryCodes: e.target.value })}
+                placeholder="e.g. US, CA, GB, AU"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent uppercase"
               />
             </div>
@@ -357,19 +370,7 @@ export default function AdvertiserModal({
                 </label>
               </div>
 
-              <div className="flex items-center gap-3 sm:col-span-2 pt-2 border-t border-gray-100">
-                <input
-                  type="checkbox"
-                  id="isGlobal"
-                  checked={formData.isGlobal}
-                  onChange={(e) => setFormData({ ...formData, isGlobal: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent cursor-pointer"
-                />
-                <label htmlFor="isGlobal" className="text-sm font-medium text-gray-900 cursor-pointer">
-                  🌍 Mark as Global Advertiser
-                  <span className="block text-xs text-gray-500 font-normal">Global advertisers will automatically appear on all country pages (e.g. /pk, /de) regardless of their specific country code.</span>
-                </label>
-              </div>
+
 
               <div className="flex items-center gap-3 sm:col-span-2 mt-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
                 <input
