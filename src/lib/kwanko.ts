@@ -103,44 +103,52 @@ export async function fetchKwankoCampaigns(): Promise<Advertiser[]> {
 }
 
 // ===========================================================================
-// Phase 2 — Promotions / Deals
+// Phase 2 — Promotions / Deals (Ads / Voucher Codes)
 // ===========================================================================
 
-export interface KwankoPromotion {
-  id?: number | string;
-  campaign_id?: number | string;
-  campaign_name?: string;
-  title?: string;
+export interface KwankoAd {
+  id?: string;
+  campaign?: {
+    id?: number;
+    name?: string;
+  };
+  name?: string;
   description?: string;
   code?: string;
-  url?: string;
-  start_date?: string;
-  end_date?: string;
+  validity_date?: {
+    start?: string;
+    end?: string;
+  };
+  tracked_material_per_websites?: Array<{
+    urls?: {
+      click?: string;
+    };
+  }>;
 }
 
-export function normaliseKwankoPromotion(p: KwankoPromotion): Deal {
-  const idStr = String(p.id ?? 0);
-  const id = parseInt(idStr, 10) || 0;
+export function normaliseKwankoPromotion(p: KwankoAd): Deal {
+  const idStr = p.id || String(Math.floor(Math.random() * 1000000));
+  const id = parseInt(idStr.replace(/\D/g, ""), 10) || 0;
   
-  const campIdStr = String(p.campaign_id ?? 0);
-  const campId = parseInt(campIdStr, 10) || 0;
+  const campId = p.campaign?.id || 0;
+  const clickUrl = p.tracked_material_per_websites?.[0]?.urls?.click || null;
 
   return {
     id,
     network: "kwanko",
-    title: p.title || "Kwanko Offer",
+    title: p.name || "Kwanko Offer",
     description: p.description || null,
     advertiser: {
       id: campId,
-      name: p.campaign_name || `Campaign #${campId}`,
+      name: p.campaign?.name || `Campaign #${campId}`,
       logoUrl: null,
     },
     type: p.code ? "voucher" : "promotion",
     code: p.code || null,
-    startDate: p.start_date || null,
-    endDate: p.end_date || null,
+    startDate: p.validity_date?.start || null,
+    endDate: p.validity_date?.end || null,
     status: "active",
-    trackingUrl: p.url || null,
+    trackingUrl: clickUrl,
     regionCodes: ["EU"],
     isExclusive: false,
     discountText: null,
@@ -148,11 +156,11 @@ export function normaliseKwankoPromotion(p: KwankoPromotion): Deal {
 }
 
 export async function fetchKwankoPromotions(): Promise<Deal[]> {
-  // Try fetching promotions, but if endpoint doesn't exist, silently return empty
   try {
-    const raw = await kwankoFetch<KwankoPromotion>("publishers/promotions", {}, "promotions");
+    const raw = await kwankoFetch<KwankoAd>("publishers/ads", { ad_types: "voucher_code" }, "ads");
     return raw.map(normaliseKwankoPromotion);
   } catch (error) {
+    console.warn("[Kwanko Deals] Failed to fetch voucher codes", error);
     return [];
   }
 }
