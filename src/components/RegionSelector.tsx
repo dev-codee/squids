@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { countryFlag, countryName } from "@/lib/countries";
+import { countryFlag, countryName, normalizeCountryCode } from "@/lib/countries";
 
 interface RegionSelectorProps {
   /** Currently selected country code, or "" for all regions. */
@@ -20,12 +20,20 @@ export default function RegionSelector({
   detecting,
 }: RegionSelectorProps) {
   const options = useMemo(() => {
-    const set = new Set(countries.map((c) => c.toUpperCase()));
-    if (value) set.add(value.toUpperCase());
+    const set = new Set<string>();
+    for (const c of countries) {
+      const norm = normalizeCountryCode(c);
+      if (norm) set.add(norm);
+    }
+    if (value) {
+      const normValue = normalizeCountryCode(value);
+      if (normValue) set.add(normValue);
+    }
     return Array.from(set).sort((a, b) =>
       countryName(a).localeCompare(countryName(b)),
     );
   }, [countries, value]);
+
 
   return (
     <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1.5 pl-3 pr-1.5 text-sm text-gray-600 shadow-card">

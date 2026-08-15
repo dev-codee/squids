@@ -301,13 +301,15 @@ export interface AdmitadCampaign {
   ecpc?: number; // effective cost per click
 }
 
+import { normalizeCountryCode } from "@/lib/countries";
+
 /**
  * Normalise an Admitad campaign into our shared `Advertiser` type.
  */
 export function normaliseAdmitadCampaign(c: AdmitadCampaign): Advertiser {
   // Extract primary country code from regions
   const primaryRegion = c.regions?.[0]?.region ?? null;
-  const countryCode = primaryRegion?.toUpperCase() ?? null;
+  const countryCode = primaryRegion ? normalizeCountryCode(primaryRegion) : null;
 
   // Build commission string from actions
   let commission: string | null = null;
@@ -348,9 +350,12 @@ export function normaliseAdmitadCampaign(c: AdmitadCampaign): Advertiser {
     url: c.gotolink || c.site_url || null,
     description: c.description ?? undefined,
     categories: c.categories?.map((cat) => cat.name) ?? undefined,
-    countryCodes: c.regions?.map((r) => r.region).filter(Boolean) as string[],
+    countryCodes: c.regions
+      ?.map((r) => normalizeCountryCode(r.region))
+      .filter(Boolean) as string[],
   };
 }
+
 
 /**
  * Fetch all Admitad campaigns (advertisers) connected to the publisher website.

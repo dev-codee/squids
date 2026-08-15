@@ -10,6 +10,7 @@
  */
 
 import { getDb } from "@/lib/mongodb";
+import { normalizeCountryCode } from "@/lib/countries";
 import type {
   Advertiser,
   AdvertiserQuery,
@@ -83,10 +84,16 @@ function buildFilter(query: AdvertiserQuery & { network?: string }): Record<stri
     filter.relationship = query.relationship;
   }
   if (query.country?.trim()) {
-    const cc = query.country.trim().toUpperCase();
+    const raw = query.country.trim().toUpperCase();
+    const normCc = normalizeCountryCode(raw);
+    const regexMatch = new RegExp(`(?:^|[-_])${normCc}$`, "i");
     filter.$or = [
-      { countryCode: cc },
-      { countryCodes: cc },
+      { countryCode: raw },
+      { countryCode: normCc },
+      { countryCode: { $regex: regexMatch } },
+      { countryCodes: raw },
+      { countryCodes: normCc },
+      { countryCodes: { $regex: regexMatch } },
       { countryCode: { $in: ["WW", "GLOBAL", "INT"] } },
       { region: { $regex: /^(global|worldwide)$/i } },
     ];
@@ -108,12 +115,19 @@ export async function getAdvertiserFacets(): Promise<AdvertiserFacets> {
     col.distinct("countryCode", { countryCode: { $ne: null } }),
   ]);
 
+  const countrySet = new Set<string>();
+  for (const c of countries as string[]) {
+    const norm = normalizeCountryCode(c);
+    if (norm) countrySet.add(norm);
+  }
+
   return {
     regions: (regions as string[]).sort(),
     relationships: (relationships as string[]).sort(),
-    countries: (countries as string[]).map((c: string) => c.toUpperCase()).sort(),
+    countries: Array.from(countrySet).sort(),
   };
 }
+
 
 /**
  * Query advertisers from MongoDB with filtering and pagination.

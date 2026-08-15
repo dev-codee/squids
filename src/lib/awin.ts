@@ -247,6 +247,8 @@ export interface PagedAdvertisers {
   facets: AdvertiserFacets;
 }
 
+import { normalizeCountryCode } from "@/lib/countries";
+
 /** Distinct, sorted values for the filter dropdowns (from the full dataset). */
 function buildFacets(all: Advertiser[]): AdvertiserFacets {
   const regions = new Set<string>();
@@ -255,7 +257,10 @@ function buildFacets(all: Advertiser[]): AdvertiserFacets {
   for (const a of all) {
     if (a.region) regions.add(a.region);
     if (a.relationship) relationships.add(a.relationship);
-    if (a.countryCode) countries.add(a.countryCode.toUpperCase());
+    if (a.countryCode) {
+      const norm = normalizeCountryCode(a.countryCode);
+      if (norm) countries.add(norm);
+    }
   }
   return {
     regions: Array.from(regions).sort(),
@@ -263,6 +268,7 @@ function buildFacets(all: Advertiser[]): AdvertiserFacets {
     countries: Array.from(countries).sort(),
   };
 }
+
 
 /**
  * Apply search/region/status filters and slice the result to a single page.
