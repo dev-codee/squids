@@ -41,6 +41,16 @@ export default function AdvertiserModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableCategories, setAvailableCategories] = useState<{ id?: string; name: string; slug: string; icon?: string }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/categories")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.categories) setAvailableCategories(data.categories);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (advertiser) {
@@ -48,6 +58,7 @@ export default function AdvertiserModal({
         id: String(advertiser.id),
         name: advertiser.name || "",
         logoUrl: advertiser.logoUrl || "",
+
         status: advertiser.status || "active",
         relationship: advertiser.relationship || "joined",
         region: advertiser.region || "",
@@ -321,15 +332,46 @@ export default function AdvertiserModal({
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-700">Categories (comma-separated)</label>
+                <label className="block text-xs font-medium text-gray-700">Categories (comma-separated or click tags below)</label>
                 <input
                   type="text"
                   value={formData.categories}
                   onChange={(e) => setFormData({ ...formData, categories: e.target.value })}
-                  placeholder="e.g. Electronics, Fashion, Home"
+                  placeholder="e.g. Electronics & Tech, Fashion & Apparel"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                 />
+                {availableCategories.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {availableCategories.map((cat) => {
+                      const currentList = formData.categories.split(",").map((c) => c.trim()).filter(Boolean);
+                      const isSelected = currentList.includes(cat.name);
+                      return (
+                        <button
+                          key={cat.id || cat.slug}
+                          type="button"
+                          onClick={() => {
+                            let newList: string[];
+                            if (isSelected) {
+                              newList = currentList.filter((c) => c !== cat.name);
+                            } else {
+                              newList = [...currentList, cat.name];
+                            }
+                            setFormData({ ...formData, categories: newList.join(", ") });
+                          }}
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition ${
+                            isSelected
+                              ? "bg-accent text-white"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {cat.icon} {cat.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+
 
               <div>
                 <label className="block text-xs font-medium text-gray-700">Manual Rating Override (1-5)</label>

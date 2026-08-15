@@ -61,7 +61,10 @@ export default function AdminAdvertisersPage() {
         if (currentFilters.region) params.set("region", currentFilters.region);
         if (currentFilters.relationship)
           params.set("relationship", currentFilters.relationship);
+        if (currentFilters.category)
+          params.set("category", currentFilters.category);
         if (currentCountry) params.set("country", currentCountry);
+
 
         const res = await fetch(`/api/advertisers?${params.toString()}`);
         const json = await res.json();
@@ -223,7 +226,9 @@ export default function AdminAdvertisersPage() {
             onChange={setFilters}
             regions={facets.regions}
             relationships={facets.relationships}
+            categories={facets.categories}
           />
+
 
           {loading ? (
             <SkeletonGrid />

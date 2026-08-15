@@ -4,6 +4,7 @@ export interface Filters {
   search: string;
   region: string;
   relationship: string;
+  category?: string;
 }
 
 interface FilterBarProps {
@@ -11,6 +12,7 @@ interface FilterBarProps {
   onChange: (filters: Filters) => void;
   regions: string[];
   relationships: string[];
+  categories?: string[];
 }
 
 const selectClass =
@@ -21,6 +23,7 @@ export default function FilterBar({
   onChange,
   regions,
   relationships,
+  categories = [],
 }: FilterBarProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -40,6 +43,22 @@ export default function FilterBar({
             className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 shadow-card outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
         </div>
+
+        {categories.length > 0 && (
+          <select
+            value={filters.category || ""}
+            onChange={(e) => onChange({ ...filters, category: e.target.value })}
+            className={selectClass}
+            aria-label="Filter by category"
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        )}
 
         <select
           value={filters.relationship}
@@ -73,3 +92,4 @@ export default function FilterBar({
       </div>
   );
 }
+

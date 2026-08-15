@@ -224,6 +224,7 @@ export interface AdvertiserQuery {
   search?: string;
   region?: string;
   relationship?: string;
+  category?: string;
   /** 2-letter ISO country code to match against the advertiser's region. */
   country?: string;
   page?: number;
@@ -236,7 +237,9 @@ export interface AdvertiserFacets {
   relationships: string[];
   /** Distinct ISO country codes present in the dataset (for the geo selector). */
   countries: string[];
+  categories?: string[];
 }
+
 
 export interface PagedAdvertisers {
   advertisers: Advertiser[];

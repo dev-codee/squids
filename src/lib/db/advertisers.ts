@@ -102,21 +102,32 @@ function buildFilter(query: AdvertiserQuery & { network?: string }): Record<stri
   }
 
 
+  if (query.category?.trim()) {
+    const cat = query.category.trim();
+    const catRegex = new RegExp(`^${cat.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+    filter.$or = [
+      { categories: { $elemMatch: { $regex: catRegex } } },
+      { categories: cat },
+    ];
+  }
+
   return filter;
 }
 
 /**
- * Fetch facets (distinct regions, relationships, countries) from the full dataset.
+ * Fetch facets (distinct regions, relationships, countries, categories) from the full dataset.
  */
 export async function getAdvertiserFacets(): Promise<AdvertiserFacets> {
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
-  const [regions, relationships, countries] = await Promise.all([
+  const [regions, relationships, countries, rawCategories] = await Promise.all([
     col.distinct("region", { region: { $ne: null } }),
     col.distinct("relationship", { relationship: { $ne: null } }),
     col.distinct("countryCode", { countryCode: { $ne: null } }),
+    col.distinct("categories", { categories: { $exists: true } }),
   ]);
+
 
   const countrySet = new Set<string>();
   for (const c of countries as string[]) {
@@ -124,12 +135,23 @@ export async function getAdvertiserFacets(): Promise<AdvertiserFacets> {
     if (norm) countrySet.add(norm);
   }
 
+  const categorySet = new Set<string>();
+  for (const cat of rawCategories as (string | string[])[]) {
+    if (Array.isArray(cat)) {
+      cat.forEach((item) => item && categorySet.add(item.trim()));
+    } else if (typeof cat === "string" && cat.trim()) {
+      categorySet.add(cat.trim());
+    }
+  }
+
   return {
     regions: (regions as string[]).sort(),
     relationships: (relationships as string[]).sort(),
     countries: Array.from(countrySet).sort(),
+    categories: Array.from(categorySet).sort(),
   };
 }
+
 
 
 /**
