@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { Advertiser } from "@/lib/awin";
+import { countryName, normalizeCountryCode } from "@/lib/countries";
 
 const RELATIONSHIP_STYLES: Record<string, string> = {
   joined: "bg-green-50 text-green-700 ring-green-600/20",
   pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
   notjoined: "bg-gray-50 text-gray-600 ring-gray-500/20",
 };
+
 
 function StatusBadge({ relationship }: { relationship: string | null }) {
   if (!relationship) return null;
@@ -63,15 +65,22 @@ export default function AdvertiserCard({
         </div>
 
         <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-          {advertiser.region && (
+          {(advertiser.region || advertiser.countryCode) && (
             <div>
               <dt className="text-gray-400">Region</dt>
               <dd className="mt-0.5 font-medium text-gray-700">
-                {advertiser.region}
-                {advertiser.countryCode ? ` (${advertiser.countryCode})` : ""}
+                {(() => {
+                  const norm = normalizeCountryCode(advertiser.countryCode || advertiser.region);
+                  if (norm === "WW" || advertiser.region === "00" || advertiser.countryCode === "00") {
+                    return "Worldwide";
+                  }
+                  const name = countryName(norm || advertiser.countryCode || advertiser.region);
+                  return name ? `${name}${norm ? ` (${norm})` : ""}` : advertiser.region;
+                })()}
               </dd>
             </div>
           )}
+
           {advertiser.commission && (
             <div>
               <dt className="text-gray-400">Commission</dt>

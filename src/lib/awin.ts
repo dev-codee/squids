@@ -293,16 +293,21 @@ export function queryAdvertisers(
       const isGlobal =
         a.region?.toLowerCase() === "global" ||
         a.region?.toLowerCase() === "worldwide" ||
-        ["WW", "GLOBAL", "INT"].includes(a.countryCode?.toUpperCase() || "");
+        a.region === "00" ||
+        a.countryCode === "00" ||
+        normalizeCountryCode(a.countryCode) === "WW" ||
+        normalizeCountryCode(a.region) === "WW" ||
+        ["WW", "GLOBAL", "INT", "00"].includes(a.countryCode?.toUpperCase() || "");
 
       const hasCountry = a.countryCodes
-        ? a.countryCodes.some((c) => c.toUpperCase() === country)
-        : a.countryCode?.toUpperCase() === country;
+        ? a.countryCodes.some((c) => normalizeCountryCode(c) === normalizeCountryCode(country))
+        : normalizeCountryCode(a.countryCode) === normalizeCountryCode(country);
 
       if (!hasCountry && !isGlobal) {
         return false;
       }
     }
+
     return true;
   });
 

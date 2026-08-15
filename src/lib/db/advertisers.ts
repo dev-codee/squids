@@ -94,10 +94,13 @@ function buildFilter(query: AdvertiserQuery & { network?: string }): Record<stri
       { countryCodes: raw },
       { countryCodes: normCc },
       { countryCodes: { $regex: regexMatch } },
-      { countryCode: { $in: ["WW", "GLOBAL", "INT"] } },
+      { countryCode: { $in: ["WW", "GLOBAL", "INT", "00"] } },
+      { countryCodes: { $in: ["WW", "GLOBAL", "INT", "00"] } },
+      { region: { $in: ["00", "WW", "GLOBAL", "INT"] } },
       { region: { $regex: /^(global|worldwide)$/i } },
     ];
   }
+
 
   return filter;
 }
