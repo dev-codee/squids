@@ -47,6 +47,49 @@ const DEFAULT_CATEGORIES: Omit<Category, "id">[] = [
   { name: "Automotive", slug: "automotive", icon: "🚗", description: "Car parts, accessories, and auto services.", isFeatured: false, sortOrder: 10, storeCount: 0, dealCount: 0 },
 ];
 
+const CATEGORY_KEYWORDS: { categoryName: string; keywords: string[] }[] = [
+  {
+    categoryName: "Electronics & Tech",
+    keywords: ["electronic", "tech", "computer", "mobile", "phone", "software", "antivirus", "gadget", "pc", "digital", "hardware", "vpn", "hosting", "security", "cloud", "camera", "app", "tech", "adguard", "aomei"],
+  },
+  {
+    categoryName: "Fashion & Apparel",
+    keywords: ["fashion", "apparel", "clothing", "cloth", "shoe", "wear", "jewelry", "jewel", "accessory", "accessories", "dress", "shirt", "pant", "footwear", "watch", "bag", "style", "brand"],
+  },
+  {
+    categoryName: "Travel & Hotels",
+    keywords: ["travel", "hotel", "flight", "booking", "vacation", "car rental", "airline", "resort", "tour", "ticket", "trip", "stay", "cruise", "centara"],
+  },
+  {
+    categoryName: "Beauty & Health",
+    keywords: ["beauty", "health", "skincare", "skin", "cosmetics", "wellness", "pharmacy", "makeup", "perfume", "fragrance", "care", "hair", "body", "medical", "fitness", "vitamin"],
+  },
+  {
+    categoryName: "Home & Garden",
+    keywords: ["home", "garden", "furniture", "kitchen", "decor", "appliance", "bedding", "bath", "living", "patio", "tool", "house"],
+  },
+  {
+    categoryName: "Sports & Outdoor",
+    keywords: ["sport", "outdoor", "fitness", "gym", "activewear", "cycling", "camping", "hiking", "golf", "football", "ball", "cs2", "case"],
+  },
+  {
+    categoryName: "Software & Services",
+    keywords: ["software", "service", "saas", "hosting", "vpn", "domain", "cloud", "security", "web", "subscription", "marketing", "online", "education", "course", "chegg", "adguard", "aomei"],
+  },
+  {
+    categoryName: "Food & Dining",
+    keywords: ["food", "dining", "restaurant", "grocery", "wine", "pizza", "delivery", "gourmet", "drink", "coffee", "tea", "chocolate", "snack"],
+  },
+  {
+    categoryName: "Toys & Gaming",
+    keywords: ["toy", "game", "gaming", "console", "playstation", "xbox", "nintendo", "kid", "child", "puzzle", "hobby", "cs2", "cs2case"],
+  },
+  {
+    categoryName: "Automotive",
+    keywords: ["auto", "car", "motor", "vehicle", "tire", "automotive", "part", "accessory"],
+  },
+];
+
 /**
  * Seed default categories if collection is empty.
  */
@@ -80,6 +123,62 @@ function mapDoc(doc: CategoryDoc): Category {
 }
 
 /**
+ * Auto-categorize all advertisers in MongoDB based on keyword matching.
+ */
+export async function autoCategorizeStoresAndDeals(): Promise<{ categorizedCount: number }> {
+  try {
+    const db = await getDb();
+    const advertisersCol = db.collection("advertisers");
+
+    const advertisers = await advertisersCol.find({}).toArray();
+    let count = 0;
+
+    for (const adv of advertisers) {
+      const textToMatch = [
+        adv.name || "",
+        adv.description || "",
+        adv.region || "",
+        ...(Array.isArray(adv.categories) ? adv.categories : [adv.categories || ""]),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const assignedCategories = new Set<string>(
+        Array.isArray(adv.categories)
+          ? adv.categories.filter((c: any) => typeof c === "string" && c.trim())
+          : [],
+      );
+
+      for (const rule of CATEGORY_KEYWORDS) {
+        const matches = rule.keywords.some((kw) => textToMatch.includes(kw));
+        if (matches) {
+          assignedCategories.add(rule.categoryName);
+        }
+      }
+
+      // Default fallback if no category matched
+      if (assignedCategories.size === 0) {
+        assignedCategories.add("Electronics & Tech");
+        assignedCategories.add("Software & Services");
+      }
+
+      const categoryArray = Array.from(assignedCategories);
+      await advertisersCol.updateOne(
+        { _id: adv._id },
+        { $set: { categories: categoryArray } },
+      );
+      count++;
+    }
+
+    await recountCategoryStats();
+    return { categorizedCount: count };
+  } catch (err) {
+    console.error("[db/categories] Error auto-categorizing stores:", err);
+    return { categorizedCount: 0 };
+  }
+}
+
+/**
  * Fetch all categories with optional search or featured filtering.
  */
 export async function getCategories(query?: {
@@ -90,6 +189,12 @@ export async function getCategories(query?: {
   const col = db.collection<CategoryDoc>(COLLECTION);
 
   await seedCategoriesIfEmpty();
+
+  // If stats are empty, run auto-categorization
+  const sample = await col.findOne({ storeCount: { $gt: 0 } });
+  if (!sample) {
+    await autoCategorizeStoresAndDeals();
+  }
 
   const filter: Record<string, unknown> = {};
   if (query?.search?.trim()) {
@@ -143,7 +248,7 @@ export async function createCategory(data: Partial<Category>): Promise<Category>
   const doc: CategoryDoc = {
     name,
     slug,
-    icon: data.icon || "🏷️",
+    icon: data.icon || "",
     description: data.description || "",
     isFeatured: Boolean(data.isFeatured),
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 99,
@@ -222,8 +327,8 @@ export async function recountCategoryStats(): Promise<void> {
     const categories = await categoriesCol.find({}).toArray();
 
     for (const cat of categories) {
-      const nameRegex = new RegExp(`^${cat.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
-      const slugRegex = new RegExp(`^${cat.slug}$`, "i");
+      const nameRegex = new RegExp(cat.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      const slugRegex = new RegExp(cat.slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
 
       // Count stores that match category name or slug in their categories array
       const storeCount = await advertisersCol.countDocuments({
@@ -235,12 +340,13 @@ export async function recountCategoryStats(): Promise<void> {
         ],
       });
 
-      // Count active deals that match category
+      // Count active deals that match category or whose parent advertiser matches category
       const dealCount = await dealsCol.countDocuments({
         $or: [
-          { category: cat.name },
-          { category: cat.slug },
+          { category: { $regex: nameRegex } },
+          { category: { $regex: slugRegex } },
           { "advertiser.categories": { $elemMatch: { $regex: nameRegex } } },
+          { title: { $regex: nameRegex } },
         ],
       });
 

@@ -5,6 +5,7 @@ import {
   updateCategory,
   deleteCategory,
   recountCategoryStats,
+  autoCategorizeStoresAndDeals,
 } from "@/lib/db/categories";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,14 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const search = request.nextUrl.searchParams.get("search") ?? undefined;
-    
+    const action = request.nextUrl.searchParams.get("action");
+
+    if (action === "autoCategorize") {
+      const res = await autoCategorizeStoresAndDeals();
+      const categories = await getCategories({ search });
+      return NextResponse.json({ ...res, categories });
+    }
+
     // Recount stats on fetch
     await recountCategoryStats();
     
@@ -30,6 +38,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 
 /**
  * POST /api/admin/categories

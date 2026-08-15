@@ -144,6 +144,22 @@ export default function AdminCategoriesPage() {
     }
   }
 
+  const [autoCategorizing, setAutoCategorizing] = useState(false);
+
+  async function handleAutoCategorize() {
+    setAutoCategorizing(true);
+    try {
+      const res = await fetch("/api/admin/categories?action=autoCategorize");
+      const json = await res.json();
+      if (json.categories) setCategories(json.categories);
+      alert(`Auto-categorization complete! Categorized ${json.categorizedCount ?? 0} stores.`);
+    } catch {
+      alert("Error auto-categorizing stores.");
+    } finally {
+      setAutoCategorizing(false);
+    }
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Page Header */}
@@ -156,17 +172,28 @@ export default function AdminCategoriesPage() {
             Manage shopping categories, icons, featured status, and store mappings.
           </p>
         </div>
-        <button
-          onClick={handleOpenCreate}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-accent-hover"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Add Category
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleAutoCategorize}
+            disabled={autoCategorizing}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
+            title="Automatically assign stores and deals to categories based on keywords"
+          >
+            ⚡ {autoCategorizing ? "Categorizing…" : "Auto-Categorize All Stores"}
+          </button>
+          <button
+            onClick={handleOpenCreate}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-accent-hover"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add Category
+          </button>
+        </div>
       </header>
+
 
       {/* Filter / Search Bar */}
       <div className="mb-6 flex items-center justify-between gap-4">
