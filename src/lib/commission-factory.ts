@@ -1,4 +1,5 @@
 import { Advertiser } from "./awin";
+import { cleanAdvertiserName } from "./networks";
 import { Deal } from "./deals";
 import { Transaction } from "./transactions";
 
@@ -85,7 +86,7 @@ export function normaliseCfMerchant(m: CFMerchant): Advertiser {
   return {
     id: m.Id,
     network: "commission-factory",
-    name: m.Name,
+    name: cleanAdvertiserName(m.Name),
     logoUrl: m.AvatarUrl || null,
     status: m.Status?.toLowerCase() === "active" ? "active" : "inactive",
     relationship,

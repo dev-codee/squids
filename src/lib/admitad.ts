@@ -265,7 +265,8 @@ export function getAdmitadWebsiteId(): string {
 // Phase 2 — Advertiser Campaigns
 // ===========================================================================
 
-import type { Advertiser } from "@/lib/awin";
+import type { Advertiser } from "./awin";
+import { cleanAdvertiserName } from "./networks";
 
 /**
  * Raw Admitad campaign (advcampaign) shape from the API.
@@ -339,7 +340,7 @@ export function normaliseAdmitadCampaign(c: AdmitadCampaign): Advertiser {
   return {
     id: c.id,
     network: "admitad",
-    name: c.name,
+    name: cleanAdvertiserName(c.name),
     logoUrl,
     status: c.status ?? "active",
     relationship,

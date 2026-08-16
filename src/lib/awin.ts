@@ -5,6 +5,8 @@
  * environment variables and must never run in the browser.
  */
 
+import { cleanAdvertiserName } from "./networks";
+
 const AWIN_BASE_URL = "https://api.awin.com";
 
 /** Shape of a single programme as returned by the Awin programmes endpoint. */
@@ -115,9 +117,9 @@ export function normaliseProgramme(
   return {
     id: programme.id,
     network: "awin",
-    name: programme.name,
+    name: cleanAdvertiserName(programme.name),
     logoUrl: programme.logoUrl || null,
-    status: programme.status || null,
+    status: programme.validDomains?.length ? "active" : "inactive",
     relationship: programme.relationship || fallbackRelationship || null,
     region: programme.primaryRegion?.name || null,
     countryCode: programme.primaryRegion?.countryCode || null,

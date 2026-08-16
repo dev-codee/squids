@@ -1,5 +1,6 @@
 import { Advertiser } from "./awin";
 import { Deal } from "./deals";
+import { cleanAdvertiserName } from "./networks";
 import { Transaction } from "./transactions";
 
 export class KwankoConfigError extends Error {
@@ -83,7 +84,7 @@ export function normaliseKwankoCampaign(c: KwankoCampaign): Advertiser {
   return {
     id: c.id,
     network: "kwanko",
-    name: c.name || `Campaign #${c.id}`,
+    name: cleanAdvertiserName(c.name || `Campaign #${c.id}`),
     logoUrl: c.logo || null,
     status: "active",
     relationship: "joined",

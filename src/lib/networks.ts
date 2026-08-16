@@ -76,3 +76,13 @@ export const NETWORKS: NetworkConfig[] = [
 export function getNetwork(slug: string): NetworkConfig | undefined {
   return NETWORKS.find((n) => n.slug === slug);
 }
+
+/**
+ * Strips common affiliate network suffixes like " WW", " (WW)", " - WW" 
+ * which represent "Worldwide" but clutter the UI and URL slugs.
+ */
+export function cleanAdvertiserName(name: string): string {
+  if (!name) return name;
+  const cleaned = name.replace(/\s*[-[(]?\bWW\b[\])]?\s*/gi, " ").trim();
+  return cleaned || name; // fallback to original if it stripped completely (e.g., store was literally named "WW")
+}
