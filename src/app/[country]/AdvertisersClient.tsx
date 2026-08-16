@@ -14,6 +14,8 @@ import HomeCategories from "@/components/home/HomeCategories";
 import HomeFaqs from "@/components/home/HomeFaqs";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 
+import { useSearchParams } from "next/navigation";
+
 const PAGE_SIZE = 35;
 
 interface PageData {
@@ -32,6 +34,7 @@ interface AdvertisersClientProps {
 
 export default function AdvertisersClient({ country, initialSearch = "", homeSettings }: AdvertisersClientProps) {
   const dict = useDictionary();
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [categories, setCategories] = useState<{ id?: string; name: string; slug: string; icon?: string }[]>([]);
@@ -40,6 +43,12 @@ export default function AdvertisersClient({ country, initialSearch = "", homeSet
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync search state if URL search query changes from Header
+  useEffect(() => {
+    const urlSearch = searchParams.get("search") || "";
+    setSearch(urlSearch);
+  }, [searchParams]);
 
   useEffect(() => {
     fetch("/api/categories")
@@ -230,7 +239,7 @@ export default function AdvertisersClient({ country, initialSearch = "", homeSet
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                   {data.advertisers.map((a) => (
                     <AdvertiserCard key={a.id} advertiser={a} country={country} />
                   ))}

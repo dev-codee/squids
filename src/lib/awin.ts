@@ -57,6 +57,9 @@ export interface Advertiser {
   currencyCode: string | null;
   commission: string | null;
   url: string | null;
+
+  /** Dynamically populated count of active deals */
+  dealCount?: number;
 }
 
 export class AwinConfigError extends Error {}

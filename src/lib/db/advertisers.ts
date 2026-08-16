@@ -231,7 +231,6 @@ export async function getAdvertisersFromDb(
                 },
               },
             },
-            { $limit: 1 },
           ],
           as: "activeDeals",
         },
@@ -240,6 +239,11 @@ export async function getAdvertisersFromDb(
       { $sort: { isFlagship: -1, name: 1 } },
       { $skip: skip },
       { $limit: pageSize },
+      { 
+        $addFields: { 
+          dealCount: { $size: "$activeDeals" } 
+        } 
+      },
       { $project: { _id: 0, syncedAt: 0, activeDeals: 0 } },
     ]).toArray();
   } else {
@@ -249,6 +253,15 @@ export async function getAdvertisersFromDb(
       .skip(skip)
       .limit(pageSize)
       .toArray();
+
+    // Fetch deal counts manually for the non-joined query
+    const dealsCol = db.collection("deals");
+    for (const doc of docs) {
+      doc.dealCount = await dealsCol.countDocuments({
+        "advertiser.id": String(doc.id),
+        network: doc.network,
+      });
+    }
   }
 
   return {
