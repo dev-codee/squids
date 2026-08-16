@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  affiliate-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: affiliate-app
+    restart: always
+    ports:
+      - "3001:3000"
+    env_file:
+      - .env.local
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
