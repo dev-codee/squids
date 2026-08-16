@@ -59,8 +59,8 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
 
   const navLinks = [
     { label: "Home", href: `/${lc}` },
-    { label: "Stores", href: `/${lc}` },
-    { label: "Top Deals", href: `/${lc}` },
+    { label: "Stores", href: `/${lc}/stores` },
+    { label: "Top Deals", href: `/${lc}/deals` },
     { label: "Categories", href: `/${lc}/categories` },
   ];
 
@@ -104,7 +104,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
         {/* Right side: Nav Links, Country dropdown & Green button */}
         <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
           <Link
-            href={`/${lc}`}
+            href={`/${lc}/stores`}
             className="hidden md:inline-flex items-center text-sm font-medium text-gray-700 hover:text-amber-500 transition-colors"
           >
             All Stores
@@ -179,7 +179,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
 
           {/* Picodi-style Green Pill Button */}
           <Link
-            href={`/${lc}`}
+            href={`/${lc}/deals`}
             className="rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium px-5 py-2 transition-colors shadow-sm flex items-center gap-1"
           >
             All Deals

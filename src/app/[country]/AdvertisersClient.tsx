@@ -29,10 +29,19 @@ interface PageData {
 interface AdvertisersClientProps {
   country: string;
   initialSearch?: string;
-  homeSettings: HomeSettings;
+  /** Home marketing sections + hero. Optional for the focused "stores" variant. */
+  homeSettings?: HomeSettings;
+  /** "home" shows the hero + marketing sections; "stores" is a bare browsing grid. */
+  variant?: "home" | "stores";
 }
 
-export default function AdvertisersClient({ country, initialSearch = "", homeSettings }: AdvertisersClientProps) {
+export default function AdvertisersClient({
+  country,
+  initialSearch = "",
+  homeSettings,
+  variant = "home",
+}: AdvertisersClientProps) {
+  const isHome = variant === "home";
   const dict = useDictionary();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(initialSearch);
@@ -112,26 +121,37 @@ export default function AdvertisersClient({ country, initialSearch = "", homeSet
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-12 flex flex-col md:flex-row items-center justify-between gap-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-          <div className="w-full md:w-1/2 flex justify-center">
-            <Image 
-              src="/hero-foxzil.png" 
-              alt="Foxzil Deals" 
-              width={500}
-              height={300}
-              className="max-w-full h-auto max-h-[300px] object-contain"
-              priority
-            />
-          </div>
-          <div className="w-full md:w-1/2 text-center md:text-left">
+        {isHome ? (
+          <header className="mb-12 flex flex-col md:flex-row items-center justify-between gap-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <div className="w-full md:w-1/2 flex justify-center">
+              <Image
+                src="/hero-foxzil.png"
+                alt="Foxzil Deals"
+                width={500}
+                height={300}
+                className="max-w-full h-auto max-h-[300px] object-contain"
+                priority
+              />
+            </div>
+            <div className="w-full md:w-1/2 text-center md:text-left">
+              <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                {dict.home.heroTitle}
+              </h1>
+              <p className="mt-4 text-base text-gray-500">
+                {dict.home.heroSubtitle} {countryName(country)}.
+              </p>
+            </div>
+          </header>
+        ) : (
+          <header className="mb-8">
             <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-              {dict.home.heroTitle}
+              All Stores
             </h1>
-            <p className="mt-4 text-base text-gray-500">
-              {dict.home.heroSubtitle} {countryName(country)}.
+            <p className="mt-2 text-base text-gray-500">
+              Browse every store with active offers in {countryName(country)}.
             </p>
-          </div>
-        </header>
+          </header>
+        )}
 
         {error ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
@@ -239,10 +259,14 @@ export default function AdvertisersClient({ country, initialSearch = "", homeSet
       </main>
 
       {/* New Home Page Sections */}
-      <HomeReviews reviews={homeSettings.reviews} />
-      <HomePopularShops shops={homeSettings.popularShops} />
-      <HomeCategories categories={homeSettings.categories} />
-      <HomeFaqs faqs={homeSettings.faqs} />
+      {isHome && homeSettings && (
+        <>
+          <HomeReviews reviews={homeSettings.reviews} />
+          <HomePopularShops shops={homeSettings.popularShops} />
+          <HomeCategories categories={homeSettings.categories} />
+          <HomeFaqs faqs={homeSettings.faqs} />
+        </>
+      )}
     </div>
   );
 }
