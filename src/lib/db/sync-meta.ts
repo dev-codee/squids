@@ -35,7 +35,8 @@ export type SyncEntity =
   | "commission-factory:transactions"
   | "kwanko:advertisers"
   | "kwanko:deals"
-  | "kwanko:transactions";
+  | "kwanko:transactions"
+  | "welcome:deals";
 
 interface SyncMetaDoc {
   entity: string;

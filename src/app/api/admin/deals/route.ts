@@ -164,6 +164,10 @@ export async function PUT(request: NextRequest) {
 
     Object.assign(updateData, parseEnrichment(body));
 
+    // An admin edit promotes an auto-generated welcome deal into a curated,
+    // "real" deal — so it's no longer re-cleaned when a network deal arrives.
+    updateData.isAutoWelcome = false;
+
     const success = await updateDeal(id, updateData);
     if (!success) {
       return NextResponse.json(

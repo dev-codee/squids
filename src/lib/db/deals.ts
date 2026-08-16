@@ -9,6 +9,7 @@
  * between Awin and Admitad (or future networks).
  */
 
+import type { AnyBulkWriteOperation } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { Deal, DealQuery, PagedDeals } from "@/lib/deals";
 import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE } from "@/lib/deals";
@@ -150,6 +151,79 @@ export async function getDealsFromDb(
 }
 
 /**
+ * Most recently created/updated deals for the homepage showcase, newest first.
+ * Excludes generic auto-welcome deals so the showcase highlights real offers.
+ */
+export async function getRecentDeals(
+  limit = 10,
+  country?: string,
+): Promise<Deal[]> {
+  const db = await getDb();
+  const col = db.collection<DealDoc>(COLLECTION);
+
+  const filter: Record<string, unknown> = {
+    ...buildFilter({ country } as DealQuery),
+    isAutoWelcome: { $ne: true },
+  };
+
+  const docs = await col
+    .find(filter, { projection: { _id: 0, syncedAt: 0 } })
+    .sort({ syncedAt: -1 })
+    .limit(Math.max(1, limit))
+    .toArray();
+
+  return docs as unknown as Deal[];
+}
+
+/** A popular store derived from deal counts (for the homepage grid). */
+export interface PopularShopData {
+  id: number;
+  network: string;
+  name: string;
+  logoUrl: string | null;
+  dealCount: number;
+}
+
+/**
+ * Stores with more than `minDeals` deals/coupons, ranked by deal count.
+ * Used to auto-populate the homepage "Popular shops" grid.
+ */
+export async function getPopularShops(opts?: {
+  minDeals?: number;
+  limit?: number;
+  country?: string;
+}): Promise<PopularShopData[]> {
+  const { minDeals = 10, limit = 8, country } = opts ?? {};
+  const db = await getDb();
+  const col = db.collection<DealDoc>(COLLECTION);
+
+  const rows = await col
+    .aggregate([
+      { $match: buildFilter({ country } as DealQuery) },
+      {
+        $group: {
+          _id: { id: "$advertiser.id", network: "$network" },
+          name: { $first: "$advertiser.name" },
+          logoUrl: { $first: "$advertiser.logoUrl" },
+          dealCount: { $sum: 1 },
+        },
+      },
+      { $match: { dealCount: { $gt: minDeals } } },
+      { $sort: { dealCount: -1, name: 1 } },
+      { $limit: Math.max(1, limit) },
+    ])
+    .toArray();
+
+  return rows.map((r) => ({
+    id: r._id.id,
+    network: r._id.network,
+    name: r.name,
+    logoUrl: r.logoUrl ?? null,
+    dealCount: r.dealCount,
+  }));
+}
+
+/**
  * Check if there is any data in the deals collection.
  */
 export async function hasDealsData(): Promise<boolean> {
@@ -198,10 +272,180 @@ export async function removeStaleDeals(
 
   const result = await col.deleteMany({
     network,
-    id: { $nin: currentIds },
+    id: { $nin: currentIds, $lt: WELCOME_DEAL_ID_BASE },
+    // Ids in the welcome band are auto-generated and intentionally absent from
+    // any network feed, so they must never be treated as "stale" — even after an
+    // admin edits them and the isAutoWelcome flag is cleared.
   });
 
   return result.deletedCount;
+}
+
+// ---------------------------------------------------------------------------
+// Auto "welcome" deals for joined advertisers with no real deals
+// ---------------------------------------------------------------------------
+
+/**
+ * Deterministic id band for auto-generated welcome deals: `BASE + advertiserId`.
+ * Kept far above the manual-deal range (900000+) so ids never collide, and so a
+ * welcome deal can be re-derived idempotently for the same advertiser.
+ */
+const WELCOME_DEAL_ID_BASE = 1_000_000_000;
+
+/** Default copy for an auto-generated welcome deal. Admin can edit afterwards. */
+export const WELCOME_DEAL_DEFAULTS = {
+  discountText: "SPECIAL OFFER",
+  title: (name: string) => `Shop ${name} & Start Saving`,
+  description: (name: string) =>
+    `Explore the latest products, promotions and exclusive savings at ${name}. Click through to grab today's best offers.`,
+};
+
+interface WelcomeAdvertiser {
+  id: number;
+  network?: string;
+  name: string;
+  logoUrl?: string | null;
+  url?: string | null;
+  countryCode?: string | null;
+  countryCodes?: string[];
+}
+
+/** Build (but don't persist) a welcome Deal for a joined advertiser. */
+function buildWelcomeDeal(a: WelcomeAdvertiser): Deal {
+  const network = a.network ?? "awin";
+  const regionCodes =
+    Array.isArray(a.countryCodes) && a.countryCodes.length > 0
+      ? a.countryCodes.map((c) => String(c).toUpperCase())
+      : a.countryCode
+      ? [String(a.countryCode).toUpperCase()]
+      : [];
+
+  return {
+    id: WELCOME_DEAL_ID_BASE + a.id,
+    network,
+    title: WELCOME_DEAL_DEFAULTS.title(a.name),
+    description: WELCOME_DEAL_DEFAULTS.description(a.name),
+    advertiser: {
+      id: a.id,
+      name: a.name,
+      logoUrl: a.logoUrl ?? null,
+    },
+    type: "promotion",
+    code: null,
+    startDate: null,
+    endDate: null, // open-ended — survives removeExpiredDeals
+    status: "active",
+    trackingUrl: a.url ?? null,
+    regionCodes,
+    discountText: WELCOME_DEAL_DEFAULTS.discountText,
+    placement: "todays",
+    isAutoWelcome: true,
+  };
+}
+
+/**
+ * Ensure every **joined** advertiser has at least one deal so it surfaces on the
+ * public pages (which require `requireDeals`).
+ *
+ * For each joined advertiser with no real (non-welcome) deal, upserts a generic
+ * welcome deal carrying the advertiser's affiliate link. Uses `$setOnInsert`, so
+ * an admin can freely edit the deal afterwards without the sync overwriting it.
+ *
+ * Also self-cleans: removes welcome deals once the advertiser gains a real deal,
+ * or is no longer joined.
+ *
+ * @returns counts of welcome deals created and removed.
+ */
+export async function generateWelcomeDeals(): Promise<{
+  created: number;
+  removed: number;
+  joined: number;
+}> {
+  const db = await getDb();
+  const dealsCol = db.collection<DealDoc>(COLLECTION);
+  const advCol = db.collection("advertisers");
+
+  await dealsCol.createIndex({ network: 1, id: 1 }, { unique: true });
+
+  const joined = (await advCol
+    .find(
+      { relationship: "joined" },
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          network: 1,
+          name: 1,
+          logoUrl: 1,
+          url: 1,
+          countryCode: 1,
+          countryCodes: 1,
+        },
+      },
+    )
+    .toArray()) as unknown as WelcomeAdvertiser[];
+
+  // Advertiser keys (network:id) that already have a real, non-welcome deal.
+  const realDealGroups = await dealsCol
+    .aggregate([
+      { $match: { isAutoWelcome: { $ne: true } } },
+      { $group: { _id: { network: "$network", advId: "$advertiser.id" } } },
+    ])
+    .toArray();
+  const realKeys = new Set(
+    realDealGroups.map((g) => `${g._id.network}:${g._id.advId}`),
+  );
+
+  const now = new Date();
+  const joinedKeys = new Set<string>();
+  const ops: AnyBulkWriteOperation<DealDoc>[] = [];
+
+  for (const a of joined) {
+    if (!a?.id || !a.name) continue;
+    const key = `${a.network ?? "awin"}:${a.id}`;
+    joinedKeys.add(key);
+    if (realKeys.has(key)) continue; // already has a real deal — no welcome needed
+
+    const welcome = buildWelcomeDeal(a);
+    ops.push({
+      updateOne: {
+        filter: { network: welcome.network, id: welcome.id },
+        update: { $setOnInsert: { ...welcome, syncedAt: now } },
+        upsert: true,
+      },
+    });
+  }
+
+  let created = 0;
+  if (ops.length > 0) {
+    const res = await dealsCol.bulkWrite(ops, { ordered: false });
+    created = res.upsertedCount;
+  }
+
+  // Cleanup: drop welcome deals that are now redundant (advertiser gained a real
+  // deal) or orphaned (advertiser no longer joined).
+  const welcomeDeals = await dealsCol
+    .find(
+      { isAutoWelcome: true },
+      { projection: { _id: 0, id: 1, network: 1, advertiser: 1 } },
+    )
+    .toArray();
+
+  const toRemove = welcomeDeals.filter((d) => {
+    const key = `${d.network}:${d.advertiser?.id}`;
+    return realKeys.has(key) || !joinedKeys.has(key);
+  });
+
+  let removed = 0;
+  if (toRemove.length > 0) {
+    const res = await dealsCol.deleteMany({
+      isAutoWelcome: true,
+      $or: toRemove.map((d) => ({ network: d.network, id: d.id })),
+    });
+    removed = res.deletedCount;
+  }
+
+  return { created, removed, joined: joinedKeys.size };
 }
 
 /**

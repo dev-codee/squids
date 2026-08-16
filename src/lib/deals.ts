@@ -96,6 +96,14 @@ export interface Deal {
   placement?: DealPlacement | null;
   /** Percent of stock already claimed (lightning deals), 0–100. */
   stockPercentage?: number | null;
+
+  /**
+   * True when this deal was auto-generated as a generic "welcome" offer for a
+   * joined advertiser that had no real deals yet (so the store still surfaces on
+   * public pages). Cleared once an admin edits it, and skipped by stale-removal
+   * so the network sync never wipes it.
+   */
+  isAutoWelcome?: boolean;
 }
 
 export interface PagedDeals {

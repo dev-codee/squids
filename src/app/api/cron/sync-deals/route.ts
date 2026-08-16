@@ -4,6 +4,7 @@ import {
   upsertDeals,
   removeExpiredDeals,
   removeStaleDeals,
+  generateWelcomeDeals,
 } from "@/lib/db/deals";
 import { updateSyncTime, recordSyncError } from "@/lib/db/sync-meta";
 
@@ -183,6 +184,25 @@ export async function GET(request: NextRequest) {
     console.warn("[cron/sync-deals] Kwanko sync failed (non-fatal):", msg);
     await recordSyncError("kwanko:deals", msg).catch(() => {});
     results.kwanko = { error: msg };
+  }
+
+  // ── Welcome deals ─────────────────────────────────────────────────────────
+  // Runs last, after every network has synced and stale deals were pruned, so
+  // joined advertisers still lacking any real deal get a generic welcome deal
+  // (carrying their affiliate link) and thus appear on the public pages.
+  try {
+    const welcome = await generateWelcomeDeals();
+    await updateSyncTime("welcome:deals", welcome.created);
+    results.welcome = welcome;
+    console.log(
+      `[cron/sync-deals] Welcome: ${welcome.created} created, ${welcome.removed} removed ` +
+        `(${welcome.joined} joined advertisers)`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[cron/sync-deals] Welcome-deal generation failed (non-fatal):", msg);
+    await recordSyncError("welcome:deals", msg).catch(() => {});
+    results.welcome = { error: msg };
   }
 
   return NextResponse.json({

@@ -71,16 +71,15 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
       {/* Top row: logo, search, account actions */}
       <div className="mx-auto max-w-7xl px-4 h-20 flex items-center justify-between gap-4 sm:px-6 lg:px-8">
-        {/* Left side: Logo & Header Search Bar */}
-        <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0">
-          {/* Logo */}
-          <Link href={`/${lc}`} className="flex items-center gap-2 flex-shrink-0" suppressHydrationWarning>
-            <Image src="/logo.png" alt="Foxzil Logo" width={32} height={32} className="object-contain" priority />
-            <span className="text-2xl font-black tracking-tight text-amber-500 hidden sm:inline">Foxzil</span>
-          </Link>
+        {/* Logo */}
+        <Link href={`/${lc}`} className="flex items-center gap-2 flex-shrink-0" suppressHydrationWarning>
+          <Image src="/logo.png" alt="Foxzil Logo" width={32} height={32} className="object-contain" priority />
+          <span className="text-2xl font-black tracking-tight text-amber-500 hidden sm:inline">Foxzil</span>
+        </Link>
 
-          {/* Picodi-style Header Search Bar Pill */}
-          <form onSubmit={handleSearchSubmit} className="relative w-full max-w-md flex-1">
+        {/* Centered Header Search Bar Pill */}
+        <div className="flex flex-1 justify-center px-2 min-w-0">
+          <form onSubmit={handleSearchSubmit} className="relative w-full max-w-md">
             <input
               type="text"
               value={searchQuery}
@@ -101,15 +100,8 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
           </form>
         </div>
 
-        {/* Right side: Nav Links, Country dropdown & Green button */}
+        {/* Right side: Country dropdown & Sign in */}
         <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
-          <Link
-            href={`/${lc}/stores`}
-            className="hidden md:inline-flex items-center text-sm font-medium text-gray-700 hover:text-amber-500 transition-colors"
-          >
-            All Stores
-          </Link>
-
           {/* Country flag dropdown */}
           <div className="relative" ref={countryRef}>
             <button
@@ -175,14 +167,6 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
             className="text-sm font-medium text-gray-700 hover:text-amber-500 transition-colors"
           >
             Sign in
-          </Link>
-
-          {/* Picodi-style Green Pill Button */}
-          <Link
-            href={`/${lc}/deals`}
-            className="rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium px-5 py-2 transition-colors shadow-sm flex items-center gap-1"
-          >
-            All Deals
           </Link>
         </div>
       </div>

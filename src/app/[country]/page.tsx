@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getHomeSettings } from "@/lib/db/homeSettings";
+import { getRecentDeals, getPopularShops } from "@/lib/db/deals";
 import AdvertisersClient from "./AdvertisersClient";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,19 @@ export default async function CountryHomePage({
   }
 
   const search = typeof searchParams.search === "string" ? searchParams.search : "";
-  const homeSettings = await getHomeSettings();
-  return <AdvertisersClient country={rawCountry.toUpperCase()} initialSearch={search} homeSettings={homeSettings} />;
+  const country = rawCountry.toUpperCase();
+  const [homeSettings, recentDeals, popularShops] = await Promise.all([
+    getHomeSettings(),
+    getRecentDeals(10, country),
+    getPopularShops({ minDeals: 10, limit: 8, country }),
+  ]);
+  return (
+    <AdvertisersClient
+      country={country}
+      initialSearch={search}
+      homeSettings={homeSettings}
+      recentDeals={recentDeals}
+      popularShops={popularShops}
+    />
+  );
 }

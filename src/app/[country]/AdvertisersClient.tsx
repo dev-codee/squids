@@ -8,7 +8,9 @@ import Image from "next/image";
 import Pagination from "@/components/Pagination";
 import SkeletonGrid from "@/components/SkeletonGrid";
 import type { HomeSettings } from "@/lib/db/homeSettings";
-import HomeReviews from "@/components/home/HomeReviews";
+import type { Deal } from "@/lib/deals";
+import type { PopularShopData } from "@/lib/db/deals";
+import HomeRecentDeals from "@/components/home/HomeRecentDeals";
 import HomePopularShops from "@/components/home/HomePopularShops";
 import HomeCategories from "@/components/home/HomeCategories";
 import HomeFaqs from "@/components/home/HomeFaqs";
@@ -31,6 +33,10 @@ interface AdvertisersClientProps {
   initialSearch?: string;
   /** Home marketing sections + hero. Optional for the focused "stores" variant. */
   homeSettings?: HomeSettings;
+  /** Newest deals for the homepage showcase. */
+  recentDeals?: Deal[];
+  /** Auto-populated popular shops (stores with the most deals). */
+  popularShops?: PopularShopData[];
   /** "home" shows the hero + marketing sections; "stores" is a bare browsing grid. */
   variant?: "home" | "stores";
 }
@@ -39,6 +45,8 @@ export default function AdvertisersClient({
   country,
   initialSearch = "",
   homeSettings,
+  recentDeals = [],
+  popularShops = [],
   variant = "home",
 }: AdvertisersClientProps) {
   const isHome = variant === "home";
@@ -46,7 +54,6 @@ export default function AdvertisersClient({
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [categories, setCategories] = useState<{ id?: string; name: string; slug: string; icon?: string }[]>([]);
   const [page, setPage] = useState(1);
 
   const [data, setData] = useState<PageData | null>(null);
@@ -58,15 +65,6 @@ export default function AdvertisersClient({
     const urlSearch = searchParams.get("search") || "";
     setSearch(urlSearch);
   }, [searchParams]);
-
-  useEffect(() => {
-    fetch("/api/categories")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.categories) setCategories(data.categories);
-      })
-      .catch(() => {});
-  }, []);
 
   const load = useCallback(
     async (currentSearch: string, currentCategory: string, currentPage: number) => {
@@ -207,53 +205,6 @@ export default function AdvertisersClient({
                 />
               </>
             )}
-
-            {/* Categories Section */}
-            {categories.length > 0 && (
-              <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-gray-900">
-                    Browse by category
-                  </h2>
-                  {selectedCategory && (
-                    <button
-                      onClick={() => setSelectedCategory("")}
-                      className="text-xs font-medium text-accent hover:text-accent-hover"
-                    >
-                      Clear filter
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <button
-                    onClick={() => setSelectedCategory("")}
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 font-medium transition ${
-                      selectedCategory === ""
-                        ? "bg-accent text-white shadow-sm"
-                        : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    All Stores
-                  </button>
-                  {categories.map((c) => {
-                    const isSelected = selectedCategory === c.name;
-                    return (
-                      <button
-                        key={c.slug}
-                        onClick={() => setSelectedCategory(isSelected ? "" : c.name)}
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium transition ${
-                          isSelected
-                            ? "bg-accent text-white shadow-sm"
-                            : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        <span>{c.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
           </div>
         )}
       </main>
@@ -261,8 +212,8 @@ export default function AdvertisersClient({
       {/* New Home Page Sections */}
       {isHome && homeSettings && (
         <>
-          <HomeReviews reviews={homeSettings.reviews} />
-          <HomePopularShops shops={homeSettings.popularShops} />
+          <HomeRecentDeals deals={recentDeals} country={country} />
+          <HomePopularShops shops={popularShops} country={country} />
           <HomeCategories categories={homeSettings.categories} />
           <HomeFaqs faqs={homeSettings.faqs} />
         </>
