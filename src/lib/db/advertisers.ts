@@ -10,7 +10,7 @@
  */
 
 import { getDb } from "@/lib/mongodb";
-import { normalizeCountryCode } from "@/lib/countries";
+import { normalizeCountryCode, foreignCountrySignals } from "@/lib/countries";
 import { cleanAdvertiserName } from "@/lib/networks";
 import type {
   Advertiser,
@@ -70,6 +70,10 @@ export async function upsertAdvertisers(
  */
 function buildFilter(query: AdvertiserQuery & { network?: string }): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
+  // Accumulate independent clauses here so that multiple filters (e.g. country
+  // AND category) all apply — a single `filter.$or` would let a later clause
+  // silently overwrite an earlier one.
+  const and: Record<string, unknown>[] = [];
 
   if (query.network) {
     filter.network = query.network;
@@ -88,28 +92,50 @@ function buildFilter(query: AdvertiserQuery & { network?: string }): Record<stri
     const raw = query.country.trim().toUpperCase();
     const normCc = normalizeCountryCode(raw);
     const regexMatch = new RegExp(`(?:^|[-_])${normCc}$`, "i");
-    filter.$or = [
-      { countryCode: raw },
-      { countryCode: normCc },
-      { countryCode: { $regex: regexMatch } },
-      { countryCodes: raw },
-      { countryCodes: normCc },
-      { countryCodes: { $regex: regexMatch } },
-      { countryCode: { $in: ["WW", "GLOBAL", "INT", "00"] } },
-      { countryCodes: { $in: ["WW", "GLOBAL", "INT", "00"] } },
-      { region: { $in: ["00", "WW", "GLOBAL", "INT"] } },
-      { region: { $regex: /^(global|worldwide)$/i } },
-    ];
-  }
+    // Match the requested country explicitly, or fall back to worldwide/global.
+    and.push({
+      $or: [
+        { countryCode: raw },
+        { countryCode: normCc },
+        { countryCode: { $regex: regexMatch } },
+        { countryCodes: raw },
+        { countryCodes: normCc },
+        { countryCodes: { $regex: regexMatch } },
+        { countryCode: { $in: ["WW", "GLOBAL", "INT", "00"] } },
+        { countryCodes: { $in: ["WW", "GLOBAL", "INT", "00"] } },
+        { region: { $in: ["00", "WW", "GLOBAL", "INT"] } },
+        { region: { $regex: /^(global|worldwide)$/i } },
+      ],
+    });
 
+    // Exclude stores whose name/URL explicitly signals a *different* country
+    // (e.g. "acer.fr"/"Aosom.fr" must not show under "DE"), even if the store
+    // is tagged worldwide/global by the network feed.
+    const foreign = foreignCountrySignals(normCc);
+    if (foreign.length > 0) {
+      const foreignRegex = foreign.join("|");
+      and.push({
+        $nor: [
+          { name: { $regex: foreignRegex, $options: "i" } },
+          { url: { $regex: foreignRegex, $options: "i" } },
+        ],
+      });
+    }
+  }
 
   if (query.category?.trim()) {
     const cat = query.category.trim();
     const catRegex = new RegExp(`^${cat.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
-    filter.$or = [
-      { categories: { $elemMatch: { $regex: catRegex } } },
-      { categories: cat },
-    ];
+    and.push({
+      $or: [
+        { categories: { $elemMatch: { $regex: catRegex } } },
+        { categories: cat },
+      ],
+    });
+  }
+
+  if (and.length > 0) {
+    filter.$and = and;
   }
 
   return filter;
@@ -240,10 +266,10 @@ export async function getAdvertisersFromDb(
       { $sort: { isFlagship: -1, name: 1 } },
       { $skip: skip },
       { $limit: pageSize },
-      { 
-        $addFields: { 
-          dealCount: { $size: "$activeDeals" } 
-        } 
+      {
+        $addFields: {
+          dealCount: { $size: "$activeDeals" }
+        }
       },
       { $project: { _id: 0, syncedAt: 0, activeDeals: 0 } },
     ]).toArray();
@@ -371,7 +397,7 @@ export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | nu
   const exact = candidates.find(
     (a) => slugifyAdvertiserName((a as unknown as Advertiser).name) === normalized,
   );
-  
+
   const result = (exact ?? candidates[0]) as unknown as Advertiser;
   if (result && result.name) {
     result.name = cleanAdvertiserName(result.name);

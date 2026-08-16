@@ -65,4 +65,47 @@ export function countryLabel(code: string | null | undefined): string {
   return `${countryFlag(code)} ${countryName(code)}`;
 }
 
+/**
+ * Regex source strings (case-insensitive) that, when found in a store name or
+ * domain URL, explicitly signal that the store belongs to a specific country
+ * (e.g. "acer.fr" / "Acer Store UK" / "Aosom.fr"). Keyed by ISO country code.
+ *
+ * Reused by the DB query layer to *exclude* foreign-country stores from a
+ * country listing even when a store is tagged worldwide/global.
+ */
+export const COUNTRY_SIGNAL_PATTERNS: Record<string, string> = {
+  FR: "\\.fr\\b|[-\\s]fr\\b",
+  DE: "\\.de\\b|[-\\s]de\\b",
+  GB: "\\.co\\.uk\\b|\\.uk\\b|[-\\s]uk\\b",
+  IT: "\\.it\\b|[-\\s]it\\b",
+  ES: "\\.es\\b|[-\\s]es\\b",
+  CA: "\\.ca\\b|[-\\s]ca\\b",
+  AU: "\\.com\\.au\\b|\\.au\\b|[-\\s]au\\b",
+  NL: "\\.nl\\b|[-\\s]nl\\b",
+  PL: "\\.pl\\b|[-\\s]pl\\b",
+};
+
+/**
+ * Detects if a store name or domain URL explicitly specifies a country suffix/TLD
+ * like "Aosom.fr" -> "FR", "Acer Store UK" -> "GB", "Acer.de" -> "DE".
+ */
+export function extractCountryFromNameOrUrl(name?: string | null, url?: string | null): string | null {
+  const text = `${name || ""} ${url || ""}`.toLowerCase();
+  for (const [code, pattern] of Object.entries(COUNTRY_SIGNAL_PATTERNS)) {
+    if (new RegExp(pattern, "i").test(text)) return code;
+  }
+  return null;
+}
+
+/**
+ * Returns the country-signal regex source strings for every country *other than*
+ * `selected`. Used to exclude e.g. "acer.fr" / "acer.co.uk" from a "DE" listing
+ * even when the store is tagged worldwide/global.
+ */
+export function foreignCountrySignals(selected: string | null | undefined): string[] {
+  const cc = normalizeCountryCode(selected);
+  return Object.entries(COUNTRY_SIGNAL_PATTERNS)
+    .filter(([code]) => code !== cc)
+    .map(([, pattern]) => pattern);
+}
 

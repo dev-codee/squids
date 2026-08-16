@@ -148,73 +148,6 @@ export default function AdvertisersClient({ country, initialSearch = "", homeSet
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="m21 21-4.3-4.3" />
-                  </svg>
-                </span>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search advertisers by name…"
-                  className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 shadow-card outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
-                />
-              </div>
-
-              {categories.length > 0 && (
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-card outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 cursor-pointer"
-                  aria-label="Filter by category"
-                >
-                  <option value="">All Categories</option>
-                  {categories.map((c) => (
-                    <option key={c.slug} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            {/* Category Quick Filter Pills */}
-            {categories.length > 0 && (
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none text-xs">
-                <button
-                  onClick={() => setSelectedCategory("")}
-                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 font-medium transition flex-shrink-0 ${
-                    selectedCategory === ""
-                      ? "bg-accent text-white shadow-sm"
-                      : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  All Stores
-                </button>
-                {categories.map((c) => {
-                  const isSelected = selectedCategory === c.name;
-                  return (
-                    <button
-                      key={c.slug}
-                      onClick={() => setSelectedCategory(isSelected ? "" : c.name)}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium transition flex-shrink-0 ${
-                        isSelected
-                          ? "bg-accent text-white shadow-sm"
-                          : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      <span>{c.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-
             {loading ? (
               <SkeletonGrid />
             ) : !data || data.total === 0 ? (
@@ -253,6 +186,53 @@ export default function AdvertisersClient({ country, initialSearch = "", homeSet
                   onPageChange={goToPage}
                 />
               </>
+            )}
+
+            {/* Categories Section */}
+            {categories.length > 0 && (
+              <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    Browse by category
+                  </h2>
+                  {selectedCategory && (
+                    <button
+                      onClick={() => setSelectedCategory("")}
+                      className="text-xs font-medium text-accent hover:text-accent-hover"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <button
+                    onClick={() => setSelectedCategory("")}
+                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 font-medium transition ${
+                      selectedCategory === ""
+                        ? "bg-accent text-white shadow-sm"
+                        : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    All Stores
+                  </button>
+                  {categories.map((c) => {
+                    const isSelected = selectedCategory === c.name;
+                    return (
+                      <button
+                        key={c.slug}
+                        onClick={() => setSelectedCategory(isSelected ? "" : c.name)}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium transition ${
+                          isSelected
+                            ? "bg-accent text-white shadow-sm"
+                            : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100"
+                        }`}
+                      >
+                        <span>{c.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
             )}
           </div>
         )}
