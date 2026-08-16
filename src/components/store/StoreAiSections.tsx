@@ -66,6 +66,15 @@ export default function StoreAiSections({
 
   return (
     <div className="space-y-6">
+      {/* Hero intro */}
+      {hasVal(c.hero_intro) && (
+        <Card>
+          <p className="text-sm leading-relaxed text-gray-700 whitespace-pre-line">
+            {c.hero_intro}
+          </p>
+        </Card>
+      )}
+
       {/* Store Trust & Info panel */}
       {showTrustPanel && (
         <Card title="Store Trust & Info">

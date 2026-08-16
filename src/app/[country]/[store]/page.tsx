@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { loadStoreData } from "@/lib/storeData";
+import { Suspense } from "react";
 import StoreSidebar from "@/components/store/StoreSidebar";
 import HorizontalCouponCard from "@/components/store/HorizontalCouponCard";
 import LightningDealCard from "@/components/store/LightningDealCard";
-import StoreAiSections from "@/components/store/StoreAiSections";
+import StoreAiContent from "@/components/store/StoreAiContent";
+import StoreAiSkeleton from "@/components/store/StoreAiSkeleton";
 import { getDictionary } from "@/i18n";
 
 export const dynamic = "force-dynamic";
@@ -43,14 +45,8 @@ export default async function StoreMainPage({
             {/* Top Header */}
             <div className="bg-white p-6 rounded border border-gray-200">
               <h1 className="text-2xl font-bold text-gray-900">
-                {store.aiStorePage?.hero_heading?.trim() ||
-                  dict.store.promoCodeTitle.replace("{store}", store.name).replace("{month}", currentMonth).replace("{year}", String(currentYear))}
+                {dict.store.promoCodeTitle.replace("{store}", store.name).replace("{month}", currentMonth).replace("{year}", String(currentYear))}
               </h1>
-              {store.aiStorePage?.hero_intro?.trim() && (
-                <p className="mt-3 text-sm leading-relaxed text-gray-600">
-                  {store.aiStorePage.hero_intro}
-                </p>
-              )}
             </div>
 
             {/* Coupons Section */}
@@ -95,10 +91,15 @@ export default async function StoreMainPage({
               </div>
             )}
 
-            {/* AI-generated store page sections (trust, best time, shipping, FAQ…) */}
-            {store.aiStorePage && (
-              <StoreAiSections content={store.aiStorePage} storeName={store.name} />
-            )}
+            {/* AI-generated store page sections — streamed in with a skeleton
+                fallback while Claude generates them on first visit. */}
+            <Suspense fallback={<StoreAiSkeleton />}>
+              <StoreAiContent
+                slug={store.slug}
+                country={params.country}
+                storeName={store.name}
+              />
+            </Suspense>
 
           </div>
         </div>

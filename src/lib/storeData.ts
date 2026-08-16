@@ -320,13 +320,6 @@ export async function loadStoreData(
     .sort(exclusiveFirst)
     .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode, region, rates));
 
-  // First-view AI store page: generate rich merchant-page content once and cache
-  // it on the advertiser. No-op when ANTHROPIC_API_KEY is unset.
-  const advertiserWithAi = await ensureAdvertiserStorePage(advertiser, allDeals, {
-    country: region.country,
-    currency: region.currency,
-  });
-
   const productsResult = await safeQuery(
     () => getProductsFromDb({ advertiserId: advertiser!.id, page: 1, pageSize: 50 }),
     { products: [], page: 1, pageSize: 50, total: 0, totalPages: 1 }
@@ -411,6 +404,51 @@ export async function loadStoreData(
     buyingGuides,
     reviews,
     latestDiscounts: [],
-    aiStorePage: advertiserWithAi.aiStorePage ?? null,
+    // AI store-page content is loaded separately (streamed) via loadStoreAiContent.
+    aiStorePage: null,
   };
+}
+
+/**
+ * Load (and, on first visit, generate) the AI store-page content for a merchant.
+ * Kept separate from {@link loadStoreData} so the page can render immediately and
+ * stream this in behind a Suspense boundary. Cached in the DB after the first
+ * generation, so later visits return instantly without re-spending tokens.
+ */
+export async function loadStoreAiContent(
+  slug: string,
+  country?: string,
+): Promise<StorePageContent | null> {
+  let advertiser: Advertiser | null = null;
+  try {
+    advertiser = await getAdvertiserBySlug(slug);
+  } catch {
+    return null;
+  }
+  if (!advertiser) return null;
+  if (advertiser.name) advertiser.name = cleanAdvertiserName(advertiser.name);
+
+  // Cached path: already generated → return from the DB (no deals query needed).
+  if (advertiser.aiStorePage) return advertiser.aiStorePage;
+
+  const region = getRegionConfig(country);
+  let deals: Deal[] = [];
+  try {
+    const res = await getDealsFromDb({
+      advertiserId: advertiser.id,
+      status: "all",
+      type: "all",
+      page: 1,
+      pageSize: 100,
+    });
+    deals = res?.deals ?? [];
+  } catch {
+    /* generate from advertiser metadata alone if deals can't be loaded */
+  }
+
+  const updated = await ensureAdvertiserStorePage(advertiser, deals, {
+    country: region.country,
+    currency: region.currency,
+  });
+  return updated.aiStorePage ?? null;
 }
