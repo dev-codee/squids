@@ -21,6 +21,7 @@ import { getReviewsFromDb } from "@/lib/db/reviews";
 import { getFAQsFromDb } from "@/lib/db/faqs";
 import { getGuidesFromDb } from "@/lib/db/buyingGuides";
 import type { Advertiser } from "@/lib/awin";
+import { cleanAdvertiserName } from "@/lib/networks";
 import type { Deal } from "@/lib/deals";
 import type { Product } from "@/lib/products";
 import { getRegionConfig, formatMoney, type RegionConfig } from "@/lib/regions";
@@ -245,6 +246,10 @@ export async function loadStoreData(
   }
 
   if (!advertiser) return null;
+
+  if (advertiser.name) {
+    advertiser.name = cleanAdvertiserName(advertiser.name);
+  }
 
   // Region context: prices are converted from the advertiser's native currency
   // into the URL region's currency (e.g. /de -> EUR) and formatted for its locale.

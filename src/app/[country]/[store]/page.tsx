@@ -14,13 +14,13 @@ export default async function StoreMainPage({
 }) {
   const rawSlug = params.store;
 
-  // Canonicalize store slug to lowercase (e.g. /Amazon -> /amazon)
-  if (rawSlug !== rawSlug.toLowerCase()) {
-    redirect(`/${params.country}/${rawSlug.toLowerCase()}`);
-  }
-
   const store = await loadStoreData(rawSlug, params.country);
   if (!store) notFound();
+
+  // Canonicalize store slug (e.g. /invideo-ww or /Amazon -> /invideo or /amazon)
+  if (rawSlug !== store.slug) {
+    redirect(`/${params.country}/${store.slug}`);
+  }
 
   const currentMonth = new Date().toLocaleString('default', { month: 'long' });
   const currentYear = new Date().getFullYear();

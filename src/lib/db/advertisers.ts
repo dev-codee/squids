@@ -11,6 +11,7 @@
 
 import { getDb } from "@/lib/mongodb";
 import { normalizeCountryCode } from "@/lib/countries";
+import { cleanAdvertiserName } from "@/lib/networks";
 import type {
   Advertiser,
   AdvertiserQuery,
@@ -264,6 +265,13 @@ export async function getAdvertisersFromDb(
     }
   }
 
+  // Ensure names are clean of WW suffixes
+  for (const doc of docs) {
+    if (doc.name) {
+      doc.name = cleanAdvertiserName(doc.name);
+    }
+  }
+
   return {
     advertisers: docs as unknown as Advertiser[],
     page,
@@ -287,12 +295,16 @@ export async function getAdvertiserByIdFromDb(
   const filter: Record<string, unknown> = { id };
   if (network) filter.network = network;
   const doc = await col.findOne(filter, { projection: { _id: 0, syncedAt: 0 } });
+  if (doc && doc.name) {
+    (doc as any).name = cleanAdvertiserName(doc.name);
+  }
   return (doc as unknown as Advertiser) || null;
 }
 
 /** Turn an advertiser name into a URL slug (lowercase, hyphenated). */
 export function slugifyAdvertiserName(name: string): string {
-  return name
+  const clean = cleanAdvertiserName(name || "");
+  return clean
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
@@ -315,8 +327,13 @@ function escapeRegExp(s: string): string {
  * first found (deterministic by sort order).
  */
 export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | null> {
-  const normalized = slug.trim().toLowerCase();
+  let normalized = slug.trim().toLowerCase();
   if (!normalized) return null;
+
+  // Handle old/existing slugs with -ww appended (e.g. invideo-ww -> invideo)
+  if (normalized.endsWith("-ww")) {
+    normalized = normalized.slice(0, -3).replace(/(^-|-$)/g, "");
+  }
 
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
@@ -329,7 +346,7 @@ export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | nu
       .join("[^a-z0-9]*") +
     "[^a-z0-9]*$";
 
-  const candidates = await col
+  let candidates = await col
     .find(
       { name: { $regex: pattern, $options: "i" } },
       { projection: { _id: 0, syncedAt: 0 } },
@@ -337,13 +354,29 @@ export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | nu
     .limit(25)
     .toArray();
 
+  if (candidates.length === 0) {
+    const broader = await col
+      .find(
+        { name: { $regex: escapeRegExp(normalized), $options: "i" } },
+        { projection: { _id: 0, syncedAt: 0 } },
+      )
+      .limit(25)
+      .toArray();
+    candidates = broader;
+  }
+
   if (candidates.length === 0) return null;
 
   // Prefer an exact slug match; otherwise take the first regex candidate.
   const exact = candidates.find(
     (a) => slugifyAdvertiserName((a as unknown as Advertiser).name) === normalized,
   );
-  return (exact ?? candidates[0]) as unknown as Advertiser;
+  
+  const result = (exact ?? candidates[0]) as unknown as Advertiser;
+  if (result && result.name) {
+    result.name = cleanAdvertiserName(result.name);
+  }
+  return result;
 }
 
 /**

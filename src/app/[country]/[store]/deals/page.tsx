@@ -13,12 +13,12 @@ export default async function StoreDealsPage({
 }) {
   const rawSlug = params.store;
 
-  if (rawSlug !== rawSlug.toLowerCase()) {
-    redirect(`/${params.country}/${rawSlug.toLowerCase()}/deals`);
-  }
-
   const store = await loadStoreData(rawSlug, params.country);
   if (!store) notFound();
+
+  if (rawSlug !== store.slug) {
+    redirect(`/${params.country}/${store.slug}/deals`);
+  }
 
   const todaysDeals = store.deals.filter((d) => d.type === "todays");
   const lightningDeals = store.deals.filter((d) => d.type === "lightning");

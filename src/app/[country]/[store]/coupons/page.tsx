@@ -13,12 +13,12 @@ export default async function StoreCouponsPage({
 }) {
   const rawSlug = params.store;
 
-  if (rawSlug !== rawSlug.toLowerCase()) {
-    redirect(`/${params.country}/${rawSlug.toLowerCase()}/coupons`);
-  }
-
   const store = await loadStoreData(rawSlug, params.country);
   if (!store) notFound();
+
+  if (rawSlug !== store.slug) {
+    redirect(`/${params.country}/${store.slug}/coupons`);
+  }
 
   const verifiedCoupons = store.coupons.filter((c) => c.verified);
   const promoCodes = store.coupons.filter((c) => c.code !== null);
