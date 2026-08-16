@@ -66,7 +66,7 @@ export default function HomeRecentDeals({
                     )}
                   </div>
                   <p className="mt-3 line-clamp-3 text-sm font-medium text-gray-900 group-hover:text-amber-600">
-                    {deal.title}
+                    {deal.aiTitle?.trim() || deal.title}
                   </p>
                   <span className="mt-auto pt-3 text-[11px] font-medium text-amber-600">
                     {deal.code ? "Reveal code →" : "Get this deal →"}

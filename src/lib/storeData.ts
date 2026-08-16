@@ -14,7 +14,7 @@ import {
   getAdvertiserBySlug,
   slugifyAdvertiserName,
 } from "@/lib/db/advertisers";
-import { getDealsFromDb } from "@/lib/db/deals";
+import { getDealsFromDb, ensureDealAiContent } from "@/lib/db/deals";
 
 import { getProductsFromDb } from "@/lib/db/products";
 import { getReviewsFromDb } from "@/lib/db/reviews";
@@ -23,6 +23,7 @@ import { getGuidesFromDb } from "@/lib/db/buyingGuides";
 import type { Advertiser } from "@/lib/awin";
 import { cleanAdvertiserName } from "@/lib/networks";
 import type { Deal } from "@/lib/deals";
+import { dealDisplayTitle, dealDisplayDescription } from "@/lib/deals";
 import type { Product } from "@/lib/products";
 import { getRegionConfig, formatMoney, type RegionConfig } from "@/lib/regions";
 import { convert, getUsdRates, type UsdRates } from "@/lib/fx";
@@ -174,11 +175,11 @@ function secondsUntil(endDate: string | null | undefined): number | undefined {
 function couponFromDeal(deal: Deal, fallbackUrl: string): CouponItem {
   return {
     id: String(deal.id),
-    title: deal.title,
+    title: dealDisplayTitle(deal),
     code: deal.code,
     discount: deal.discountText || "",
     type: deal.subtype || "code",
-    description: deal.description || "",
+    description: dealDisplayDescription(deal),
     verified: deal.status === "active",
     expiryDate: deal.endDate,
     isExclusive: deal.isExclusive,
@@ -203,8 +204,8 @@ function dealFromDeal(
 
   return {
     id: String(deal.id),
-    title: deal.title,
-    description: deal.description || "",
+    title: dealDisplayTitle(deal),
+    description: dealDisplayDescription(deal),
     discount: deal.discountText || "",
     originalPrice:
       deal.originalPrice != null
@@ -285,7 +286,20 @@ export async function loadStoreData(
     () => getDealsFromDb({ advertiserId: advertiser!.id, status: "all", type: "all", page: 1, pageSize: 100 }),
     { deals: [], page: 1, pageSize: 100, total: 0, totalPages: 1 } as any
   );
-  const allDeals: Deal[] = dealsResult?.deals ?? [];
+  let allDeals: Deal[] = dealsResult?.deals ?? [];
+
+  // First-view AI copy: generate shopper-facing title/description for deals that
+  // lack it, then cache in the DB so tokens are only spent once. Bounded per
+  // request to keep the page responsive; a no-op when ANTHROPIC_API_KEY is unset.
+  const AI_GEN_PER_REQUEST = 6;
+  let aiBudget = AI_GEN_PER_REQUEST;
+  allDeals = await Promise.all(
+    allDeals.map((d) => {
+      if (aiBudget <= 0 || (d.aiTitle && d.aiDescription)) return d;
+      aiBudget -= 1;
+      return ensureDealAiContent(d);
+    }),
+  );
 
   // Exclusive offers float to the top; Array.sort is stable so everything else
   // keeps its original order.

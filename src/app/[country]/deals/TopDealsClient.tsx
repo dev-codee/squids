@@ -78,10 +78,12 @@ function DealCard({ deal, country }: { deal: Deal; country: string }) {
       </div>
 
       <h3 className="mt-4 line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-amber-600">
-        {deal.title}
+        {deal.aiTitle?.trim() || deal.title}
       </h3>
-      {deal.description && (
-        <p className="mt-1.5 line-clamp-2 text-xs text-gray-500">{deal.description}</p>
+      {(deal.aiDescription?.trim() || deal.description) && (
+        <p className="mt-1.5 line-clamp-2 text-xs text-gray-500">
+          {deal.aiDescription?.trim() || deal.description}
+        </p>
       )}
 
       <div className="mt-auto pt-4">

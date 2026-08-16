@@ -104,6 +104,22 @@ export interface Deal {
    * so the network sync never wipes it.
    */
   isAutoWelcome?: boolean;
+
+  // --- AI-generated copy (Claude) ------------------------------------------
+  /** AI-written shopper-facing title. Preferred over `title` on public pages. */
+  aiTitle?: string | null;
+  /** AI-written shopper-facing description. Preferred over `description`. */
+  aiDescription?: string | null;
+  /** ISO timestamp the AI copy was generated — presence means "already spent tokens". */
+  aiGeneratedAt?: string | null;
+}
+
+/** Shopper-facing title/description, preferring AI copy when present. */
+export function dealDisplayTitle(deal: Deal): string {
+  return deal.aiTitle?.trim() || deal.title;
+}
+export function dealDisplayDescription(deal: Deal): string {
+  return deal.aiDescription?.trim() || deal.description || "";
 }
 
 export interface PagedDeals {

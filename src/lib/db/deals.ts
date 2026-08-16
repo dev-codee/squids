@@ -541,6 +541,78 @@ export async function updateDeal(
   return result.matchedCount > 0;
 }
 
+// ---------------------------------------------------------------------------
+// AI-generated deal copy (Claude)
+// ---------------------------------------------------------------------------
+
+/** Fetch a single deal by its composite key. */
+export async function getDealByCompositeId(
+  id: number,
+  network: string = "awin",
+): Promise<Deal | null> {
+  const db = await getDb();
+  const col = db.collection<DealDoc>(COLLECTION);
+  const doc = await col.findOne(
+    { network, id },
+    { projection: { _id: 0, syncedAt: 0 } },
+  );
+  return (doc as unknown as Deal) || null;
+}
+
+/** Persist AI-generated title/description on a deal. */
+export async function setDealAiContent(
+  id: number,
+  network: string,
+  content: { title: string; description: string },
+): Promise<boolean> {
+  const db = await getDb();
+  const col = db.collection<DealDoc>(COLLECTION);
+  const result = await col.updateOne(
+    { network, id },
+    {
+      $set: {
+        aiTitle: content.title,
+        aiDescription: content.description,
+        aiGeneratedAt: new Date().toISOString(),
+        syncedAt: new Date(),
+      },
+    },
+  );
+  return result.matchedCount > 0;
+}
+
+/**
+ * Ensure a deal has AI copy, generating it the first time and caching it in the
+ * DB so tokens are never spent twice. Best-effort: if generation is unconfigured
+ * or fails, the original deal is returned unchanged. Pass `force` to regenerate.
+ */
+export async function ensureDealAiContent(
+  deal: Deal,
+  opts?: { force?: boolean },
+): Promise<Deal> {
+  if (!opts?.force && deal.aiTitle && deal.aiDescription) return deal;
+
+  const { isAiConfigured, generateDealContent } = await import("@/lib/ai/dealContent");
+  if (!isAiConfigured()) return deal;
+
+  try {
+    const copy = await generateDealContent(deal);
+    await setDealAiContent(deal.id, deal.network ?? "awin", copy);
+    return {
+      ...deal,
+      aiTitle: copy.title,
+      aiDescription: copy.description,
+      aiGeneratedAt: new Date().toISOString(),
+    };
+  } catch (err) {
+    console.warn(
+      `[ai] Failed to generate deal copy for ${deal.network}:${deal.id}:`,
+      err instanceof Error ? err.message : err,
+    );
+    return deal;
+  }
+}
+
 /**
  * Delete a deal from MongoDB by ID.
  */

@@ -32,6 +32,9 @@ export default function DealModal({
     status: "active",
     trackingUrl: "",
     regionCodes: "",
+    // AI-generated public copy
+    aiTitle: "",
+    aiDescription: "",
     // Enrichment (shared)
     discountText: "",
     isExclusive: false,
@@ -51,6 +54,31 @@ export default function DealModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiGenerating, setAiGenerating] = useState(false);
+
+  async function handleGenerateAi() {
+    if (!deal) return;
+    setAiGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/deals/generate-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: deal.id, network: deal.network, force: true }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Failed to generate AI copy.");
+      setFormData((f) => ({
+        ...f,
+        aiTitle: json.deal?.aiTitle || f.aiTitle,
+        aiDescription: json.deal?.aiDescription || f.aiDescription,
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate AI copy.");
+    } finally {
+      setAiGenerating(false);
+    }
+  }
 
   useEffect(() => {
     if (deal) {
@@ -68,6 +96,8 @@ export default function DealModal({
         status: deal.status || "active",
         trackingUrl: deal.trackingUrl || "",
         regionCodes: deal.regionCodes ? deal.regionCodes.join(", ") : "",
+        aiTitle: deal.aiTitle || "",
+        aiDescription: deal.aiDescription || "",
         discountText: deal.discountText || "",
         isExclusive: Boolean(deal.isExclusive),
         subtype: deal.subtype || "code",
@@ -117,6 +147,10 @@ export default function DealModal({
         regionCodes: formData.regionCodes
           ? formData.regionCodes.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
           : [],
+
+        // AI-generated public copy (editable)
+        aiTitle: formData.aiTitle || null,
+        aiDescription: formData.aiDescription || null,
 
         // Shared enrichment
         discountText: formData.discountText || null,
@@ -340,6 +374,51 @@ export default function DealModal({
                 onChange={(e) => setFormData({ ...formData, regionCodes: e.target.value })}
                 placeholder="e.g. US, GB, PK (leave blank for all)"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent uppercase"
+              />
+            </div>
+
+            {/* -------- AI-generated public copy -------- */}
+            <div className="sm:col-span-2 mt-2 border-t border-gray-100 pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    AI Copy (shown on public pages)
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-gray-400">
+                    When set, these replace the raw title/description on public pages.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGenerateAi}
+                  disabled={!isEditing || aiGenerating}
+                  title={!isEditing ? "Save the deal first, then generate" : "Generate with Claude"}
+                  className="rounded-lg border border-accent px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent hover:text-white transition disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-accent"
+                >
+                  {aiGenerating ? "Generating…" : "✨ Generate with AI"}
+                </button>
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-700">AI Title</label>
+              <input
+                type="text"
+                value={formData.aiTitle}
+                onChange={(e) => setFormData({ ...formData, aiTitle: e.target.value })}
+                placeholder="Generated or hand-written shopper-facing title"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-700">AI Description</label>
+              <textarea
+                rows={3}
+                value={formData.aiDescription}
+                onChange={(e) => setFormData({ ...formData, aiDescription: e.target.value })}
+                placeholder="Generated or hand-written shopper-facing description"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
               />
             </div>
 

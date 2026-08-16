@@ -145,6 +145,8 @@ export async function PUT(request: NextRequest) {
     if (body.endDate !== undefined) updateData.endDate = body.endDate ? String(body.endDate).trim() : null;
     if (body.status !== undefined) updateData.status = body.status ? String(body.status).trim() : "active";
     if (body.trackingUrl !== undefined) updateData.trackingUrl = body.trackingUrl ? String(body.trackingUrl).trim() : null;
+    if (body.aiTitle !== undefined) updateData.aiTitle = body.aiTitle ? String(body.aiTitle).trim() : null;
+    if (body.aiDescription !== undefined) updateData.aiDescription = body.aiDescription ? String(body.aiDescription).trim() : null;
 
     if (body.advertiser) {
       updateData.advertiser = {
