@@ -11,6 +11,7 @@
 
 import type { AnyBulkWriteOperation } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { cleanAdvertiserName } from "@/lib/networks";
 import type { Deal, DealQuery, PagedDeals } from "@/lib/deals";
 import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE } from "@/lib/deals";
 
@@ -193,7 +194,7 @@ export async function getPopularShops(opts?: {
   limit?: number;
   country?: string;
 }): Promise<PopularShopData[]> {
-  const { minDeals = 10, limit = 8, country } = opts ?? {};
+  const { minDeals = 1, limit = 8, country } = opts ?? {};
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
 
@@ -203,24 +204,62 @@ export async function getPopularShops(opts?: {
       {
         $group: {
           _id: { id: "$advertiser.id", network: "$network" },
-          name: { $first: "$advertiser.name" },
-          logoUrl: { $first: "$advertiser.logoUrl" },
+          dealName: { $first: "$advertiser.name" },
+          dealLogoUrl: { $first: "$advertiser.logoUrl" },
           dealCount: { $sum: 1 },
         },
       },
-      { $match: { dealCount: { $gt: minDeals } } },
-      { $sort: { dealCount: -1, name: 1 } },
-      { $limit: Math.max(1, limit) },
+      { $sort: { dealCount: -1 } },
+      { $limit: Math.max(1, limit * 3) },
+      {
+        $lookup: {
+          from: "advertisers",
+          let: { advId: "$_id.id", advNet: "$_id.network" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$id", "$$advId"] },
+                    { $eq: ["$network", "$$advNet"] },
+                  ],
+                },
+              },
+            },
+            { $limit: 1 },
+          ],
+          as: "advDoc",
+        },
+      },
     ])
     .toArray();
 
-  return rows.map((r) => ({
-    id: r._id.id,
-    network: r._id.network,
-    name: r.name,
-    logoUrl: r.logoUrl ?? null,
-    dealCount: r.dealCount,
-  }));
+  const results: PopularShopData[] = [];
+  const seenNames = new Set<string>();
+
+  for (const r of rows) {
+    const adv = r.advDoc?.[0];
+    const rawName = adv?.name || r.dealName || "";
+    const cleanName = cleanAdvertiserName(rawName);
+    const key = cleanName.toLowerCase().trim();
+
+    if (!key || seenNames.has(key)) continue;
+    seenNames.add(key);
+
+    const logoUrl = adv?.logoUrl || r.dealLogoUrl || null;
+
+    results.push({
+      id: r._id.id,
+      network: r._id.network,
+      name: cleanName,
+      logoUrl,
+      dealCount: r.dealCount,
+    });
+
+    if (results.length >= limit) break;
+  }
+
+  return results;
 }
 
 /**
