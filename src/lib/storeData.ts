@@ -13,7 +13,9 @@
 import {
   getAdvertiserBySlug,
   slugifyAdvertiserName,
+  ensureAdvertiserStorePage,
 } from "@/lib/db/advertisers";
+import type { StorePageContent } from "@/lib/ai/storeContent";
 import { getDealsFromDb, ensureDealAiContent } from "@/lib/db/deals";
 
 import { getProductsFromDb } from "@/lib/db/products";
@@ -144,6 +146,8 @@ export interface StoreData {
     updatedTime: string;
     type: string;
   }[];
+  /** AI-generated store page content (hero, trust, shipping, FAQ, …). */
+  aiStorePage: StorePageContent | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -316,6 +320,13 @@ export async function loadStoreData(
     .sort(exclusiveFirst)
     .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode, region, rates));
 
+  // First-view AI store page: generate rich merchant-page content once and cache
+  // it on the advertiser. No-op when ANTHROPIC_API_KEY is unset.
+  const advertiserWithAi = await ensureAdvertiserStorePage(advertiser, allDeals, {
+    country: region.country,
+    currency: region.currency,
+  });
+
   const productsResult = await safeQuery(
     () => getProductsFromDb({ advertiserId: advertiser!.id, page: 1, pageSize: 50 }),
     { products: [], page: 1, pageSize: 50, total: 0, totalPages: 1 }
@@ -400,5 +411,6 @@ export async function loadStoreData(
     buyingGuides,
     reviews,
     latestDiscounts: [],
+    aiStorePage: advertiserWithAi.aiStorePage ?? null,
   };
 }

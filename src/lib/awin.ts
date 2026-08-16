@@ -60,6 +60,11 @@ export interface Advertiser {
 
   /** Dynamically populated count of active deals */
   dealCount?: number;
+
+  /** AI-generated store page content (Claude). Cached so tokens are spent once. */
+  aiStorePage?: import("@/lib/ai/storeContent").StorePageContent | null;
+  /** ISO timestamp the store page content was generated. */
+  aiStorePageAt?: string | null;
 }
 
 export class AwinConfigError extends Error {}

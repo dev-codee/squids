@@ -3,6 +3,7 @@ import { loadStoreData } from "@/lib/storeData";
 import StoreSidebar from "@/components/store/StoreSidebar";
 import HorizontalCouponCard from "@/components/store/HorizontalCouponCard";
 import LightningDealCard from "@/components/store/LightningDealCard";
+import StoreAiSections from "@/components/store/StoreAiSections";
 import { getDictionary } from "@/i18n";
 
 export const dynamic = "force-dynamic";
@@ -42,8 +43,14 @@ export default async function StoreMainPage({
             {/* Top Header */}
             <div className="bg-white p-6 rounded border border-gray-200">
               <h1 className="text-2xl font-bold text-gray-900">
-                {dict.store.promoCodeTitle.replace("{store}", store.name).replace("{month}", currentMonth).replace("{year}", String(currentYear))}
+                {store.aiStorePage?.hero_heading?.trim() ||
+                  dict.store.promoCodeTitle.replace("{store}", store.name).replace("{month}", currentMonth).replace("{year}", String(currentYear))}
               </h1>
+              {store.aiStorePage?.hero_intro?.trim() && (
+                <p className="mt-3 text-sm leading-relaxed text-gray-600">
+                  {store.aiStorePage.hero_intro}
+                </p>
+              )}
             </div>
 
             {/* Coupons Section */}
@@ -77,7 +84,7 @@ export default async function StoreMainPage({
             )}
 
             {/* Empty state — advertiser exists but has no published offers yet */}
-            {store.coupons.length === 0 && (
+            {store.coupons.length === 0 && store.deals.length === 0 && (
               <div className="rounded border border-dashed border-gray-300 bg-white p-12 text-center">
                 <p className="text-sm font-semibold text-gray-700">
                   {dict.store.noOffersYet.replace("{store}", store.name)}
@@ -87,7 +94,12 @@ export default async function StoreMainPage({
                 </p>
               </div>
             )}
-            
+
+            {/* AI-generated store page sections (trust, best time, shipping, FAQ…) */}
+            {store.aiStorePage && (
+              <StoreAiSections content={store.aiStorePage} storeName={store.name} />
+            )}
+
           </div>
         </div>
       </main>

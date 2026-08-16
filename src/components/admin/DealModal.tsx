@@ -55,6 +55,7 @@ export default function DealModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiInfo, setAiInfo] = useState<{ status?: string; issues?: string[] } | null>(null);
 
   async function handleGenerateAi() {
     if (!deal) return;
@@ -73,6 +74,7 @@ export default function DealModal({
         aiTitle: json.deal?.aiTitle || f.aiTitle,
         aiDescription: json.deal?.aiDescription || f.aiDescription,
       }));
+      setAiInfo({ status: json.deal?.aiStatus, issues: json.deal?.aiIssues || [] });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate AI copy.");
     } finally {
@@ -113,6 +115,9 @@ export default function DealModal({
       setFormData(emptyForm);
     }
     setError(null);
+    setAiInfo(
+      deal?.aiStatus ? { status: deal.aiStatus, issues: deal.aiIssues ?? [] } : null,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deal, isOpen]);
 
@@ -421,6 +426,34 @@ export default function DealModal({
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
               />
             </div>
+
+            {aiInfo?.status && (
+              <div className="sm:col-span-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    aiInfo.status === "APPROVED"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : aiInfo.status === "CORRECTED"
+                      ? "bg-amber-50 text-amber-700"
+                      : "bg-red-50 text-red-700"
+                  }`}
+                >
+                  QC: {aiInfo.status}
+                </span>
+                {aiInfo.issues && aiInfo.issues.length > 0 && (
+                  <ul className="mt-2 list-disc space-y-0.5 pl-5 text-[11px] text-gray-500">
+                    {aiInfo.issues.map((issue, i) => (
+                      <li key={i}>{issue}</li>
+                    ))}
+                  </ul>
+                )}
+                {aiInfo.status === "REVIEW" && (
+                  <p className="mt-1 text-[11px] text-gray-500">
+                    Offer data was insufficient — public pages will show the raw title/description.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* -------- Public page enrichment -------- */}
             <div className="sm:col-span-2 mt-2 border-t border-gray-100 pt-4">

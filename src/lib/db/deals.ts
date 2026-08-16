@@ -559,11 +559,11 @@ export async function getDealByCompositeId(
   return (doc as unknown as Deal) || null;
 }
 
-/** Persist AI-generated title/description on a deal. */
+/** Persist AI-generated (and QC-reviewed) copy on a deal. */
 export async function setDealAiContent(
   id: number,
   network: string,
-  content: { title: string; description: string },
+  content: { title: string; description: string; status: string; issues: string[] },
 ): Promise<boolean> {
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
@@ -571,8 +571,11 @@ export async function setDealAiContent(
     { network, id },
     {
       $set: {
-        aiTitle: content.title,
-        aiDescription: content.description,
+        // REVIEW verdicts store empty copy so public pages fall back to the raw text.
+        aiTitle: content.title || null,
+        aiDescription: content.description || null,
+        aiStatus: content.status,
+        aiIssues: content.issues,
         aiGeneratedAt: new Date().toISOString(),
         syncedAt: new Date(),
       },
@@ -582,15 +585,19 @@ export async function setDealAiContent(
 }
 
 /**
- * Ensure a deal has AI copy, generating it the first time and caching it in the
- * DB so tokens are never spent twice. Best-effort: if generation is unconfigured
- * or fails, the original deal is returned unchanged. Pass `force` to regenerate.
+ * Ensure a deal has AI copy, generating (draft + QC review) the first time and
+ * caching it in the DB so tokens are never spent twice — even for REVIEW verdicts,
+ * which record the attempt so we don't keep retrying insufficient offers.
+ *
+ * Best-effort: if generation is unconfigured or errors, the original deal is
+ * returned unchanged. Pass `force` to regenerate.
  */
 export async function ensureDealAiContent(
   deal: Deal,
   opts?: { force?: boolean },
 ): Promise<Deal> {
-  if (!opts?.force && deal.aiTitle && deal.aiDescription) return deal;
+  // aiGeneratedAt marks a completed attempt (APPROVED, CORRECTED, or REVIEW).
+  if (!opts?.force && deal.aiGeneratedAt) return deal;
 
   const { isAiConfigured, generateDealContent } = await import("@/lib/ai/dealContent");
   if (!isAiConfigured()) return deal;
@@ -600,8 +607,10 @@ export async function ensureDealAiContent(
     await setDealAiContent(deal.id, deal.network ?? "awin", copy);
     return {
       ...deal,
-      aiTitle: copy.title,
-      aiDescription: copy.description,
+      aiTitle: copy.title || null,
+      aiDescription: copy.description || null,
+      aiStatus: copy.status,
+      aiIssues: copy.issues,
       aiGeneratedAt: new Date().toISOString(),
     };
   } catch (err) {

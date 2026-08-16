@@ -52,31 +52,36 @@ export async function POST(request: NextRequest) {
       const updated = await ensureDealAiContent(deal, { force });
       return NextResponse.json({
         ok: true,
-        deal: { id: updated.id, network: updated.network, aiTitle: updated.aiTitle, aiDescription: updated.aiDescription },
+        deal: {
+          id: updated.id,
+          network: updated.network,
+          aiTitle: updated.aiTitle,
+          aiDescription: updated.aiDescription,
+          aiStatus: updated.aiStatus,
+          aiIssues: updated.aiIssues,
+        },
       });
     }
 
-    // Bulk: generate for deals still missing AI copy
+    // Bulk: generate for deals that haven't been attempted yet
     const limit = Math.max(1, Math.min(Number(body.limit) || 25, 100));
     const page = await getDealsFromDb({ status: "all", type: "all", page: 1, pageSize: 500 });
-    const candidates = (page?.deals ?? []).filter(
-      (d) => force || !d.aiTitle || !d.aiDescription,
-    );
+    const candidates = (page?.deals ?? []).filter((d) => force || !d.aiGeneratedAt);
 
-    let generated = 0;
-    const errors: string[] = [];
+    const counts = { approved: 0, corrected: 0, review: 0, failed: 0 };
     for (const deal of candidates.slice(0, limit)) {
-      const before = deal.aiTitle;
       const updated = await ensureDealAiContent(deal, { force });
-      if (updated.aiTitle && updated.aiTitle !== before) generated += 1;
-      else if (!updated.aiTitle) errors.push(`${deal.network}:${deal.id}`);
+      if (!updated.aiGeneratedAt && !deal.aiGeneratedAt) counts.failed += 1;
+      else if (updated.aiStatus === "APPROVED") counts.approved += 1;
+      else if (updated.aiStatus === "CORRECTED") counts.corrected += 1;
+      else if (updated.aiStatus === "REVIEW") counts.review += 1;
     }
 
     return NextResponse.json({
       ok: true,
-      generated,
+      processed: Math.min(limit, candidates.length),
       remaining: Math.max(0, candidates.length - limit),
-      failed: errors.length,
+      ...counts,
     });
   } catch (error) {
     console.error("Error generating deal AI content:", error);

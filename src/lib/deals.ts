@@ -112,6 +112,10 @@ export interface Deal {
   aiDescription?: string | null;
   /** ISO timestamp the AI copy was generated — presence means "already spent tokens". */
   aiGeneratedAt?: string | null;
+  /** QC verdict from the review pass: "APPROVED" | "CORRECTED" | "REVIEW". */
+  aiStatus?: string | null;
+  /** Issues the QC editor fixed or flagged (empty when APPROVED). */
+  aiIssues?: string[] | null;
 }
 
 /** Shopper-facing title/description, preferring AI copy when present. */

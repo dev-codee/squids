@@ -327,6 +327,61 @@ export async function getAdvertiserByIdFromDb(
   return (doc as unknown as Advertiser) || null;
 }
 
+// ---------------------------------------------------------------------------
+// AI-generated store page content (Claude)
+// ---------------------------------------------------------------------------
+
+/** Persist AI-generated store page content on an advertiser. */
+export async function setAdvertiserStorePage(
+  id: number,
+  network: string,
+  content: unknown,
+): Promise<boolean> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+  const result = await col.updateOne(
+    { network, id },
+    {
+      $set: {
+        aiStorePage: content,
+        aiStorePageAt: new Date().toISOString(),
+        syncedAt: new Date(),
+      } as Partial<AdvertiserDoc>,
+    },
+  );
+  return result.matchedCount > 0;
+}
+
+/**
+ * Ensure an advertiser has AI store-page content, generating it the first time
+ * and caching it so tokens are only spent once per merchant. Best-effort: returns
+ * the advertiser unchanged when AI is unconfigured or generation fails. Pass
+ * `force` to regenerate.
+ */
+export async function ensureAdvertiserStorePage(
+  advertiser: Advertiser,
+  deals: import("@/lib/deals").Deal[],
+  ctx: { country: string; currency: string },
+  opts?: { force?: boolean },
+): Promise<Advertiser> {
+  if (!opts?.force && advertiser.aiStorePage) return advertiser;
+
+  const { isAiConfigured, generateStorePageContent } = await import("@/lib/ai/storeContent");
+  if (!isAiConfigured()) return advertiser;
+
+  try {
+    const content = await generateStorePageContent(advertiser, deals, ctx);
+    await setAdvertiserStorePage(advertiser.id, advertiser.network ?? "awin", content);
+    return { ...advertiser, aiStorePage: content, aiStorePageAt: new Date().toISOString() };
+  } catch (err) {
+    console.warn(
+      `[ai] Failed to generate store page for ${advertiser.network}:${advertiser.id}:`,
+      err instanceof Error ? err.message : err,
+    );
+    return advertiser;
+  }
+}
+
 /** Turn an advertiser name into a URL slug (lowercase, hyphenated). */
 export function slugifyAdvertiserName(name: string): string {
   const clean = cleanAdvertiserName(name || "");

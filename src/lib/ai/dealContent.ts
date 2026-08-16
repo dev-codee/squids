@@ -6,39 +6,15 @@
  * and description. Callers persist the result so tokens are only spent once.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
 import type { Deal } from "@/lib/deals";
 import { countryName } from "@/lib/countries";
+import {
+  getAnthropicClient,
+  resolveModel,
+  parseJsonResponse,
+} from "@/lib/ai/client";
 
-/** Thrown when the Anthropic API key isn't configured. Lets callers no-op cleanly. */
-export class AiConfigError extends Error {}
-
-/** Default model — override with AI_MODEL (or ANTHROPIC_MODEL). */
-const DEFAULT_MODEL = "claude-opus-4-8";
-
-/** Resolve the configured model, preferring AI_MODEL. */
-function resolveModel(): string {
-  return process.env.AI_MODEL || process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
-}
-
-let cachedClient: Anthropic | null = null;
-
-/** Lazily construct the Anthropic client, throwing AiConfigError if unconfigured. */
-function getClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new AiConfigError(
-      "Missing ANTHROPIC_API_KEY. Set it to enable AI deal-copy generation.",
-    );
-  }
-  if (!cachedClient) cachedClient = new Anthropic({ apiKey });
-  return cachedClient;
-}
-
-/** True when AI generation is available (key present). Safe to call anywhere. */
-export function isAiConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
-}
+export { AiConfigError, isAiConfigured } from "@/lib/ai/client";
 
 const SYSTEM_PROMPT = `ROLE
 You are a senior ecommerce copywriter and deal-content editor working for a global coupon, promo code, cashback and deals platform.
@@ -136,54 +112,98 @@ function buildInputData(deal: Deal): string {
 const OUTPUT_SCHEMA = {
   type: "object",
   properties: {
+    status: { type: "string", enum: ["APPROVED", "CORRECTED", "REVIEW"] },
     title: { type: "string" },
     description: { type: "string" },
+    issues: { type: "array", items: { type: "string" } },
   },
-  required: ["title", "description"],
+  required: ["status", "title", "description", "issues"],
   additionalProperties: false,
 } as const;
 
+// Quality-control checklist folded into the single generation call: the model
+// writes the copy, self-checks it against the raw offer data, and reports the
+// verdict in one response.
+const QC_INSTRUCTIONS = `QUALITY CONTROL
+After drafting, act as the final quality-control editor and verify the title and description against the raw offer data across all of:
+1. Discount accuracy
+2. Product/category accuracy
+3. Merchant accuracy
+4. "Up to" accuracy
+5. Eligibility accuracy
+6. Minimum-spend accuracy
+7. Expiration accuracy
+8. No unsupported claims
+9. No misleading wording
+10. No duplicate/generic wording
+11. Natural human readability
+12. Clear shopper benefit
+
+Then return a verdict:
+- If the content is accurate and useful, set status to "APPROVED" with an empty issues array.
+- If something is wrong, fix it and set status to "CORRECTED", returning the corrected title/description and a short issues array describing what you fixed.
+- If the offer data is insufficient to safely create the content, set status to "REVIEW" with an empty title and description and an issues array explaining why.
+Never invent missing information. Return JSON only.`;
+
+const FULL_SYSTEM_PROMPT = `${SYSTEM_PROMPT}\n\n${QC_INSTRUCTIONS}`;
+
+export type DealCopyStatus = "APPROVED" | "CORRECTED" | "REVIEW";
+
 export interface DealCopy {
+  /** QC verdict. REVIEW means the offer data was insufficient — copy is empty. */
+  status: DealCopyStatus;
+  /** Final shopper-facing title (empty when status is REVIEW). */
   title: string;
+  /** Final shopper-facing description (empty when status is REVIEW). */
   description: string;
+  /** What the QC editor fixed or flagged (empty when APPROVED). */
+  issues: string[];
 }
 
 /**
- * Generate a shopper-facing title + description for a single deal via Claude.
- * Uses structured outputs so the result is always valid `{title, description}`.
+ * Generate shopper-facing copy for a deal in a single Claude call: the model
+ * drafts the title/description, self-QCs it against the raw offer data, and
+ * returns a verdict. APPROVED/CORRECTED copy is safe to publish; REVIEW means the
+ * offer data was insufficient (empty copy).
  *
  * @throws {AiConfigError} when ANTHROPIC_API_KEY is not set.
  */
 export async function generateDealContent(deal: Deal): Promise<DealCopy> {
-  const client = getClient();
-  const model = resolveModel();
-
+  const client = getAnthropicClient();
   const response = await client.messages.create({
-    model,
+    model: resolveModel(),
     max_tokens: 1024,
-    system: SYSTEM_PROMPT,
-    // Structured outputs guarantee a valid { title, description } object.
-    // Note: no `effort` here — it isn't supported on Haiku 4.5 and the detailed
-    // system prompt already does the heavy lifting.
-    output_config: {
-      format: { type: "json_schema", schema: OUTPUT_SCHEMA },
-    },
+    system: FULL_SYSTEM_PROMPT,
+    // Structured outputs guarantee a valid verdict object.
+    // Note: no `effort` here — it isn't supported on Haiku 4.5.
+    output_config: { format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
     messages: [{ role: "user", content: buildInputData(deal) }],
   });
 
-  const textBlock = response.content.find((b) => b.type === "text");
-  const raw = textBlock && "text" in textBlock ? textBlock.text : "";
-  let parsed: Partial<DealCopy>;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(`AI returned non-JSON deal copy: ${raw.slice(0, 200)}`);
+  const parsed = parseJsonResponse<Partial<DealCopy>>(response);
+  const status = parsed.status;
+  if (status !== "APPROVED" && status !== "CORRECTED" && status !== "REVIEW") {
+    throw new Error(`AI returned an unknown status: ${String(status)}`);
   }
 
-  const title = parsed.title?.trim();
-  const description = parsed.description?.trim();
-  if (!title || !description) {
-    throw new Error("AI returned incomplete deal copy (missing title or description).");
+  const title = parsed.title?.trim() || "";
+  const description = parsed.description?.trim() || "";
+  const issues = Array.isArray(parsed.issues) ? parsed.issues.filter(Boolean).map(String) : [];
+
+  // A non-REVIEW verdict with no usable copy is unsafe to publish — treat as REVIEW.
+  if (status !== "REVIEW" && (!title || !description)) {
+    return {
+      status: "REVIEW",
+      title: "",
+      description: "",
+      issues: issues.length ? issues : ["Model returned incomplete copy."],
+    };
   }
-  return { title, description };
+
+  return {
+    status,
+    title: status === "REVIEW" ? "" : title,
+    description: status === "REVIEW" ? "" : description,
+    issues,
+  };
 }
