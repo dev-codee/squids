@@ -35,8 +35,18 @@ export default async function StoreMainPage({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Sidebar - Left Column */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 space-y-6">
             <StoreSidebar store={store} />
+
+            {/* AI-generated store content — streamed in with a skeleton
+                fallback while Claude generates it on first visit. */}
+            <Suspense fallback={<StoreAiSkeleton />}>
+              <StoreAiContent
+                slug={store.slug}
+                country={params.country}
+                storeName={store.name}
+              />
+            </Suspense>
           </div>
 
           {/* Main Content - Right Column */}
@@ -90,16 +100,6 @@ export default async function StoreMainPage({
                 </p>
               </div>
             )}
-
-            {/* AI-generated store page sections — streamed in with a skeleton
-                fallback while Claude generates them on first visit. */}
-            <Suspense fallback={<StoreAiSkeleton />}>
-              <StoreAiContent
-                slug={store.slug}
-                country={params.country}
-                storeName={store.name}
-              />
-            </Suspense>
 
           </div>
         </div>

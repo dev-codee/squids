@@ -9,8 +9,8 @@ function hasVal(v: unknown): v is string {
 
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <section className="bg-white p-6 rounded border border-gray-200">
-      {title && <h2 className="text-lg font-medium text-gray-900 mb-3">{title}</h2>}
+    <section className="bg-white p-5 rounded border border-gray-200">
+      {title && <h3 className="font-bold text-gray-900 mb-3">{title}</h3>}
       {children}
     </section>
   );
@@ -78,29 +78,25 @@ export default function StoreAiSections({
       {/* Store Trust & Info panel */}
       {showTrustPanel && (
         <Card title="Store Trust & Info">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
-            <div>
-              {hasVal(trust?.rating) && (
-                <InfoRow
-                  label="Trustpilot"
-                  value={`${trust!.rating}/5${hasVal(trust?.review_count) ? ` (${trust!.review_count} reviews)` : ""}${hasVal(trust?.checked_date) ? `, checked ${trust!.checked_date}` : ""}`}
-                />
-              )}
-              {hasVal(google?.rating) && (
-                <InfoRow
-                  label="Google"
-                  value={`${google!.rating}/5${hasVal(google?.review_count) ? ` (${google!.review_count} reviews)` : ""}${hasVal(google?.checked_date) ? `, checked ${google!.checked_date}` : ""}`}
-                />
-              )}
-              <InfoRow label="Typical discount" value={c.typical_discount} />
-            </div>
-            <div>
-              <InfoRow label="Cashback rate" value={c.cashback?.rate} />
-              {!hasVal(c.cashback?.rate) && <InfoRow label="Cashback" value={c.cashback?.available} />}
-              {typeof c.information_confidence === "number" && c.information_confidence > 0 && (
-                <InfoRow label="Info confidence" value={`${c.information_confidence}/100`} />
-              )}
-            </div>
+          <div>
+            {hasVal(trust?.rating) && (
+              <InfoRow
+                label="Trustpilot"
+                value={`${trust!.rating}/5${hasVal(trust?.review_count) ? ` (${trust!.review_count})` : ""}`}
+              />
+            )}
+            {hasVal(google?.rating) && (
+              <InfoRow
+                label="Google"
+                value={`${google!.rating}/5${hasVal(google?.review_count) ? ` (${google!.review_count})` : ""}`}
+              />
+            )}
+            <InfoRow label="Typical discount" value={c.typical_discount} />
+            <InfoRow label="Cashback rate" value={c.cashback?.rate} />
+            {!hasVal(c.cashback?.rate) && <InfoRow label="Cashback" value={c.cashback?.available} />}
+            {typeof c.information_confidence === "number" && c.information_confidence > 0 && (
+              <InfoRow label="Info confidence" value={`${c.information_confidence}/100`} />
+            )}
           </div>
         </Card>
       )}
@@ -121,11 +117,11 @@ export default function StoreAiSections({
           {hasVal(bt?.reason) && <p className="mt-3 text-sm text-gray-600">{bt!.reason}</p>}
 
           {calendar.length > 0 && (
-            <div className="mt-4 grid grid-cols-3 sm:grid-cols-6 gap-2">
+            <div className="mt-4 grid grid-cols-4 gap-1.5">
               {calendar.map((m) => (
                 <div
                   key={m.month}
-                  className={`rounded px-2 py-1.5 text-center text-[11px] font-medium ${
+                  className={`rounded px-1 py-1.5 text-center text-[10px] font-medium ${
                     CAL_COLORS[m.activity?.toLowerCase()] || "bg-gray-100 text-gray-500"
                   }`}
                 >
@@ -147,9 +143,9 @@ export default function StoreAiSections({
         </Card>
       )}
 
-      {/* Shipping & Returns side by side */}
+      {/* Shipping & Returns (stacked in the sidebar) */}
       {(showShipping || showReturns) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-6">
           {showShipping && (
             <Card title="Shipping & Delivery">
               <InfoRow label="Free shipping" value={shipping!.free_shipping} />

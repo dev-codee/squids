@@ -109,46 +109,42 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
         </div>
       )}
 
-      {/* Products Feed */}
-      <div className="bg-white p-5 rounded border border-gray-200">
-        <div className="mb-4">
-          <h2 className="font-bold text-gray-900">{dict.sidebar.productsFeed}</h2>
-        </div>
-        {store.products && store.products.length > 0 ? (
+      {/* Products Feed — only when a product source exists */}
+      {store.products && store.products.length > 0 && (
+        <div className="bg-white p-5 rounded border border-gray-200">
+          <div className="mb-4">
+            <h2 className="font-bold text-gray-900">{dict.sidebar.productsFeed}</h2>
+          </div>
           <div className="flex flex-col gap-4">
             {store.products.map((product) => (
               <ProductFeedCard key={product.id} product={product} />
             ))}
           </div>
-        ) : (
-          <p className="text-sm text-gray-500">{dict.sidebar.noProducts}</p>
-        )}
-      </div>
-
-      {/* Price Comparison */}
-      <div className="bg-white p-5 rounded border border-gray-200">
-        <div className="mb-4">
-          <h2 className="font-bold text-gray-900">{dict.sidebar.priceComparison}</h2>
         </div>
-        {store.priceComparisons && store.priceComparisons.length > 0 ? (
+      )}
+
+      {/* Price Comparison — only when data exists */}
+      {store.priceComparisons && store.priceComparisons.length > 0 && (
+        <div className="bg-white p-5 rounded border border-gray-200">
+          <div className="mb-4">
+            <h2 className="font-bold text-gray-900">{dict.sidebar.priceComparison}</h2>
+          </div>
           <div className="overflow-x-auto pb-2">
             <PriceComparisonWidget items={store.priceComparisons} storeName={store.name} />
           </div>
-        ) : (
-          <p className="text-sm text-gray-500">{dict.sidebar.noPriceComparisons}</p>
-        )}
-      </div>
-
-      {/* Latest Discounts Feed */}
-      <div className="bg-amber-50/50 p-5 rounded border border-amber-200">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="flex h-3 w-3 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-          </span>
-          <h3 className="font-bold text-gray-900">{dict.sidebar.liveUpdates}</h3>
         </div>
-        {store.latestDiscounts && store.latestDiscounts.length > 0 ? (
+      )}
+
+      {/* Latest Discounts Feed — only when data exists */}
+      {store.latestDiscounts && store.latestDiscounts.length > 0 && (
+        <div className="bg-amber-50/50 p-5 rounded border border-amber-200">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="flex h-3 w-3 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </span>
+            <h3 className="font-bold text-gray-900">{dict.sidebar.liveUpdates}</h3>
+          </div>
           <div className="flex flex-col gap-3">
             {store.latestDiscounts.map((ld) => (
               <div key={ld.id} className="rounded bg-white p-3.5 border border-amber-100 shadow-sm">
@@ -161,17 +157,15 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
               </div>
             ))}
           </div>
-        ) : (
-          <p className="text-sm text-gray-500">{dict.sidebar.noLiveUpdates}</p>
-        )}
-      </div>
-
-      {/* Buying Guides */}
-      <div className="bg-white p-5 rounded border border-gray-200">
-        <div className="mb-4">
-          <h2 className="font-bold text-gray-900">{dict.sidebar.buyingGuides}</h2>
         </div>
-        {store.buyingGuides && store.buyingGuides.length > 0 ? (
+      )}
+
+      {/* Buying Guides — only when data exists */}
+      {store.buyingGuides && store.buyingGuides.length > 0 && (
+        <div className="bg-white p-5 rounded border border-gray-200">
+          <div className="mb-4">
+            <h2 className="font-bold text-gray-900">{dict.sidebar.buyingGuides}</h2>
+          </div>
           <div className="flex flex-col gap-4">
             {store.buyingGuides.map((guide) => (
               <div key={guide.id} className="flex flex-col justify-between rounded border border-gray-200 bg-white p-4 shadow-sm">
@@ -182,39 +176,30 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
               </div>
             ))}
           </div>
-        ) : (
-          <p className="text-sm text-gray-500">{dict.sidebar.noBuyingGuides}</p>
-        )}
-      </div>
-
-      {/* FAQs */}
-      <div className="bg-white p-5 rounded border border-gray-200">
-        <div className="mb-4">
-          <h2 className="font-bold text-gray-900">{dict.sidebar.faqs}</h2>
         </div>
-        {store.faqs && store.faqs.length > 0 ? (
-          <FaqAccordion faqs={store.faqs} storeName={store.name} />
-        ) : (
-          <p className="text-sm text-gray-500">{dict.sidebar.noFaqs}</p>
-        )}
-      </div>
+      )}
 
-      {/* Reviews */}
-      <div className="bg-white p-5 rounded border border-gray-200 overflow-hidden">
-        {store.reviews && store.reviews.length > 0 ? (
+      {/* FAQs — only when data exists (AI FAQs render in the main column) */}
+      {store.faqs && store.faqs.length > 0 && (
+        <div className="bg-white p-5 rounded border border-gray-200">
+          <div className="mb-4">
+            <h2 className="font-bold text-gray-900">{dict.sidebar.faqs}</h2>
+          </div>
+          <FaqAccordion faqs={store.faqs} storeName={store.name} />
+        </div>
+      )}
+
+      {/* Reviews — only when data exists */}
+      {store.reviews && store.reviews.length > 0 && (
+        <div className="bg-white p-5 rounded border border-gray-200 overflow-hidden">
           <ReviewsWidget
             reviews={store.reviews}
             rating={store.rating}
             totalReviews={store.totalReviews}
             storeName={store.name}
           />
-        ) : (
-          <div>
-            <h2 className="font-bold text-gray-900 mb-2">{dict.sidebar.reviews}</h2>
-            <p className="text-sm text-gray-500">{dict.sidebar.noReviews}</p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   );
 }

@@ -37,13 +37,43 @@ export function getAnthropicClient(): Anthropic {
   return cachedClient;
 }
 
-/** Read the single text block of a structured-output response and JSON-parse it. */
+/**
+ * Read the single text block of a Claude response and JSON-parse it. Tolerant of
+ * models that wrap JSON in ```` ```json ```` fences or add surrounding prose:
+ * strips fences and falls back to the outermost `{...}` / `[...]` span.
+ */
 export function parseJsonResponse<T>(response: Anthropic.Message): T {
   const textBlock = response.content.find((b) => b.type === "text");
   const raw = textBlock && "text" in textBlock ? textBlock.text : "";
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    throw new Error(`AI returned non-JSON output: ${raw.slice(0, 200)}`);
+
+  const candidates: string[] = [];
+  const trimmed = raw.trim();
+  candidates.push(trimmed);
+
+  // ```json ... ``` or ``` ... ``` fenced block
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence?.[1]) candidates.push(fence[1].trim());
+
+  // Outermost object or array span
+  const objStart = trimmed.indexOf("{");
+  const objEnd = trimmed.lastIndexOf("}");
+  if (objStart !== -1 && objEnd > objStart) {
+    candidates.push(trimmed.slice(objStart, objEnd + 1));
   }
+  const arrStart = trimmed.indexOf("[");
+  const arrEnd = trimmed.lastIndexOf("]");
+  if (arrStart !== -1 && arrEnd > arrStart) {
+    candidates.push(trimmed.slice(arrStart, arrEnd + 1));
+  }
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      return JSON.parse(candidate) as T;
+    } catch {
+      /* try next candidate */
+    }
+  }
+
+  throw new Error(`AI returned non-JSON output: ${raw.slice(0, 200)}`);
 }
