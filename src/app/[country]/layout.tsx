@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PublicHeader from "@/components/store/PublicHeader";
+import PublicFooter from "@/components/store/PublicFooter";
 import { getDictionary } from "@/i18n";
 import { DictionaryProvider } from "@/i18n/DictionaryProvider";
 import { CurrencyProvider } from "@/i18n/CurrencyProvider";
@@ -79,6 +80,7 @@ export default async function StoreLayout({
       <CurrencyProvider region={region} usdRate={usdRate}>
         <PublicHeader country={region.country} />
         {children}
+        <PublicFooter country={region.country} />
       </CurrencyProvider>
     </DictionaryProvider>
   );
