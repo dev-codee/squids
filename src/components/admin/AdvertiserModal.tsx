@@ -42,6 +42,38 @@ export default function AdvertiserModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availableCategories, setAvailableCategories] = useState<{ id?: string; name: string; slug: string; icon?: string }[]>([]);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMsg, setAiMsg] = useState<string | null>(null);
+  const [storePageJson, setStorePageJson] = useState("");
+
+  async function handleGenerateStorePage() {
+    if (!advertiser) return;
+    setAiBusy(true);
+    setAiMsg(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/advertisers/generate-store-page", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: advertiser.id,
+          network: advertiser.network,
+          country: advertiser.countryCode || undefined,
+          force: true,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Failed to generate store page.");
+      if (json.storePage) {
+        setStorePageJson(JSON.stringify(json.storePage, null, 2));
+      }
+      setAiMsg(json.generated ? "Store page generated ✓ (review & Save)" : "No content generated.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate store page.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/admin/categories")
@@ -97,6 +129,10 @@ export default function AdvertiserModal({
         countryCodes: "",
       });
     }
+    setStorePageJson(
+      advertiser?.aiStorePage ? JSON.stringify(advertiser.aiStorePage, null, 2) : "",
+    );
+    setAiMsg(null);
     setError(null);
   }, [advertiser, isOpen]);
 
@@ -111,6 +147,21 @@ export default function AdvertiserModal({
       const url = "/api/admin/advertisers";
       const method = isEditing ? "PUT" : "POST";
 
+      // Store-page content (edited JSON) — only sent when editing.
+      let aiStorePage: unknown = undefined;
+      if (isEditing) {
+        const t = storePageJson.trim();
+        if (t === "") {
+          aiStorePage = null;
+        } else {
+          try {
+            aiStorePage = JSON.parse(t);
+          } catch {
+            throw new Error("Store Page Content is not valid JSON — fix it or clear the field.");
+          }
+        }
+      }
+
       const payload = {
         ...formData,
         categories: formData.categories
@@ -122,6 +173,7 @@ export default function AdvertiserModal({
         countryCodes: formData.countryCodes
           ? formData.countryCodes.split(",").map((c) => c.trim().toUpperCase()).filter(Boolean)
           : [],
+        ...(aiStorePage !== undefined ? { aiStorePage } : {}),
       };
 
       const res = await fetch(url, {
@@ -430,8 +482,44 @@ export default function AdvertiserModal({
             </div>
           </div>
 
+          {/* AI Store Page content (editable JSON) */}
+          {isEditing && (
+            <div className="mt-6 border-t border-gray-100 pt-4">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Store Page Content (AI)
+              </label>
+              <p className="mt-0.5 mb-2 text-[11px] text-gray-400">
+                Shown on the public store page. Edit the JSON directly, or use “Generate Store Page”
+                below to (re)create it, then Save. Clear the field to remove it.
+              </p>
+              <textarea
+                rows={10}
+                value={storePageJson}
+                onChange={(e) => setStorePageJson(e.target.value)}
+                placeholder='{ "hero_heading": "…", "hero_intro": "…", "faq": [ … ] }'
+                spellCheck={false}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-[11px] leading-relaxed text-gray-800 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+            </div>
+          )}
+
           {/* Footer Actions */}
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
+          <div className="mt-6 flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+            <div className="flex items-center gap-2">
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={handleGenerateStorePage}
+                  disabled={aiBusy}
+                  title="Generate the public store page content with Claude"
+                  className="rounded-lg border border-accent px-3 py-2 text-xs font-medium text-accent hover:bg-accent hover:text-white transition disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-accent"
+                >
+                  {aiBusy ? "Generating…" : "✨ Generate Store Page"}
+                </button>
+              )}
+              {aiMsg && <span className="text-xs text-emerald-600">{aiMsg}</span>}
+            </div>
+            <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={onClose}
@@ -446,6 +534,7 @@ export default function AdvertiserModal({
             >
               {submitting ? "Saving..." : isEditing ? "Save Changes" : "Create Advertiser"}
             </button>
+            </div>
           </div>
         </form>
       </div>

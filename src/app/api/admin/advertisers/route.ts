@@ -96,6 +96,12 @@ export async function PUT(request: NextRequest) {
     if (body.isFlagship !== undefined) updateData.isFlagship = Boolean(body.isFlagship);
     if (body.countryCodes !== undefined) updateData.countryCodes = Array.isArray(body.countryCodes) ? body.countryCodes : [];
     if (body.isPPC !== undefined) updateData.isPPC = Boolean(body.isPPC);
+    // AI store-page content — accept an object (edited copy) or null (clear it).
+    if (body.aiStorePage !== undefined) {
+      updateData.aiStorePage =
+        body.aiStorePage && typeof body.aiStorePage === "object" ? body.aiStorePage : null;
+      updateData.aiStorePageAt = new Date().toISOString();
+    }
 
     const success = await updateAdvertiser(id, updateData);
     if (!success) {
