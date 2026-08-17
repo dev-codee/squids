@@ -202,7 +202,9 @@ export default function AdminSidebar() {
     setLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
+      // Return to the public home — the admin login lives at a secret URL that
+      // we intentionally don't reference from the client bundle.
+      router.push("/");
       router.refresh();
     } catch {
       setLoggingOut(false);

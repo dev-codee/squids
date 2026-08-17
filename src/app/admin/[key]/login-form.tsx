@@ -3,15 +3,15 @@
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+export default function LoginForm() {
   return (
     <Suspense>
-      <LoginForm />
+      <LoginFormInner />
     </Suspense>
   );
 }
 
-function LoginForm() {
+function LoginFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/dashboard";

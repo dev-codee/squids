@@ -184,8 +184,9 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
           </div>
 
           {/* User accounts are coming soon. This intentionally does NOT link to
-              the admin login (/login) — that URL stays unadvertised on public
-              pages. Swap this for the real user sign-in route when it ships. */}
+              the admin login — that lives at a secret, unguessable URL and is
+              never referenced on public pages. Swap this for the real user
+              sign-in route when it ships. */}
           <button
             type="button"
             title="User accounts coming soon"

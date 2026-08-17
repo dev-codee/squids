@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE_NAME } from "@/lib/auth";
+import { SESSION_COOKIE_NAME, getAdminLoginPath } from "@/lib/auth";
 
 /**
  * Middleware verifies the session cookie on protected routes.
@@ -50,19 +50,20 @@ export async function middleware(request: NextRequest) {
 
   const loggedIn = await isValidSession(request);
 
-  // Already logged in → visiting /login should bounce to /dashboard.
-  if (pathname === "/login" && loggedIn) {
+  // Already logged in → visiting the admin login page should bounce to /dashboard.
+  if (pathname === getAdminLoginPath() && loggedIn) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Not logged in → protected route
+  // Not logged in → protected route.
+  // Deliberately do NOT redirect to the admin login here: that would reveal the
+  // secret login URL to any anonymous visitor probing /dashboard. APIs get 401;
+  // pages are sent to the public home. Admins reach the login via its secret URL.
   if (isProtectedRoute && !loggedIn) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("from", pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return pass();
