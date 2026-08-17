@@ -419,13 +419,19 @@ export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | nu
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
+  // Anchor the start and each slug part, but allow an optional TRAILING suffix
+  // after the last part (e.g. "Beauty Amora AU", "Acme WW"). The suffix must
+  // begin at a non-alphanumeric boundary, so this matches stripped country/region
+  // tokens without over-matching mid-word extensions ("Amora" ≠ "Amorable").
+  // Slugs are built from cleanAdvertiserName(), which removes those tokens, so
+  // without this the cleaned slug could never resolve back to the raw DB name.
   const pattern =
     "^[^a-z0-9]*" +
     normalized
       .split("-")
       .map((part) => escapeRegExp(part))
       .join("[^a-z0-9]*") +
-    "[^a-z0-9]*$";
+    "(?:[^a-z0-9].*)?$";
 
   let candidates = await col
     .find(

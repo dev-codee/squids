@@ -224,18 +224,19 @@ export default function DealModal({
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Custom ID */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Deal ID</label>
-              <input
-                type="number"
-                disabled={isEditing}
-                placeholder="Auto-generated if blank"
-                value={formData.id}
-                onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:bg-gray-100"
-              />
-            </div>
+            {/* Deal ID — read-only reference, only shown when editing.
+                New deals get an auto-generated ID on the server. */}
+            {isEditing && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700">Deal ID</label>
+                <input
+                  type="number"
+                  disabled
+                  value={formData.id}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:bg-gray-100"
+                />
+              </div>
+            )}
 
             {/* Type */}
             <div>
