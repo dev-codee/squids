@@ -17,11 +17,32 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
   const countryRef = useRef<HTMLDivElement>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+  // Tracks whether the current value came from the user typing (vs. a URL sync),
+  // so live-filtering only fires in response to real input.
+  const userTypedRef = useRef(false);
+
+  const urlSearch = searchParams.get("search") || "";
 
   useEffect(() => {
-    const q = searchParams.get("search") || "";
-    setSearchQuery(q);
-  }, [searchParams]);
+    setSearchQuery(urlSearch);
+  }, [urlSearch]);
+
+  // Live-filter as the user types: debounce, then push the search term into the
+  // URL. The home advertiser grid reacts to `?search=` and re-filters — no Enter
+  // required. Typing from any page navigates to the country home with the query.
+  useEffect(() => {
+    if (!userTypedRef.current) return;
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      const q = searchQuery.trim();
+      if (q === urlSearch) return; // already reflected in the URL
+      router.replace(q ? `/${lc}?search=${encodeURIComponent(q)}` : `/${lc}`);
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchQuery, urlSearch, lc, router]);
 
   // Close the country dropdown when clicking outside of it.
   useEffect(() => {
@@ -37,12 +58,9 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     const q = searchQuery.trim();
-    if (q) {
-      router.push(`/${lc}?search=${encodeURIComponent(q)}`);
-    } else {
-      router.push(`/${lc}`);
-    }
+    router.push(q ? `/${lc}?search=${encodeURIComponent(q)}` : `/${lc}`);
   };
 
   const selectCountry = (code: string) => {
@@ -83,7 +101,10 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                userTypedRef.current = true;
+                setSearchQuery(e.target.value);
+              }}
               placeholder="Search on Foxzil..."
               className="w-full rounded-full border border-gray-300 bg-white py-3 pl-5 pr-11 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
             />
