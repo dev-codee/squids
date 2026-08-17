@@ -39,7 +39,7 @@ export default function AdvertiserCard({
   const content = (
     <div className="group flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-card transition hover:border-gray-300 hover:shadow-card-hover cursor-pointer h-full justify-between">
       <div>
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4 pr-16">
           <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
             {advertiser.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
