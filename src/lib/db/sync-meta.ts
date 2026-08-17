@@ -11,6 +11,7 @@
  */
 
 import { getDb } from "@/lib/mongodb";
+import { logActivity } from "@/lib/db/activity-logs";
 
 const COLLECTION = "sync_meta";
 
@@ -81,6 +82,7 @@ export async function getLastSyncTime(
 export async function updateSyncTime(
   entity: SyncEntity,
   count: number,
+  details?: { created?: number; updated?: number; removed?: number },
 ): Promise<void> {
   const db = await getDb();
   const col = db.collection<SyncMetaDoc>(COLLECTION);
@@ -99,6 +101,30 @@ export async function updateSyncTime(
     },
     { upsert: true },
   );
+
+  const parts = key.split(":");
+  const network = parts.length > 1 ? parts[0] : "awin";
+  const entityType = parts.length > 1 ? parts[1] : key;
+
+  const descParts: string[] = [`Total: ${count}`];
+  if (details?.created !== undefined) descParts.push(`Created: ${details.created}`);
+  if (details?.updated !== undefined) descParts.push(`Updated: ${details.updated}`);
+  if (details?.removed !== undefined) descParts.push(`Removed: ${details.removed}`);
+
+  await logActivity({
+    type: "cron_sync",
+    title: `${network.toUpperCase()} ${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Sync Successful`,
+    description: `Successfully synced ${count} ${entityType}. (${descParts.join(", ")})`,
+    network,
+    entity: entityType,
+    stats: {
+      total: count,
+      created: details?.created,
+      updated: details?.updated,
+      deleted: details?.removed,
+    },
+    status: "success",
+  }).catch(() => {});
 }
 
 /**
@@ -125,6 +151,19 @@ export async function recordSyncError(
     },
     { upsert: true },
   );
+
+  const parts = key.split(":");
+  const network = parts.length > 1 ? parts[0] : "awin";
+  const entityType = parts.length > 1 ? parts[1] : key;
+
+  await logActivity({
+    type: "cron_sync",
+    title: `${network.toUpperCase()} ${entityType.charAt(0).toUpperCase() + entityType.slice(1)} Sync Failed`,
+    description: `Sync failed with error: ${errorMessage}`,
+    network,
+    entity: entityType,
+    status: "error",
+  }).catch(() => {});
 }
 
 /**

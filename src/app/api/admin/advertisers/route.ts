@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/advertisers";
 import type { Advertiser } from "@/lib/awin";
 import { revalidatePublic, CACHE_TAGS } from "@/lib/cache";
+import { logActivity } from "@/lib/db/activity-logs";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,16 @@ export async function POST(request: NextRequest) {
 
     const created = await createAdvertiser(advertiser);
     invalidateAdvertiserCaches();
+
+    await logActivity({
+      type: "store_joined",
+      title: `Store Joined: ${created.name}`,
+      description: `New store ${created.name} (#${created.id}) added to ${created.network.toUpperCase()}.`,
+      network: created.network,
+      entity: "advertisers",
+      status: "success",
+    }).catch(() => {});
+
     return NextResponse.json({ ok: true, advertiser: created }, { status: 201 });
   } catch (error) {
     console.error("Error creating advertiser:", error);
