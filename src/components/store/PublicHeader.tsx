@@ -183,12 +183,17 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
             )}
           </div>
 
-          <Link
-            href="/login"
-            className="text-sm font-medium text-gray-700 hover:text-amber-500 transition-colors"
+          {/* User accounts are coming soon. This intentionally does NOT link to
+              the admin login (/login) — that URL stays unadvertised on public
+              pages. Swap this for the real user sign-in route when it ships. */}
+          <button
+            type="button"
+            title="User accounts coming soon"
+            className="cursor-default text-sm font-medium text-gray-400"
+            aria-disabled="true"
           >
             Sign in
-          </Link>
+          </button>
         </div>
       </div>
 
