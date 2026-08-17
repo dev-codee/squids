@@ -59,12 +59,31 @@ export default function AdvertiserCard({
             <h3 className="truncate text-sm font-semibold text-gray-900 group-hover:text-accent transition">
               {advertiser.name}
             </h3>
-            <p className="text-[11px] font-mono text-gray-400">#{advertiser.id}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <p className="text-[11px] font-mono text-gray-400">#{advertiser.id}</p>
+              <span className="inline-flex items-center rounded bg-blue-50 px-1.5 py-0.2 text-[10px] font-bold text-blue-700 uppercase tracking-wide border border-blue-100">
+                {advertiser.network || "awin"}
+              </span>
+            </div>
           </div>
           <StatusBadge relationship={advertiser.relationship} />
         </div>
 
-        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs border-t border-gray-100 pt-3">
+          <div>
+            <dt className="text-gray-400">Network</dt>
+            <dd className="mt-0.5 font-bold uppercase text-blue-700">
+              {advertiser.network || "awin"}
+            </dd>
+          </div>
+
+          <div>
+            <dt className="text-gray-400">Total Deals / Offers</dt>
+            <dd className="mt-0.5 font-bold text-emerald-600">
+              {advertiser.dealCount ?? 0} {advertiser.dealCount === 1 ? "offer" : "offers"}
+            </dd>
+          </div>
+
           {(advertiser.region || advertiser.countryCode) && (
             <div>
               <dt className="text-gray-400">Region</dt>
@@ -149,7 +168,7 @@ export default function AdvertiserCard({
 
     return (
       <Link href={`/${country.toLowerCase()}/${slug}`} className="block h-full">
-        <div className={`relative group flex items-center justify-between gap-3 rounded-xl border bg-white p-3.5 shadow-sm transition cursor-pointer h-24 sm:h-28 ${
+        <div className={`relative group flex flex-col items-center justify-between rounded-xl border bg-white p-3 shadow-sm transition cursor-pointer h-28 sm:h-32 ${
           advertiser.isFlagship 
             ? "border-amber-400 hover:border-amber-500 shadow-md hover:shadow-lg bg-amber-50/10" 
             : "border-gray-200 hover:border-amber-300 hover:shadow-md"
@@ -160,14 +179,14 @@ export default function AdvertiserCard({
             </div>
           )}
 
-          {/* 70% width for Store Logo / Image */}
-          <div className="w-[70%] h-full flex items-center justify-center overflow-hidden pr-2">
+          {/* 70% height for Store Logo / Image */}
+          <div className="h-[68%] w-full flex items-center justify-center overflow-hidden pb-1">
             {advertiser.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={advertiser.logoUrl}
                 alt={`${advertiser.name} logo`}
-                className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
+                className="max-h-full max-w-[90%] object-contain filter group-hover:scale-105 transition-transform"
                 loading="lazy"
               />
             ) : (
@@ -177,9 +196,9 @@ export default function AdvertiserCard({
             )}
           </div>
 
-          {/* 30% width for Store Name */}
-          <div className="w-[30%] h-full flex items-center justify-center border-l border-gray-100 pl-2 text-center">
-            <span className="text-xs font-bold text-gray-800 line-clamp-2 leading-tight group-hover:text-amber-600 transition-colors">
+          {/* Store Name below the image */}
+          <div className="h-[32%] w-full flex items-center justify-center border-t border-gray-100 pt-1 text-center">
+            <span className="text-xs font-bold text-gray-800 truncate px-1 group-hover:text-amber-600 transition-colors">
               {advertiser.name}
             </span>
           </div>

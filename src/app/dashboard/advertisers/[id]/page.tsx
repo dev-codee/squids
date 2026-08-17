@@ -200,6 +200,9 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-mono font-medium text-gray-600">
                     #{advertiser.id}
                   </span>
+                  <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-700 uppercase ring-1 ring-inset ring-blue-600/20">
+                    {advertiser.network || "awin"}
+                  </span>
                   {advertiser.relationship && (
                     <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 capitalize ring-1 ring-inset ring-green-600/20">
                       {advertiser.relationship}
@@ -208,6 +211,9 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
                 </div>
 
                 <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                  <span className="font-semibold text-emerald-600">
+                    Total Deals: {dealsData?.total ?? advertiser.dealCount ?? 0}
+                  </span>
                   {advertiser.region && <span>Region: {advertiser.region}</span>}
                   {advertiser.commission && <span>Commission: {advertiser.commission}</span>}
                   {advertiser.currencyCode && <span>Currency: {advertiser.currencyCode}</span>}
