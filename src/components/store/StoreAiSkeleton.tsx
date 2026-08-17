@@ -1,16 +1,20 @@
-/** Placeholder shown while the AI store content is being generated (sidebar). */
+/** Placeholder shown while the AI store content is being generated (full width). */
 export default function StoreAiSkeleton() {
   return (
-    <div className="space-y-6" aria-busy="true" aria-label="Loading store details">
+    <div
+      className="columns-1 gap-6 lg:columns-2"
+      aria-busy="true"
+      aria-label="Loading store details"
+    >
       {/* Intro card */}
-      <div className="bg-white p-5 rounded border border-gray-200 animate-pulse">
+      <div className="mb-6 break-inside-avoid bg-white p-5 rounded border border-gray-200 animate-pulse">
         <div className="h-3 w-11/12 rounded bg-gray-200" />
         <div className="mt-2 h-3 w-10/12 rounded bg-gray-200" />
         <div className="mt-2 h-3 w-7/12 rounded bg-gray-200" />
       </div>
 
       {/* Trust panel */}
-      <div className="bg-white p-5 rounded border border-gray-200 animate-pulse">
+      <div className="mb-6 break-inside-avoid bg-white p-5 rounded border border-gray-200 animate-pulse">
         <div className="h-4 w-32 rounded bg-gray-200" />
         <div className="mt-4 space-y-2.5">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -23,7 +27,7 @@ export default function StoreAiSkeleton() {
       </div>
 
       {/* Info card */}
-      <div className="bg-white p-5 rounded border border-gray-200 animate-pulse">
+      <div className="mb-6 break-inside-avoid bg-white p-5 rounded border border-gray-200 animate-pulse">
         <div className="h-4 w-28 rounded bg-gray-200" />
         <div className="mt-4 space-y-2.5">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -33,7 +37,7 @@ export default function StoreAiSkeleton() {
       </div>
 
       {/* FAQ block */}
-      <div className="bg-white p-5 rounded border border-gray-200 animate-pulse">
+      <div className="mb-6 break-inside-avoid bg-white p-5 rounded border border-gray-200 animate-pulse">
         <div className="h-4 w-40 rounded bg-gray-200" />
         <div className="mt-4 space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (

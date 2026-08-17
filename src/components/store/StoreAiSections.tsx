@@ -9,7 +9,7 @@ function hasVal(v: unknown): v is string {
 
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <section className="bg-white p-5 rounded border border-gray-200">
+    <section className="mb-6 break-inside-avoid bg-white p-5 rounded border border-gray-200">
       {title && <h3 className="font-bold text-gray-900 mb-3">{title}</h3>}
       {children}
     </section>
@@ -65,7 +65,8 @@ export default function StoreAiSections({
   const calendar = (c.shopping_calendar ?? []).filter((m) => m && m.month);
 
   return (
-    <div className="space-y-6">
+    <div>
+      <div className="columns-1 gap-6 lg:columns-2">
       {/* Hero intro */}
       {hasVal(c.hero_intro) && (
         <Card>
@@ -143,30 +144,28 @@ export default function StoreAiSections({
         </Card>
       )}
 
-      {/* Shipping & Returns (stacked in the sidebar) */}
-      {(showShipping || showReturns) && (
-        <div className="space-y-6">
-          {showShipping && (
-            <Card title="Shipping & Delivery">
-              <InfoRow label="Free shipping" value={shipping!.free_shipping} />
-              <InfoRow label="Free over" value={shipping!.threshold} />
-              <InfoRow label="Standard cost" value={shipping!.standard_cost} />
-              <InfoRow label="Delivery time" value={shipping!.delivery_time} />
-              <InfoRow label="International" value={shipping!.international_shipping} />
-            </Card>
+      {/* Shipping & Delivery */}
+      {showShipping && (
+        <Card title="Shipping & Delivery">
+          <InfoRow label="Free shipping" value={shipping!.free_shipping} />
+          <InfoRow label="Free over" value={shipping!.threshold} />
+          <InfoRow label="Standard cost" value={shipping!.standard_cost} />
+          <InfoRow label="Delivery time" value={shipping!.delivery_time} />
+          <InfoRow label="International" value={shipping!.international_shipping} />
+        </Card>
+      )}
+
+      {/* Returns & Refunds */}
+      {showReturns && (
+        <Card title="Returns & Refunds">
+          <InfoRow label="Return window" value={returns!.return_window} />
+          <InfoRow label="Refund" value={returns!.refund} />
+          <InfoRow label="Exchange" value={returns!.exchange} />
+          <InfoRow label="Return shipping" value={returns!.return_shipping} />
+          {hasVal(returns!.conditions) && (
+            <p className="mt-2 text-xs text-gray-500">{returns!.conditions}</p>
           )}
-          {showReturns && (
-            <Card title="Returns & Refunds">
-              <InfoRow label="Return window" value={returns!.return_window} />
-              <InfoRow label="Refund" value={returns!.refund} />
-              <InfoRow label="Exchange" value={returns!.exchange} />
-              <InfoRow label="Return shipping" value={returns!.return_shipping} />
-              {hasVal(returns!.conditions) && (
-                <p className="mt-2 text-xs text-gray-500">{returns!.conditions}</p>
-              )}
-            </Card>
-          )}
-        </div>
+        </Card>
       )}
 
       {/* Payment methods */}
@@ -257,9 +256,11 @@ export default function StoreAiSections({
         </Card>
       )}
 
+      </div>
+
       {/* Affiliate disclosure */}
       {hasVal(c.affiliate_disclosure) && (
-        <p className="px-1 text-xs text-gray-400">{c.affiliate_disclosure}</p>
+        <p className="mt-2 px-1 text-xs text-gray-400">{c.affiliate_disclosure}</p>
       )}
     </div>
   );

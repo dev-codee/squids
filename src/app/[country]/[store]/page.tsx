@@ -37,16 +37,6 @@ export default async function StoreMainPage({
           {/* Sidebar - Left Column */}
           <div className="lg:col-span-3 space-y-6">
             <StoreSidebar store={store} />
-
-            {/* AI-generated store content — streamed in with a skeleton
-                fallback while Claude generates it on first visit. */}
-            <Suspense fallback={<StoreAiSkeleton />}>
-              <StoreAiContent
-                slug={store.slug}
-                country={params.country}
-                storeName={store.name}
-              />
-            </Suspense>
           </div>
 
           {/* Main Content - Right Column */}
@@ -102,6 +92,19 @@ export default async function StoreMainPage({
             )}
 
           </div>
+        </div>
+
+        {/* AI-generated store content — full width below the offers.
+            Streamed in with a skeleton fallback while Claude generates it
+            on first visit. */}
+        <div className="mt-8">
+          <Suspense fallback={<StoreAiSkeleton />}>
+            <StoreAiContent
+              slug={store.slug}
+              country={params.country}
+              storeName={store.name}
+            />
+          </Suspense>
         </div>
       </main>
     </div>
