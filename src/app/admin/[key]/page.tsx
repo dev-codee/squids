@@ -1,9 +1,23 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAdminLoginSlug } from "@/lib/auth";
 import LoginForm from "./login-form";
 
 // Never cache: the gate depends on the runtime env var.
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Admin Gate",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
+};
 
 /**
  * Admin login lives at an unguessable path: `/admin/<ADMIN_LOGIN_SLUG>`.

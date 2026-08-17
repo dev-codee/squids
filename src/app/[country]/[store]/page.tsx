@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { loadStoreData, loadStoreAiContent } from "@/lib/storeData";
 import { Suspense } from "react";
@@ -7,8 +8,58 @@ import LightningDealCard from "@/components/store/LightningDealCard";
 import StoreAiContent from "@/components/store/StoreAiContent";
 import StoreAiSkeleton from "@/components/store/StoreAiSkeleton";
 import { getDictionary } from "@/i18n";
+import { getSiteUrl } from "@/lib/regions";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { country: string; store: string };
+}): Promise<Metadata> {
+  const store = await loadStoreData(params.store, params.country);
+  if (!store) return {};
+
+  const currentMonth = new Date().toLocaleString("default", { month: "long" });
+  const currentYear = new Date().getFullYear();
+  const siteUrl = getSiteUrl();
+  const canonicalUrl = `${siteUrl}/${params.country.toLowerCase()}/${store.slug}`;
+
+  const title = `${store.name} Promo Codes & Coupons (${currentMonth} ${currentYear})`;
+  const description = `Get active ${store.name} promo codes, discount vouchers, and deals for ${currentMonth} ${currentYear}. Verified offers updated daily on Foxzil.`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: "Foxzil",
+      images: store.logoUrl ? [{ url: store.logoUrl, alt: `${store.name} logo` }] : [],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: store.logoUrl ? [store.logoUrl] : [],
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-snippet": -1,
+        "max-image-preview": "large",
+      },
+    },
+  };
+}
 
 export default async function StoreMainPage({
   params,
@@ -31,8 +82,21 @@ export default async function StoreMainPage({
   const currentYear = new Date().getFullYear();
   const dict = await getDictionary(params.country);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: store.name,
+    url: `${getSiteUrl()}/${params.country.toLowerCase()}/${store.slug}`,
+    logo: store.logoUrl || undefined,
+    description: `Verified promo codes, discount coupons, and offers for ${store.name}.`,
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
