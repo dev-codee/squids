@@ -428,29 +428,20 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
       <DealModal
         isOpen={isDealModalOpen}
         onClose={() => setIsDealModalOpen(false)}
-        onSaved={() => loadDeals(search, type, status, page)}
-        deal={
-          selectedDeal ??
-          (advertiser
-            ? ({
-                id: 0,
+        onSaved={() => {
+          loadDeals(search, type, status, page);
+          fetchAdvertiser();
+        }}
+        deal={selectedDeal}
+        initialAdvertiser={
+          advertiser
+            ? {
+                id: advertiser.id,
+                name: advertiser.name,
+                logoUrl: advertiser.logoUrl,
                 network: advertiser.network,
-                title: "",
-                description: null,
-                advertiser: {
-                  id: advertiser.id,
-                  name: advertiser.name,
-                  logoUrl: advertiser.logoUrl,
-                },
-                type: "voucher",
-                code: null,
-                startDate: null,
-                endDate: null,
-                status: "active",
-                trackingUrl: advertiser.url,
-                regionCodes: advertiser.countryCode ? [advertiser.countryCode] : [],
-              } as Deal)
-            : null)
+              }
+            : undefined
         }
       />
     </main>

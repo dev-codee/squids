@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/deals";
 import type { Deal, CouponSubtype, DealPlacement } from "@/lib/deals";
 import { revalidatePublic, CACHE_TAGS } from "@/lib/cache";
+import { logActivity } from "@/lib/db/activity-logs";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const id = body.id && !isNaN(Number(body.id))
+    const id = body.id && !isNaN(Number(body.id)) && Number(body.id) > 0
       ? Number(body.id)
       : await getNextDealId();
 
@@ -116,6 +117,16 @@ export async function POST(request: NextRequest) {
 
     const created = await createDeal(deal);
     invalidateDealCaches();
+
+    await logActivity({
+      type: "deal_added",
+      title: `Deal Added: ${created.title}`,
+      description: `New ${created.type} offer "${created.title}" (#${created.id}) added for ${created.advertiser.name}.`,
+      network: created.network,
+      entity: "deals",
+      status: "success",
+    }).catch(() => {});
+
     return NextResponse.json({ ok: true, deal: created }, { status: 201 });
   } catch (error) {
     console.error("Error creating deal:", error);

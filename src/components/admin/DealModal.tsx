@@ -8,6 +8,12 @@ interface DealModalProps {
   onClose: () => void;
   onSaved: () => void;
   deal: Deal | null; // null for Create, Deal for Edit
+  initialAdvertiser?: {
+    id: number;
+    name: string;
+    logoUrl?: string | null;
+    network?: string;
+  };
 }
 
 export default function DealModal({
@@ -15,6 +21,7 @@ export default function DealModal({
   onClose,
   onSaved,
   deal,
+  initialAdvertiser,
 }: DealModalProps) {
   const isEditing = Boolean(deal);
 
@@ -114,7 +121,17 @@ export default function DealModal({
         stockPercentage: deal.stockPercentage != null ? String(deal.stockPercentage) : "",
       });
     } else {
-      setFormData(emptyForm);
+      setFormData({
+        ...emptyForm,
+        ...(initialAdvertiser
+          ? {
+              advertiserId: String(initialAdvertiser.id),
+              advertiserName: initialAdvertiser.name,
+              advertiserLogoUrl: initialAdvertiser.logoUrl || "",
+              network: initialAdvertiser.network || "awin",
+            }
+          : {}),
+      });
     }
     setError(null);
     setAiInfo(
@@ -137,7 +154,7 @@ export default function DealModal({
       const isVoucher = formData.type === "voucher";
 
       const payload = {
-        id: formData.id ? Number(formData.id) : undefined,
+        ...(isEditing && formData.id ? { id: Number(formData.id) } : {}),
         network: formData.network || "awin",
         title: formData.title,
         description: formData.description || null,
