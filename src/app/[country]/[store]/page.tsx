@@ -49,13 +49,11 @@ export async function generateMetadata({
       images: store.logoUrl ? [store.logoUrl] : [],
     },
     robots: {
-      index: true,
-      follow: true,
+      index: false,
+      follow: false,
       googleBot: {
-        index: true,
-        follow: true,
-        "max-snippet": -1,
-        "max-image-preview": "large",
+        index: false,
+        follow: false,
       },
     },
   };
