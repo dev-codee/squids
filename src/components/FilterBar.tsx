@@ -5,6 +5,7 @@ export interface Filters {
   region: string;
   relationship: string;
   category?: string;
+  network?: string;
 }
 
 interface FilterBarProps {
@@ -43,6 +44,19 @@ export default function FilterBar({
             className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 shadow-card outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
           />
         </div>
+
+        <select
+          value={filters.network || ""}
+          onChange={(e) => onChange({ ...filters, network: e.target.value })}
+          className={selectClass}
+          aria-label="Filter by network"
+        >
+          <option value="">All networks</option>
+          <option value="awin">Awin</option>
+          <option value="admitad">Admitad</option>
+          <option value="commission-factory">Commission Factory</option>
+          <option value="kwanko">Kwanko</option>
+        </select>
 
         {categories.length > 0 && (
           <select

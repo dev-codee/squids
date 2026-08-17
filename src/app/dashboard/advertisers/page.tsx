@@ -10,7 +10,7 @@ import SkeletonGrid from "@/components/SkeletonGrid";
 import AdvertiserModal from "@/components/admin/AdvertiserModal";
 
 const PAGE_SIZE = 24;
-const EMPTY_FILTERS: Filters = { search: "", region: "", relationship: "" };
+const EMPTY_FILTERS: Filters = { search: "", region: "", relationship: "", category: "", network: "" };
 const COUNTRY_KEY = "awin_country";
 
 interface PageData {
@@ -26,8 +26,8 @@ export default function AdminAdvertisersPage() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
 
-  const [country, setCountry] = useState<string | null>(null);
-  const [countryResolved, setCountryResolved] = useState(false);
+  const [country, setCountry] = useState<string | null>("");
+  const [countryResolved, setCountryResolved] = useState(true);
 
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,6 +63,8 @@ export default function AdminAdvertisersPage() {
           params.set("relationship", currentFilters.relationship);
         if (currentFilters.category)
           params.set("category", currentFilters.category);
+        if (currentFilters.network)
+          params.set("network", currentFilters.network);
         if (currentCountry) params.set("country", currentCountry);
 
 
@@ -81,34 +83,6 @@ export default function AdminAdvertisersPage() {
     },
     [],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    const stored =
-      typeof window !== "undefined" ? localStorage.getItem(COUNTRY_KEY) : null;
-
-    if (stored !== null) {
-      setCountry(stored);
-      setCountryResolved(true);
-      return;
-    }
-
-    (async () => {
-      try {
-        const res = await fetch("/api/geo");
-        const geo = await res.json();
-        if (!cancelled) setCountry(geo?.country ?? "");
-      } catch {
-        if (!cancelled) setCountry("");
-      } finally {
-        if (!cancelled) setCountryResolved(true);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
