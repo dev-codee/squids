@@ -175,7 +175,7 @@ export default function AdvertiserCard({
         }`}>
           {advertiser.isFlagship && (
             <div className="absolute -top-2.5 right-2 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
-              ⭐ FLAGSHIP
+              FLAGSHIP
             </div>
           )}
 

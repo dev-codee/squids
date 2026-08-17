@@ -254,7 +254,13 @@ async function getAdvertisersFromDbUncached(
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ["$advertiser.id", "$$advId"] },
+                    {
+                      $or: [
+                        { $eq: ["$advertiser.id", "$$advId"] },
+                        { $eq: ["$advertiser.id", { $toString: "$$advId" }] },
+                        { $eq: [{ $toString: "$advertiser.id" }, { $toString: "$$advId" }] },
+                      ],
+                    },
                     { $eq: ["$network", "$$advNetwork"] },
                   ],
                 },
@@ -286,10 +292,18 @@ async function getAdvertisersFromDbUncached(
     // Fetch deal counts manually for the non-joined query
     const dealsCol = db.collection("deals");
     for (const doc of docs) {
-      doc.dealCount = await dealsCol.countDocuments({
-        "advertiser.id": String(doc.id),
-        network: doc.network,
-      });
+      const numId = Number(doc.id);
+      const strId = String(doc.id);
+      const idMatch = !isNaN(numId) ? { $in: [numId, strId] } : strId;
+
+      const dealFilter: Record<string, unknown> = {
+        "advertiser.id": idMatch,
+      };
+      if (doc.network) {
+        dealFilter.network = doc.network;
+      }
+
+      doc.dealCount = await dealsCol.countDocuments(dealFilter);
     }
   }
 

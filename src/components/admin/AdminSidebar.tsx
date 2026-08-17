@@ -121,7 +121,7 @@ const groups: NavGroup[] = [
           </>,
         ),
       },
-      ...NETWORKS.map((n) => ({
+      ...NETWORKS.filter((n) => n.integrated).map((n) => ({
         label: n.name,
         href: `/dashboard/networks/${n.slug}`,
         icon: icon(

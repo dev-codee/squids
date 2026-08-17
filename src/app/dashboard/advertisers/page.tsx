@@ -237,7 +237,7 @@ export default function AdminAdvertisersPage() {
                     {/* Internal-only PPC tag (admin dashboard only) */}
                     {a.isPPC && (
                       <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 rounded-md bg-amber-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
-                        🏷️ PPC
+                        PPC
                       </span>
                     )}
 

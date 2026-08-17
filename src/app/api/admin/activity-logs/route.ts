@@ -59,6 +59,22 @@ export async function GET(request: NextRequest) {
       errorMessage: s.errorMessage,
     }));
 
+    const dealsCol = db.collection("deals");
+    const recentStores = await Promise.all(
+      recentStoresDocs.map(async (store) => {
+        const numId = Number(store.id);
+        const strId = String(store.id);
+        const count = await dealsCol.countDocuments({
+          "advertiser.id": { $in: [numId, strId] },
+          network: store.network,
+        });
+        return {
+          ...store,
+          dealCount: count,
+        };
+      })
+    );
+
     return NextResponse.json({
       logs: logData.items,
       total: logData.total,
@@ -67,7 +83,7 @@ export async function GET(request: NextRequest) {
       totalPages: logData.totalPages,
       summary,
       syncStatus,
-      recentStores: recentStoresDocs,
+      recentStores,
       recentDeals: recentDealsDocs,
     });
   } catch (error) {

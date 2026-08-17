@@ -111,7 +111,14 @@ function buildFilter(query: DealQuery & { network?: string }): Record<string, un
   }
 
   if (query.advertiserId) {
-    conditions.push({ "advertiser.id": query.advertiserId });
+    const raw = query.advertiserId;
+    const num = Number(raw);
+    const str = String(raw);
+    if (!isNaN(num)) {
+      conditions.push({ "advertiser.id": { $in: [num, str] } });
+    } else {
+      conditions.push({ "advertiser.id": str });
+    }
   }
 
   if (query.status && query.status !== "all") {
