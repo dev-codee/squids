@@ -537,16 +537,20 @@ export async function createAdvertiser(advertiser: Advertiser): Promise<Advertis
 export async function updateAdvertiser(
   id: number,
   data: Partial<Advertiser>,
-  network: string = "awin",
+  network?: string,
 ): Promise<boolean> {
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
+  const update = { $set: { ...data, syncedAt: new Date() } };
 
-  const result = await col.updateOne(
-    { network, id },
-    { $set: { ...data, syncedAt: new Date() } }
-  );
+  // Prefer the exact (network, id) match; fall back to id-only so a
+  // missing/stale network never causes the update to silently no-op.
+  if (network) {
+    const scoped = await col.updateOne({ network, id }, update);
+    if (scoped.matchedCount > 0) return true;
+  }
 
+  const result = await col.updateOne({ id }, update);
   return result.matchedCount > 0;
 }
 
@@ -555,11 +559,18 @@ export async function updateAdvertiser(
  */
 export async function deleteAdvertiser(
   id: number,
-  network: string = "awin",
+  network?: string,
 ): Promise<boolean> {
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
-  const result = await col.deleteOne({ network, id });
+  // Prefer the exact (network, id) match, but fall back to id-only so a
+  // missing/stale network never causes the delete to silently no-op.
+  if (network) {
+    const scoped = await col.deleteOne({ network, id });
+    if (scoped.deletedCount > 0) return true;
+  }
+
+  const result = await col.deleteOne({ id });
   return result.deletedCount > 0;
 }

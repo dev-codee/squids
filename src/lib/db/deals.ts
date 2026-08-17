@@ -528,16 +528,20 @@ export async function createDeal(deal: Deal): Promise<Deal> {
 export async function updateDeal(
   id: number,
   data: Partial<Deal>,
-  network: string = "awin",
+  network?: string,
 ): Promise<boolean> {
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
+  const update = { $set: { ...data, syncedAt: new Date() } };
 
-  const result = await col.updateOne(
-    { network, id },
-    { $set: { ...data, syncedAt: new Date() } }
-  );
+  // Prefer the exact (network, id) match; fall back to id-only so a
+  // missing/stale network never causes the update to silently no-op.
+  if (network) {
+    const scoped = await col.updateOne({ network, id }, update);
+    if (scoped.matchedCount > 0) return true;
+  }
 
+  const result = await col.updateOne({ id }, update);
   return result.matchedCount > 0;
 }
 
@@ -627,11 +631,19 @@ export async function ensureDealAiContent(
  */
 export async function deleteDeal(
   id: number,
-  network: string = "awin",
+  network?: string,
 ): Promise<boolean> {
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
 
-  const result = await col.deleteOne({ network, id });
+  // Prefer the exact (network, id) match. If the caller's network is missing,
+  // stale, or mismatched, fall back to deleting by id alone so the delete
+  // never silently no-ops (ids are effectively unique across networks).
+  if (network) {
+    const scoped = await col.deleteOne({ network, id });
+    if (scoped.deletedCount > 0) return true;
+  }
+
+  const result = await col.deleteOne({ id });
   return result.deletedCount > 0;
 }
