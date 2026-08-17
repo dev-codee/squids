@@ -38,6 +38,9 @@ export default function AdvertiserModal({
     isFlagship: false,
     isPPC: false,
     countryCodes: "",
+    seoTitle: "",
+    seoDescription: "",
+    maxDiscount: "",
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -108,6 +111,9 @@ export default function AdvertiserModal({
         isFlagship: advertiser.isFlagship || false,
         isPPC: advertiser.isPPC || false,
         countryCodes: advertiser.countryCodes?.join(", ") || "",
+        seoTitle: advertiser.seoTitle || "",
+        seoDescription: advertiser.seoDescription || "",
+        maxDiscount: advertiser.maxDiscount || "",
       });
     } else {
       setFormData({
@@ -130,6 +136,9 @@ export default function AdvertiserModal({
         isFlagship: false,
         isPPC: false,
         countryCodes: "",
+        seoTitle: "",
+        seoDescription: "",
+        maxDiscount: "",
       });
     }
     setStorePageJson(
@@ -481,9 +490,49 @@ export default function AdvertiserModal({
                   className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent cursor-pointer"
                 />
                 <label htmlFor="isPPC" className="text-sm font-medium text-gray-900 cursor-pointer">
-                  🏷️ PPC Advertiser
+                  PPC Advertiser
                   <span className="block text-xs text-amber-700 font-normal">Internal use only — flags this advertiser as PPC in the admin dashboard. Never shown on public pages.</span>
                 </label>
+              </div>
+
+              {/* SEO Title & Description Controls */}
+              <div className="sm:col-span-2 border-t border-gray-100 pt-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-gray-700">
+                    SEO Title (Store Page & Meta)
+                  </label>
+                  {formData.maxDiscount && (
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                      Top Discount: {formData.maxDiscount}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-gray-400 mb-1">
+                  Custom SEO title. If left blank, it is automatically generated from deal max discount analysis on first visit.
+                </p>
+                <input
+                  type="text"
+                  value={formData.seoTitle}
+                  onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
+                  placeholder="e.g. Nike Promo Codes & Up to 50% Off Coupons (March 2026)"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-700">
+                  SEO Short Description (Meta Description)
+                </label>
+                <p className="text-[11px] text-gray-400 mb-1">
+                  Very short, concise description without AI fluff. Displays under store title and in Google search results.
+                </p>
+                <textarea
+                  rows={2}
+                  value={formData.seoDescription}
+                  onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
+                  placeholder="e.g. Save up to 50% off at Nike with verified promo codes, discount vouchers, and deals for March 2026."
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                />
               </div>
             </div>
           </div>

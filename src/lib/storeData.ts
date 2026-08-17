@@ -11,11 +11,8 @@
  */
 
 import { cache } from "react";
-import {
-  getAdvertiserBySlug,
-  slugifyAdvertiserName,
-  ensureAdvertiserStorePage,
-} from "@/lib/db/advertisers";
+import { getAdvertiserBySlug, slugifyAdvertiserName, ensureAdvertiserStorePage } from "@/lib/db/advertisers";
+import { ensureAdvertiserSeo } from "@/lib/ai/storeSeo";
 import type { StorePageContent } from "@/lib/ai/storeContent";
 import { getDealsFromDb, ensureDealAiContent } from "@/lib/db/deals";
 
@@ -149,6 +146,12 @@ export interface StoreData {
   }[];
   /** AI-generated store page content (hero, trust, shipping, FAQ, …). */
   aiStorePage: StorePageContent | null;
+  /** SEO Title (custom or AI-generated with max discount analysis). */
+  seoTitle?: string | null;
+  /** Short non-fluffy SEO Description. */
+  seoDescription?: string | null;
+  /** Maximum discount percentage (e.g. "50%"). */
+  maxDiscount?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -378,10 +381,12 @@ export async function loadStoreData(
     title: g.title,
     readTime: g.readTime,
     summary: g.summary,
-    category: g.category,
-    author: g.author,
-    date: g.date,
+    category: g.category || "",
+    author: g.author || "",
+    date: g.date || "",
   }));
+
+  const seoContent = await ensureAdvertiserSeo(advertiser, allDeals);
 
   return {
     slug: finalSlug,
@@ -407,6 +412,9 @@ export async function loadStoreData(
     latestDiscounts: [],
     // AI store-page content is loaded separately (streamed) via loadStoreAiContent.
     aiStorePage: null,
+    seoTitle: seoContent.seoTitle,
+    seoDescription: seoContent.seoDescription,
+    maxDiscount: seoContent.maxDiscount,
   };
 }
 

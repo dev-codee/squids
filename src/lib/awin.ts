@@ -65,6 +65,13 @@ export interface Advertiser {
   aiStorePage?: import("@/lib/ai/storeContent").StorePageContent | null;
   /** ISO timestamp the store page content was generated. */
   aiStorePageAt?: string | null;
+
+  /** SEO Title (custom or AI generated with max discount analysis). */
+  seoTitle?: string | null;
+  /** Short non-fluffy SEO Description. */
+  seoDescription?: string | null;
+  /** Maximum discount percentage (e.g. "50%"). */
+  maxDiscount?: string | null;
 }
 
 export class AwinConfigError extends Error {}

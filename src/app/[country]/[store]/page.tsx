@@ -25,8 +25,8 @@ export async function generateMetadata({
   const siteUrl = getSiteUrl();
   const canonicalUrl = `${siteUrl}/${params.country.toLowerCase()}/${store.slug}`;
 
-  const title = `${store.name} Promo Codes & Coupons (${currentMonth} ${currentYear})`;
-  const description = `Get active ${store.name} promo codes, discount vouchers, and deals for ${currentMonth} ${currentYear}. Verified offers updated daily on Foxzil.`;
+  const title = store.seoTitle || `${store.name} Promo Codes & Up to ${store.maxDiscount || "50% Off"} (${currentMonth} ${currentYear})`;
+  const description = store.seoDescription || `Save up to ${store.maxDiscount || "50% off"} at ${store.name} with verified promo codes, discount vouchers, and deals for ${currentMonth} ${currentYear}.`;
 
   return {
     title,
@@ -88,7 +88,7 @@ export default async function StoreMainPage({
     name: store.name,
     url: `${getSiteUrl()}/${params.country.toLowerCase()}/${store.slug}`,
     logo: store.logoUrl || undefined,
-    description: `Verified promo codes, discount coupons, and offers for ${store.name}.`,
+    description: store.seoDescription || `Verified promo codes, discount coupons, and offers for ${store.name}.`,
   };
 
   return (
@@ -109,10 +109,15 @@ export default async function StoreMainPage({
           <div className="lg:col-span-9 space-y-8">
             
             {/* Top Header */}
-            <div className="bg-white p-6 rounded border border-gray-200">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {dict.store.promoCodeTitle.replace("{store}", store.name).replace("{month}", currentMonth).replace("{year}", String(currentYear))}
+            <div className="bg-white p-6 rounded border border-gray-200 shadow-sm">
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                {store.seoTitle || dict.store.promoCodeTitle.replace("{store}", store.name).replace("{month}", currentMonth).replace("{year}", String(currentYear))}
               </h1>
+              {store.seoDescription && (
+                <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+                  {store.seoDescription}
+                </p>
+              )}
             </div>
 
             {/* Coupons Section */}

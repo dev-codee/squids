@@ -55,6 +55,9 @@ export async function POST(request: NextRequest) {
       isFlagship: body.isFlagship === true,
       countryCodes: Array.isArray(body.countryCodes) ? body.countryCodes : [],
       isPPC: body.isPPC === true,
+      seoTitle: body.seoTitle ? String(body.seoTitle).trim() : null,
+      seoDescription: body.seoDescription ? String(body.seoDescription).trim() : null,
+      maxDiscount: body.maxDiscount ? String(body.maxDiscount).trim() : null,
     };
 
     const created = await createAdvertiser(advertiser);
@@ -114,6 +117,9 @@ export async function PUT(request: NextRequest) {
     if (body.isFlagship !== undefined) updateData.isFlagship = Boolean(body.isFlagship);
     if (body.countryCodes !== undefined) updateData.countryCodes = Array.isArray(body.countryCodes) ? body.countryCodes : [];
     if (body.isPPC !== undefined) updateData.isPPC = Boolean(body.isPPC);
+    if (body.seoTitle !== undefined) updateData.seoTitle = body.seoTitle ? String(body.seoTitle).trim() : null;
+    if (body.seoDescription !== undefined) updateData.seoDescription = body.seoDescription ? String(body.seoDescription).trim() : null;
+    if (body.maxDiscount !== undefined) updateData.maxDiscount = body.maxDiscount ? String(body.maxDiscount).trim() : null;
     // AI store-page content — accept an object (edited copy) or null (clear it).
     if (body.aiStorePage !== undefined) {
       updateData.aiStorePage =
