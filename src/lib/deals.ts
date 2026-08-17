@@ -118,12 +118,48 @@ export interface Deal {
   aiIssues?: string[] | null;
 }
 
+/**
+ * Remove the coupon code — and the "use code … at checkout" scaffolding around
+ * it — from shopper-facing copy. The code is revealed separately via the
+ * "Show Coupon Code" button, so repeating it in the title/description is noise.
+ * Best-effort: also cleans up any leftover punctuation/whitespace.
+ */
+export function stripCouponCode(text: string, code?: string | null): string {
+  if (!text) return text;
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const token = code?.trim();
+  const codePart = token ? `(?:[:\\s]*${esc(token)})?` : "";
+
+  let out = text
+    // "with code B100", "using promo code B100 at checkout [during …]", "code: B100", "(code B100)"
+    .replace(
+      new RegExp(
+        `[\\s,(–—-]*\\b(?:with|using|use|apply|applying|applied|enter|redeem|via|w/)?\\s*(?:the\\s*)?(?:promo|coupon|discount|voucher)?\\s*codes?\\b${codePart}(?:\\s+at\\s+checkout)?(?:\\s+during\\b[^.!?]*)?\\)?`,
+        "gi",
+      ),
+      " ",
+    );
+
+  // Any remaining standalone occurrence of the code token (e.g. "(B100)").
+  if (token) {
+    out = out.replace(new RegExp(`[\\s,(–—-]*\\b${esc(token)}\\b\\)?`, "gi"), " ");
+  }
+
+  return out
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([.,;:!?])/g, "$1")
+    .replace(/([.!?])\s*[.!?]+/g, "$1") // collapse doubled sentence punctuation
+    .replace(/\(\s*\)/g, "")
+    .replace(/[\s,–—-]+$/g, "")
+    .trim();
+}
+
 /** Shopper-facing title/description, preferring AI copy when present. */
 export function dealDisplayTitle(deal: Deal): string {
-  return deal.aiTitle?.trim() || deal.title;
+  return stripCouponCode(deal.aiTitle?.trim() || deal.title, deal.code);
 }
 export function dealDisplayDescription(deal: Deal): string {
-  return deal.aiDescription?.trim() || deal.description || "";
+  return stripCouponCode(deal.aiDescription?.trim() || deal.description || "", deal.code);
 }
 
 export interface PagedDeals {

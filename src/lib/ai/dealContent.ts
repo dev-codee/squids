@@ -49,10 +49,13 @@ TITLE FORMULAS (choose the most appropriate):
 - Cashback: "Up to [X]% Cashback at [Merchant]" (never describe cashback as a discount)
 
 IMPORTANT TITLE RULES
-Never invent a discount. Never convert "up to" into a guaranteed discount. Never remove important eligibility conditions. Never use excessive capitalization or emojis. Do not use "Amazing Deal", "Huge Savings", "Don't Miss Out", "Act Now", "Best Deal Ever" unless genuinely justified. Do not repeat the merchant name unnecessarily. Do not put the coupon code in the title unless it materially helps identify the offer. Do not use misleading urgency. Do not claim "lowest price", "best price", "exclusive", "guaranteed", "massive", "unbeatable" unless explicitly supported by input data. Preserve product names exactly where possible.
+Never invent a discount. Never convert "up to" into a guaranteed discount. Never remove important eligibility conditions. Never use excessive capitalization or emojis. Do not use "Amazing Deal", "Huge Savings", "Don't Miss Out", "Act Now", "Best Deal Ever" unless genuinely justified. Do not repeat the merchant name unnecessarily. Do not use misleading urgency. Do not claim "lowest price", "best price", "exclusive", "guaranteed", "massive", "unbeatable" unless explicitly supported by input data. Preserve product names exactly where possible.
+
+COUPON CODE RULE (STRICT)
+NEVER include the coupon/promo code itself in the title or the description, and never write phrases like "with code X", "use code X", "using code X", "enter code X at checkout", "apply code X", or "code: X". The code is revealed separately by a "Show Coupon Code" button, so repeating it is redundant. Describe the offer purely by its benefit and conditions (discount, product/category, minimum spend, customer type). Do not even reference "the code" or "at checkout".
 
 DESCRIPTION RULES
-Write ONE concise description between 25 and 55 words. First sentence explains the saving; second explains the products/categories or the most important condition. Mention important restrictions naturally. If an expiration date is provided, do NOT repeat it (the system displays expiry separately). Do not simply rewrite the title. Structure: "[Benefit]. [What is included]. [Important condition/restriction if applicable]."
+Write ONE concise description between 25 and 55 words. First sentence explains the saving; second explains the products/categories or the most important condition. Mention important restrictions naturally. If an expiration date is provided, do NOT repeat it (the system displays expiry separately). NEVER include the coupon/promo code or "use code … at checkout" phrasing (the code is shown separately). Do not simply rewrite the title. Structure: "[Benefit]. [What is included]. [Important condition/restriction if applicable]."
 
 ANTI-DUPLICATION RULE
 Identify the main differentiating attribute (discount, product, category, subscription, customer type, minimum spend, payment method, membership, new-customer status, specific game/brand, shipping, cashback, starting price) and emphasize it. Never produce generic filler like "Save big on selected products."
