@@ -148,16 +148,17 @@ export default function AdminAdvertisersPage() {
     setIsModalOpen(true);
   }
 
-  async function handleDelete(id: number, name: string) {
+  async function handleDelete(id: number, name: string, network?: string) {
     if (!confirm(`Are you sure you want to delete "${name}" (#${id}) from MongoDB?`)) {
       return;
     }
 
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/admin/advertisers?id=${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/admin/advertisers?id=${id}${network ? `&network=${encodeURIComponent(network)}` : ""}`,
+        { method: "DELETE" },
+      );
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json?.error || "Failed to delete advertiser.");
@@ -289,7 +290,7 @@ export default function AdminAdvertisersPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
-                          handleDelete(a.id, a.name);
+                          handleDelete(a.id, a.name, a.network);
                         }}
                         disabled={deletingId === a.id}
                         title="Delete Advertiser"

@@ -20,6 +20,7 @@ export default function AdvertiserModal({
 
   const [formData, setFormData] = useState({
     id: "",
+    network: "awin",
     name: "",
     logoUrl: "",
     status: "active",
@@ -88,6 +89,7 @@ export default function AdvertiserModal({
     if (advertiser) {
       setFormData({
         id: String(advertiser.id),
+        network: advertiser.network || "awin",
         name: advertiser.name || "",
         logoUrl: advertiser.logoUrl || "",
 
@@ -110,6 +112,7 @@ export default function AdvertiserModal({
     } else {
       setFormData({
         id: "",
+        network: "awin",
         name: "",
         logoUrl: "",
         status: "active",
@@ -198,14 +201,16 @@ export default function AdvertiserModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl transition-all">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
+        {/* Header (pinned) */}
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900">
             {isEditing ? `Edit Advertiser (#${advertiser?.id})` : "Add New Advertiser"}
           </h2>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close"
             className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -215,13 +220,14 @@ export default function AdvertiserModal({
           </button>
         </div>
 
-        {error && (
-          <div className="mt-4 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-800 border border-red-200">
-            {error}
-          </div>
-        )}
+        <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
+          {error && (
+            <div className="rounded-lg bg-red-50 p-3 text-xs font-medium text-red-800 border border-red-200">
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Custom ID (Optional for new) */}
             <div>
@@ -502,9 +508,10 @@ export default function AdvertiserModal({
               />
             </div>
           )}
+          </div>
 
-          {/* Footer Actions */}
-          <div className="mt-6 flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+          {/* Footer Actions (pinned) */}
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-gray-100 bg-white px-6 py-4">
             <div className="flex items-center gap-2">
               {isEditing && (
                 <button

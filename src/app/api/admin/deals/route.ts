@@ -170,7 +170,8 @@ export async function PUT(request: NextRequest) {
     // "real" deal — so it's no longer re-cleaned when a network deal arrives.
     updateData.isAutoWelcome = false;
 
-    const success = await updateDeal(id, updateData);
+    const network = body.network ? String(body.network).trim() : "awin";
+    const success = await updateDeal(id, updateData, network);
     if (!success) {
       return NextResponse.json(
         { error: `Deal with ID ${id} not found.` },
@@ -203,7 +204,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     const id = Number(idRaw);
-    const success = await deleteDeal(id);
+    const network = request.nextUrl.searchParams.get("network")?.trim() || "awin";
+    const success = await deleteDeal(id, network);
 
     if (!success) {
       return NextResponse.json(

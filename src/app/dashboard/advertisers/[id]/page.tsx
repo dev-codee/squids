@@ -127,16 +127,17 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
     setIsDealModalOpen(true);
   }
 
-  async function handleDeleteDeal(id: number, title: string) {
+  async function handleDeleteDeal(id: number, title: string, network?: string) {
     if (!confirm(`Are you sure you want to delete deal "${title}" (#${id}) from MongoDB?`)) {
       return;
     }
 
     setDeletingDealId(id);
     try {
-      const res = await fetch(`/api/admin/deals?id=${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/admin/deals?id=${id}${network ? `&network=${encodeURIComponent(network)}` : ""}`,
+        { method: "DELETE" },
+      );
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json?.error || "Failed to delete deal.");
@@ -382,7 +383,7 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
                         </svg>
                       </button>
                       <button
-                        onClick={() => handleDeleteDeal(d.id, d.title)}
+                        onClick={() => handleDeleteDeal(d.id, d.title, d.network)}
                         disabled={deletingDealId === d.id}
                         title="Delete Deal"
                         className="rounded p-1 text-gray-600 hover:bg-red-50 hover:text-red-600 transition disabled:opacity-50"
@@ -427,6 +428,7 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
           (advertiser
             ? ({
                 id: 0,
+                network: advertiser.network,
                 title: "",
                 description: null,
                 advertiser: {

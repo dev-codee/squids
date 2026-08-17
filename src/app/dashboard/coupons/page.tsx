@@ -82,13 +82,16 @@ export default function AdminCouponsPage() {
     setIsModalOpen(true);
   }
 
-  async function handleDelete(id: number, title: string) {
+  async function handleDelete(id: number, title: string, network?: string) {
     if (!confirm(`Are you sure you want to delete coupon "${title}" (#${id}) from MongoDB?`)) {
       return;
     }
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/admin/deals?id=${id}`, { method: "DELETE" });
+      const res = await fetch(
+        `/api/admin/deals?id=${id}${network ? `&network=${encodeURIComponent(network)}` : ""}`,
+        { method: "DELETE" },
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to delete coupon.");
       load(search, status, page);
@@ -209,7 +212,7 @@ export default function AdminCouponsPage() {
                         </svg>
                       </button>
                       <button
-                        onClick={() => handleDelete(d.id, d.title)}
+                        onClick={() => handleDelete(d.id, d.title, d.network)}
                         disabled={deletingId === d.id}
                         title="Delete Coupon"
                         className="rounded p-1 text-gray-600 hover:bg-red-50 hover:text-red-600 transition disabled:opacity-50"

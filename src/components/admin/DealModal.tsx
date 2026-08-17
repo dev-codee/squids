@@ -20,6 +20,7 @@ export default function DealModal({
 
   const emptyForm = {
     id: "",
+    network: "awin",
     title: "",
     description: "",
     advertiserId: "",
@@ -86,6 +87,7 @@ export default function DealModal({
     if (deal) {
       setFormData({
         id: String(deal.id),
+        network: deal.network || "awin",
         title: deal.title || "",
         description: deal.description || "",
         advertiserId: String(deal.advertiser.id || ""),
@@ -136,6 +138,7 @@ export default function DealModal({
 
       const payload = {
         id: formData.id ? Number(formData.id) : undefined,
+        network: formData.network || "awin",
         title: formData.title,
         description: formData.description || null,
         advertiser: {

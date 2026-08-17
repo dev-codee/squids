@@ -103,7 +103,8 @@ export async function PUT(request: NextRequest) {
       updateData.aiStorePageAt = new Date().toISOString();
     }
 
-    const success = await updateAdvertiser(id, updateData);
+    const network = body.network ? String(body.network).trim() : "awin";
+    const success = await updateAdvertiser(id, updateData, network);
     if (!success) {
       return NextResponse.json(
         { error: `Advertiser with ID ${id} not found.` },
@@ -136,7 +137,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     const id = Number(idRaw);
-    const success = await deleteAdvertiser(id);
+    const network = request.nextUrl.searchParams.get("network")?.trim() || "awin";
+    const success = await deleteAdvertiser(id, network);
 
     if (!success) {
       return NextResponse.json(
