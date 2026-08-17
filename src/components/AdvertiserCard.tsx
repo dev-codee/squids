@@ -149,31 +149,43 @@ export default function AdvertiserCard({
 
     return (
       <Link href={`/${country.toLowerCase()}/${slug}`} className="block h-full">
-        <div className={`relative group flex flex-col items-center justify-center rounded border bg-white p-4 shadow-sm transition cursor-pointer h-24 sm:h-28 ${
+        <div className={`relative group flex items-center justify-between gap-3 rounded-xl border bg-white p-3.5 shadow-sm transition cursor-pointer h-24 sm:h-28 ${
           advertiser.isFlagship 
             ? "border-amber-400 hover:border-amber-500 shadow-md hover:shadow-lg bg-amber-50/10" 
             : "border-gray-200 hover:border-amber-300 hover:shadow-md"
         }`}>
           {advertiser.isFlagship && (
-            <div className="absolute -top-2.5 right-2 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+            <div className="absolute -top-2.5 right-2 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
               ⭐ FLAGSHIP
             </div>
           )}
-          {advertiser.logoUrl ? (
-            <img
-              src={advertiser.logoUrl}
-              alt={`${advertiser.name} logo`}
-              className="h-10 w-full object-contain filter group-hover:scale-105 transition-transform"
-              loading="lazy"
-            />
-          ) : (
-            <span className="text-center text-sm font-bold text-gray-800 line-clamp-2 w-full">
+
+          {/* 70% width for Store Logo / Image */}
+          <div className="w-[70%] h-full flex items-center justify-center overflow-hidden pr-2">
+            {advertiser.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={advertiser.logoUrl}
+                alt={`${advertiser.name} logo`}
+                className="max-h-full max-w-full object-contain filter group-hover:scale-105 transition-transform"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700 font-bold text-base shadow-inner">
+                {advertiser.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          {/* 30% width for Store Name */}
+          <div className="w-[30%] h-full flex items-center justify-center border-l border-gray-100 pl-2 text-center">
+            <span className="text-xs font-bold text-gray-800 line-clamp-2 leading-tight group-hover:text-amber-600 transition-colors">
               {advertiser.name}
             </span>
-          )}
+          </div>
 
           {advertiser.dealCount !== undefined && advertiser.dealCount > 0 && (
-            <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-white text-gray-600 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm border border-gray-100 flex items-center gap-1 whitespace-nowrap group-hover:border-accent group-hover:text-accent transition-colors">
+            <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-white text-gray-600 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm border border-gray-100 flex items-center gap-1 whitespace-nowrap group-hover:border-accent group-hover:text-accent transition-colors z-10">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400"></span>
               {advertiser.dealCount} active {advertiser.dealCount === 1 ? "offer" : "offers"}
             </div>

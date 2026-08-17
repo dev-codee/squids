@@ -34,15 +34,15 @@ export default function HomePopularShops({
                 <Link
                   key={`${shop.network}-${shop.id}`}
                   href={`/${country.toLowerCase()}/${storeSlug(name)}`}
-                  className="group flex flex-col items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md"
+                  className="group flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md h-24 sm:h-28"
                 >
-                  <div className="flex h-12 w-full items-center justify-center overflow-hidden">
+                  <div className="w-[70%] h-full flex items-center justify-center overflow-hidden pr-2">
                     {shop.logoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={shop.logoUrl}
                         alt={`${name} logo`}
-                        className="max-h-12 max-w-full object-contain transition-transform group-hover:scale-105"
+                        className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105"
                         loading="lazy"
                       />
                     ) : (
@@ -51,9 +51,9 @@ export default function HomePopularShops({
                       </div>
                     )}
                   </div>
-                  <div className="text-center w-full">
-                    <p className="truncate text-sm font-semibold text-gray-800">{name}</p>
-                    <p className="mt-0.5 text-xs text-gray-500">{shop.dealCount} deals</p>
+                  <div className="w-[30%] h-full flex flex-col items-center justify-center border-l border-gray-100 pl-2 text-center">
+                    <p className="line-clamp-2 text-xs font-bold text-gray-800 leading-tight group-hover:text-amber-600 transition-colors">{name}</p>
+                    <p className="mt-1 text-[10px] text-gray-500 font-medium">{shop.dealCount} deals</p>
                   </div>
                 </Link>
               );
