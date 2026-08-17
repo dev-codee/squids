@@ -10,12 +10,40 @@
  */
 
 import type { AnyBulkWriteOperation } from "mongodb";
+import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
 import { cleanAdvertiserName } from "@/lib/networks";
 import type { Deal, DealQuery, PagedDeals } from "@/lib/deals";
 import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE } from "@/lib/deals";
+import { CACHE_TAGS, PUBLIC_REVALIDATE } from "@/lib/cache";
 
 const COLLECTION = "deals";
+
+// ---------------------------------------------------------------------------
+// Public cached readers — served from Next's Data Cache, revalidated on a short
+// window and busted by admin deal mutations via the "deals" tag.
+// ---------------------------------------------------------------------------
+
+/** Cached deal listing for public pages/APIs. */
+export const getDealsFromDb = unstable_cache(
+  getDealsFromDbUncached,
+  ["public:deals-list"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.deals] },
+);
+
+/** Cached newest-deals list for the homepage showcase. */
+export const getRecentDeals = unstable_cache(
+  getRecentDealsUncached,
+  ["public:recent-deals"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.deals] },
+);
+
+/** Cached "popular shops" grid for the homepage. */
+export const getPopularShops = unstable_cache(
+  getPopularShopsUncached,
+  ["public:popular-shops"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.deals] },
+);
 
 interface DealDoc extends Deal {
   syncedAt: Date;
@@ -114,7 +142,7 @@ function buildFilter(query: DealQuery & { network?: string }): Record<string, un
  * Query deals from MongoDB with filtering and pagination.
  * Returns the same `PagedDeals` shape the API route expects.
  */
-export async function getDealsFromDb(
+async function getDealsFromDbUncached(
   query: DealQuery & { network?: string },
 ): Promise<PagedDeals | null> {
   const db = await getDb();
@@ -155,7 +183,7 @@ export async function getDealsFromDb(
  * Most recently created/updated deals for the homepage showcase, newest first.
  * Excludes generic auto-welcome deals so the showcase highlights real offers.
  */
-export async function getRecentDeals(
+async function getRecentDealsUncached(
   limit = 10,
   country?: string,
 ): Promise<Deal[]> {
@@ -189,7 +217,7 @@ export interface PopularShopData {
  * Stores with more than `minDeals` deals/coupons, ranked by deal count.
  * Used to auto-populate the homepage "Popular shops" grid.
  */
-export async function getPopularShops(opts?: {
+async function getPopularShopsUncached(opts?: {
   minDeals?: number;
   limit?: number;
   country?: string;

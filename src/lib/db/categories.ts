@@ -2,8 +2,10 @@
  * MongoDB persistence layer for Categories.
  */
 
+import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import { CACHE_TAGS, PUBLIC_REVALIDATE } from "@/lib/cache";
 
 export interface Category {
   id?: string;
@@ -181,7 +183,7 @@ export async function autoCategorizeStoresAndDeals(): Promise<{ categorizedCount
 /**
  * Fetch all categories with optional search or featured filtering.
  */
-export async function getCategories(query?: {
+async function getCategoriesUncached(query?: {
   search?: string;
   featuredOnly?: boolean;
 }): Promise<Category[]> {
@@ -215,7 +217,7 @@ export async function getCategories(query?: {
 /**
  * Get a single category by slug.
  */
-export async function getCategoryBySlug(slug: string): Promise<Category | null> {
+async function getCategoryBySlugUncached(slug: string): Promise<Category | null> {
   const normalizedSlug = slug.trim().toLowerCase();
   if (!normalizedSlug) return null;
 
@@ -226,6 +228,20 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
   const doc = await col.findOne({ slug: normalizedSlug });
   return doc ? mapDoc(doc) : null;
 }
+
+/** Cached category listing for public pages. */
+export const getCategories = unstable_cache(
+  getCategoriesUncached,
+  ["public:categories-list"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.categories] },
+);
+
+/** Cached single category by slug for public pages. */
+export const getCategoryBySlug = unstable_cache(
+  getCategoryBySlugUncached,
+  ["public:category-by-slug"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.categories] },
+);
 
 /**
  * Create a new category.

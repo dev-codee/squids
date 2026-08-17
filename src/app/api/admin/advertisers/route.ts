@@ -6,8 +6,14 @@ import {
   getNextAdvertiserId,
 } from "@/lib/db/advertisers";
 import type { Advertiser } from "@/lib/awin";
+import { revalidatePublic, CACHE_TAGS } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
+
+/** Advertiser changes affect store listings, store pages, and category counts. */
+function invalidateAdvertiserCaches() {
+  revalidatePublic(CACHE_TAGS.advertisers, CACHE_TAGS.categories);
+}
 
 /**
  * POST /api/admin/advertisers
@@ -51,6 +57,7 @@ export async function POST(request: NextRequest) {
     };
 
     const created = await createAdvertiser(advertiser);
+    invalidateAdvertiserCaches();
     return NextResponse.json({ ok: true, advertiser: created }, { status: 201 });
   } catch (error) {
     console.error("Error creating advertiser:", error);
@@ -112,6 +119,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    invalidateAdvertiserCaches();
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Error updating advertiser:", error);
@@ -147,6 +155,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    invalidateAdvertiserCaches();
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Error deleting advertiser:", error);

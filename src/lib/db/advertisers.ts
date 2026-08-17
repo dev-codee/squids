@@ -9,9 +9,11 @@
  * between Awin and Admitad (or future networks).
  */
 
+import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
 import { normalizeCountryCode, foreignCountrySignals } from "@/lib/countries";
 import { cleanAdvertiserName } from "@/lib/networks";
+import { CACHE_TAGS, PUBLIC_REVALIDATE } from "@/lib/cache";
 import type {
   Advertiser,
   AdvertiserQuery,
@@ -185,7 +187,7 @@ export async function getAdvertiserFacets(): Promise<AdvertiserFacets> {
  * Query advertisers from MongoDB with filtering and pagination.
  * Returns the same `PagedAdvertisers` shape the API route expects.
  */
-export async function getAdvertisersFromDb(
+async function getAdvertisersFromDbUncached(
   query: AdvertiserQuery & { network?: string },
 ): Promise<PagedAdvertisers | null> {
   const db = await getDb();
@@ -312,7 +314,7 @@ export async function getAdvertisersFromDb(
  * Get a single advertiser by ID from MongoDB.
  * Optionally scoped by network; defaults to any network.
  */
-export async function getAdvertiserByIdFromDb(
+async function getAdvertiserByIdFromDbUncached(
   id: number,
   network?: string,
 ): Promise<Advertiser | null> {
@@ -407,7 +409,7 @@ function escapeRegExp(s: string): string {
  * When multiple networks match, prefer the one with active deals, then the
  * first found (deterministic by sort order).
  */
-export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | null> {
+async function getAdvertiserBySlugUncached(slug: string): Promise<Advertiser | null> {
   let normalized = slug.trim().toLowerCase();
   if (!normalized) return null;
 
@@ -465,6 +467,32 @@ export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | nu
   }
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// Public cached readers — served from Next's Data Cache (revalidated on a short
+// window and busted by admin mutations via the "advertisers" tag).
+// ---------------------------------------------------------------------------
+
+/** Cached advertiser listing for public pages/APIs. */
+export const getAdvertisersFromDb = unstable_cache(
+  getAdvertisersFromDbUncached,
+  ["public:advertisers-list"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers] },
+);
+
+/** Cached single-advertiser lookup by id. */
+export const getAdvertiserByIdFromDb = unstable_cache(
+  getAdvertiserByIdFromDbUncached,
+  ["public:advertiser-by-id"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers] },
+);
+
+/** Cached advertiser lookup by slug (store pages). */
+export const getAdvertiserBySlug = unstable_cache(
+  getAdvertiserBySlugUncached,
+  ["public:advertiser-by-slug"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers] },
+);
 
 /**
  * Check if there is any data in the advertisers collection.

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getHomeSettings, updateHomeSettings } from "@/lib/db/homeSettings";
+import { revalidatePublic, CACHE_TAGS } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export async function PUT(request: NextRequest) {
       throw new Error("Update not acknowledged by database");
     }
 
+    revalidatePublic(CACHE_TAGS.homeSettings);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("PUT /api/admin/home-settings error:", error);

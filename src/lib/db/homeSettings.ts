@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
+import { CACHE_TAGS, PUBLIC_REVALIDATE } from "@/lib/cache";
 
 const COLLECTION = "home_settings";
 
@@ -45,7 +47,7 @@ const DEFAULT_SETTINGS: HomeSettings = {
  * Get the global home settings document.
  * If it doesn't exist, returns default empty settings.
  */
-export async function getHomeSettings(): Promise<HomeSettings> {
+async function getHomeSettingsUncached(): Promise<HomeSettings> {
   const db = await getDb();
   const col = db.collection<HomeSettings>(COLLECTION);
 
@@ -55,6 +57,13 @@ export async function getHomeSettings(): Promise<HomeSettings> {
   }
   return doc;
 }
+
+/** Cached home settings for the public homepage. */
+export const getHomeSettings = unstable_cache(
+  getHomeSettingsUncached,
+  ["public:home-settings"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.homeSettings] },
+);
 
 /**
  * Update the global home settings document.

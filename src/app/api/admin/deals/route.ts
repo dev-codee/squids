@@ -6,8 +6,14 @@ import {
   getNextDealId,
 } from "@/lib/db/deals";
 import type { Deal, CouponSubtype, DealPlacement } from "@/lib/deals";
+import { revalidatePublic, CACHE_TAGS } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
+
+/** Deal changes affect deal lists, the homepage showcase, and advertiser deal counts. */
+function invalidateDealCaches() {
+  revalidatePublic(CACHE_TAGS.deals, CACHE_TAGS.advertisers, CACHE_TAGS.categories);
+}
 
 const COUPON_SUBTYPES: CouponSubtype[] = ["code", "student", "cashback"];
 const DEAL_PLACEMENTS: DealPlacement[] = ["todays", "lightning", "limited", "trending"];
@@ -109,6 +115,7 @@ export async function POST(request: NextRequest) {
     };
 
     const created = await createDeal(deal);
+    invalidateDealCaches();
     return NextResponse.json({ ok: true, deal: created }, { status: 201 });
   } catch (error) {
     console.error("Error creating deal:", error);
@@ -179,6 +186,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    invalidateDealCaches();
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Error updating deal:", error);
@@ -214,6 +222,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    invalidateDealCaches();
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Error deleting deal:", error);

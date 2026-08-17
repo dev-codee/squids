@@ -7,6 +7,7 @@ import {
   recountCategoryStats,
   autoCategorizeStoresAndDeals,
 } from "@/lib/db/categories";
+import { revalidatePublic, CACHE_TAGS } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     const category = await createCategory(body);
+    revalidatePublic(CACHE_TAGS.categories);
     return NextResponse.json({ category }, { status: 201 });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Failed to create category.";
@@ -85,6 +87,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    revalidatePublic(CACHE_TAGS.categories);
     return NextResponse.json({ category });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Failed to update category.";
@@ -114,6 +117,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    revalidatePublic(CACHE_TAGS.categories);
     return NextResponse.json({ success: true });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Failed to delete category.";
