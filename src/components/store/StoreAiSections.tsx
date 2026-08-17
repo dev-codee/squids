@@ -32,6 +32,27 @@ const CAL_COLORS: Record<string, string> = {
   low: "bg-gray-100 text-gray-500",
 };
 
+const CAL_LABEL: Record<"high" | "medium" | "low", string> = {
+  high: "High",
+  medium: "Med",
+  low: "Low",
+};
+
+/**
+ * Normalise a calendar "activity" value to a single level. The AI is asked for
+ * exactly "High" | "Medium" | "Low", but older cached content sometimes stored
+ * verbose strings ("High - Big Vol. active through August 20") — collapse those
+ * so the calendar cells stay on one clean row.
+ */
+function calLevel(activity?: string): "high" | "medium" | "low" | null {
+  if (!activity) return null;
+  const s = activity.toLowerCase();
+  if (/\b(high|peak|busy|big)\b/.test(s)) return "high";
+  if (/\b(medium|moderate|mid)\b/.test(s)) return "medium";
+  if (/\b(low|quiet|slow)\b/.test(s)) return "low";
+  return null;
+}
+
 export default function StoreAiSections({
   content,
   storeName,
@@ -70,7 +91,7 @@ export default function StoreAiSections({
       {/* Hero intro */}
       {hasVal(c.hero_intro) && (
         <Card>
-          <p className="text-sm leading-relaxed text-gray-700 whitespace-pre-line">
+          <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
             {c.hero_intro}
           </p>
         </Card>
@@ -118,18 +139,21 @@ export default function StoreAiSections({
           {hasVal(bt?.reason) && <p className="mt-3 text-sm text-gray-600">{bt!.reason}</p>}
 
           {calendar.length > 0 && (
-            <div className="mt-4 grid grid-cols-4 gap-1.5">
-              {calendar.map((m) => (
-                <div
-                  key={m.month}
-                  className={`rounded px-1 py-1.5 text-center text-[10px] font-medium ${
-                    CAL_COLORS[m.activity?.toLowerCase()] || "bg-gray-100 text-gray-500"
-                  }`}
-                >
-                  <div className="font-semibold">{m.month.slice(0, 3)}</div>
-                  <div className="opacity-80">{m.activity}</div>
-                </div>
-              ))}
+            <div className="mt-4 grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-6">
+              {calendar.map((m) => {
+                const lvl = calLevel(m.activity);
+                return (
+                  <div
+                    key={m.month}
+                    className={`flex items-center justify-between gap-1 whitespace-nowrap rounded px-2 py-1 text-[11px] font-medium ${
+                      lvl ? CAL_COLORS[lvl] : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    <span className="font-semibold">{m.month.slice(0, 3)}</span>
+                    {lvl && <span className="opacity-80">{CAL_LABEL[lvl]}</span>}
+                  </div>
+                );
+              })}
             </div>
           )}
         </Card>
@@ -138,7 +162,7 @@ export default function StoreAiSections({
       {/* How to save the most */}
       {hasVal(c.best_saving_strategy) && (
         <Card title={`How to Save the Most at ${storeName}`}>
-          <p className="text-sm leading-relaxed text-gray-700 whitespace-pre-line">
+          <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
             {c.best_saving_strategy}
           </p>
         </Card>
@@ -187,7 +211,7 @@ export default function StoreAiSections({
       {/* Merchant overview */}
       {hasVal(c.merchant_overview) && (
         <Card title={`About ${storeName}`}>
-          <p className="text-sm leading-relaxed text-gray-700 whitespace-pre-line">
+          <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
             {c.merchant_overview}
           </p>
           {(c.categories?.length ?? 0) > 0 && (
@@ -217,7 +241,7 @@ export default function StoreAiSections({
       {(hasVal(c.buying_advice) || (c.editorial_tips?.length ?? 0) > 0) && (
         <Card title="Buying Advice">
           {hasVal(c.buying_advice) && (
-            <p className="text-sm leading-relaxed text-gray-700 whitespace-pre-line">
+            <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
               {c.buying_advice}
             </p>
           )}
@@ -250,7 +274,7 @@ export default function StoreAiSections({
       {/* Should you buy — trust conclusion */}
       {hasVal(c.trust_information) && (
         <Card title={`Should You Buy From ${storeName}?`}>
-          <p className="text-sm leading-relaxed text-gray-700 whitespace-pre-line">
+          <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
             {c.trust_information}
           </p>
         </Card>
