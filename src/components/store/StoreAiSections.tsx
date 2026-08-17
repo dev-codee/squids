@@ -88,40 +88,6 @@ export default function StoreAiSections({
   return (
     <div>
       <div className="columns-1 gap-6 lg:columns-2">
-      {/* Hero intro */}
-      {hasVal(c.hero_intro) && (
-        <Card>
-          <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
-            {c.hero_intro}
-          </p>
-        </Card>
-      )}
-
-      {/* Store Trust & Info panel */}
-      {showTrustPanel && (
-        <Card title="Store Trust & Info">
-          <div>
-            {hasVal(trust?.rating) && (
-              <InfoRow
-                label="Trustpilot"
-                value={`${trust!.rating}/5${hasVal(trust?.review_count) ? ` (${trust!.review_count})` : ""}`}
-              />
-            )}
-            {hasVal(google?.rating) && (
-              <InfoRow
-                label="Google"
-                value={`${google!.rating}/5${hasVal(google?.review_count) ? ` (${google!.review_count})` : ""}`}
-              />
-            )}
-            <InfoRow label="Typical discount" value={c.typical_discount} />
-            <InfoRow label="Cashback rate" value={c.cashback?.rate} />
-            {!hasVal(c.cashback?.rate) && <InfoRow label="Cashback" value={c.cashback?.available} />}
-            {typeof c.information_confidence === "number" && c.information_confidence > 0 && (
-              <InfoRow label="Info confidence" value={`${c.information_confidence}/100`} />
-            )}
-          </div>
-        </Card>
-      )}
 
       {/* Best time to shop + calendar */}
       {showBestTime && (

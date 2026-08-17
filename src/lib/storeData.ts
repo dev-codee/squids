@@ -10,6 +10,7 @@
  * and the pages hide them until their Phase lands (see STORE_PAGES_PLAN.md).
  */
 
+import { cache } from "react";
 import {
   getAdvertiserBySlug,
   slugifyAdvertiserName,
@@ -415,40 +416,42 @@ export async function loadStoreData(
  * stream this in behind a Suspense boundary. Cached in the DB after the first
  * generation, so later visits return instantly without re-spending tokens.
  */
-export async function loadStoreAiContent(
-  slug: string,
-  country?: string,
-): Promise<StorePageContent | null> {
-  let advertiser: Advertiser | null = null;
-  try {
-    advertiser = await getAdvertiserBySlug(slug);
-  } catch {
-    return null;
-  }
-  if (!advertiser) return null;
-  if (advertiser.name) advertiser.name = cleanAdvertiserName(advertiser.name);
+export const loadStoreAiContent = cache(
+  async (
+    slug: string,
+    country?: string,
+  ): Promise<StorePageContent | null> => {
+    let advertiser: Advertiser | null = null;
+    try {
+      advertiser = await getAdvertiserBySlug(slug);
+    } catch {
+      return null;
+    }
+    if (!advertiser) return null;
+    if (advertiser.name) advertiser.name = cleanAdvertiserName(advertiser.name);
 
-  // Cached path: already generated → return from the DB (no deals query needed).
-  if (advertiser.aiStorePage) return advertiser.aiStorePage;
+    // Cached path: already generated → return from the DB (no deals query needed).
+    if (advertiser.aiStorePage) return advertiser.aiStorePage;
 
-  const region = getRegionConfig(country);
-  let deals: Deal[] = [];
-  try {
-    const res = await getDealsFromDb({
-      advertiserId: advertiser.id,
-      status: "all",
-      type: "all",
-      page: 1,
-      pageSize: 100,
+    const region = getRegionConfig(country);
+    let deals: Deal[] = [];
+    try {
+      const res = await getDealsFromDb({
+        advertiserId: advertiser.id,
+        status: "all",
+        type: "all",
+        page: 1,
+        pageSize: 100,
+      });
+      deals = res?.deals ?? [];
+    } catch {
+      /* generate from advertiser metadata alone if deals can't be loaded */
+    }
+
+    const updated = await ensureAdvertiserStorePage(advertiser, deals, {
+      country: region.country,
+      currency: region.currency,
     });
-    deals = res?.deals ?? [];
-  } catch {
-    /* generate from advertiser metadata alone if deals can't be loaded */
+    return updated.aiStorePage ?? null;
   }
-
-  const updated = await ensureAdvertiserStorePage(advertiser, deals, {
-    country: region.country,
-    currency: region.currency,
-  });
-  return updated.aiStorePage ?? null;
-}
+);

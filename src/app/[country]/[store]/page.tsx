@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { loadStoreData } from "@/lib/storeData";
+import { loadStoreData, loadStoreAiContent } from "@/lib/storeData";
 import { Suspense } from "react";
 import StoreSidebar from "@/components/store/StoreSidebar";
 import HorizontalCouponCard from "@/components/store/HorizontalCouponCard";
@@ -25,6 +25,8 @@ export default async function StoreMainPage({
     redirect(`/${params.country}/${store.slug}`);
   }
 
+  const aiContent = await loadStoreAiContent(store.slug, params.country);
+
   const currentMonth = new Date().toLocaleString('default', { month: 'long' });
   const currentYear = new Date().getFullYear();
   const dict = await getDictionary(params.country);
@@ -36,7 +38,7 @@ export default async function StoreMainPage({
           
           {/* Sidebar - Left Column */}
           <div className="lg:col-span-3 space-y-6">
-            <StoreSidebar store={store} />
+            <StoreSidebar store={store} aiContent={aiContent} />
           </div>
 
           {/* Main Content - Right Column */}

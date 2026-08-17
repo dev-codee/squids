@@ -2,18 +2,47 @@
 
 import React from "react";
 import type { StoreData } from "@/lib/storeData";
+import type { StorePageContent } from "@/lib/ai/storeContent";
 import ProductFeedCard from "./ProductFeedCard";
 import PriceComparisonWidget from "./PriceComparisonWidget";
 import FaqAccordion from "./FaqAccordion";
 import ReviewsWidget from "./ReviewsWidget";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 
-interface StoreSidebarProps {
-  store: StoreData;
+function hasVal(v: unknown): v is string {
+  if (typeof v !== "string") return false;
+  const s = v.trim().toLowerCase();
+  return s !== "" && s !== "not available" && s !== "n/a" && s !== "unknown" && s !== "verification required";
 }
 
-export default function StoreSidebar({ store }: StoreSidebarProps) {
+function InfoRow({ label, value }: { label: string; value?: string }) {
+  if (!hasVal(value)) return null;
+  return (
+    <div className="flex justify-between gap-4 py-1.5 text-sm border-b border-gray-100 last:border-0">
+      <span className="text-gray-500">{label}</span>
+      <span className="font-medium text-gray-800 text-right">{value}</span>
+    </div>
+  );
+}
+
+interface StoreSidebarProps {
+  store: StoreData;
+  aiContent?: StorePageContent | null;
+}
+
+export default function StoreSidebar({ store, aiContent }: StoreSidebarProps) {
   const dict = useDictionary();
+
+  const trust = aiContent?.trustpilot;
+  const google = aiContent?.google_rating;
+  const showTrustPanel =
+    aiContent &&
+    (hasVal(trust?.rating) ||
+      hasVal(google?.rating) ||
+      hasVal(aiContent.typical_discount) ||
+      hasVal(aiContent.cashback?.rate) ||
+      hasVal(aiContent.cashback?.available) ||
+      typeof aiContent.information_confidence === "number");
 
   return (
     <aside className="w-full space-y-6">
@@ -35,6 +64,42 @@ export default function StoreSidebar({ store }: StoreSidebarProps) {
         )}
         <h1 className="text-xl font-bold text-gray-800 text-center">{store.name}</h1>
       </div>
+
+      {/* Store About Box */}
+      {hasVal(aiContent?.hero_intro) && (
+        <div className="bg-white p-5 rounded border border-gray-200">
+          <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
+            {aiContent.hero_intro}
+          </p>
+        </div>
+      )}
+
+      {/* Store Trust & Info Box */}
+      {showTrustPanel && aiContent && (
+        <div className="bg-white p-5 rounded border border-gray-200">
+          <h3 className="font-bold text-gray-900 mb-3">Store Trust & Info</h3>
+          <div>
+            {hasVal(trust?.rating) && (
+              <InfoRow
+                label="Trustpilot"
+                value={`${trust!.rating}/5${hasVal(trust?.review_count) ? ` (${trust!.review_count})` : ""}`}
+              />
+            )}
+            {hasVal(google?.rating) && (
+              <InfoRow
+                label="Google"
+                value={`${google!.rating}/5${hasVal(google?.review_count) ? ` (${google!.review_count})` : ""}`}
+              />
+            )}
+            <InfoRow label="Typical discount" value={aiContent.typical_discount} />
+            <InfoRow label="Cashback rate" value={aiContent.cashback?.rate} />
+            {!hasVal(aiContent.cashback?.rate) && <InfoRow label="Cashback" value={aiContent.cashback?.available} />}
+            {typeof aiContent.information_confidence === "number" && aiContent.information_confidence > 0 && (
+              <InfoRow label="Info confidence" value={`${aiContent.information_confidence}/100`} />
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Deals Details */}
       <div className="bg-white border border-gray-200 p-5 rounded">
