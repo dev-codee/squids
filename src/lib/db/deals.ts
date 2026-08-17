@@ -598,63 +598,116 @@ export async function getDealByCompositeId(
   return (doc as unknown as Deal) || null;
 }
 
-/** Persist AI-generated (and QC-reviewed) copy on a deal. */
+/** Persist AI-generated (and QC-reviewed) copy on a deal for a specific locale. */
 export async function setDealAiContent(
   id: number,
   network: string,
   content: { title: string; description: string; status: string; issues: string[] },
+  locale: string = "en",
 ): Promise<boolean> {
+  const normLocale = locale.toLowerCase().split("-")[0];
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
+  const now = new Date();
+  const nowIso = now.toISOString();
+
+  const updateFields: Record<string, unknown> = {
+    [`aiTitleByLang.${normLocale}`]: content.title || null,
+    [`aiDescriptionByLang.${normLocale}`]: content.description || null,
+    [`aiStatusByLang.${normLocale}`]: content.status,
+    [`aiIssuesByLang.${normLocale}`]: content.issues,
+    [`aiGeneratedAtByLang.${normLocale}`]: nowIso,
+    syncedAt: now,
+  };
+
+  // Keep legacy flat fields updated as the 'en' alias
+  if (normLocale === "en") {
+    updateFields.aiTitle = content.title || null;
+    updateFields.aiDescription = content.description || null;
+    updateFields.aiStatus = content.status;
+    updateFields.aiIssues = content.issues;
+    updateFields.aiGeneratedAt = nowIso;
+  }
+
   const result = await col.updateOne(
     { network, id },
-    {
-      $set: {
-        // REVIEW verdicts store empty copy so public pages fall back to the raw text.
-        aiTitle: content.title || null,
-        aiDescription: content.description || null,
-        aiStatus: content.status,
-        aiIssues: content.issues,
-        aiGeneratedAt: new Date().toISOString(),
-        syncedAt: new Date(),
-      },
-    },
+    { $set: updateFields },
   );
   return result.matchedCount > 0;
 }
 
 /**
- * Ensure a deal has AI copy, generating (draft + QC review) the first time and
- * caching it in the DB so tokens are never spent twice — even for REVIEW verdicts,
- * which record the attempt so we don't keep retrying insufficient offers.
+ * Ensure a deal has AI copy for a specific locale (defaulting to "en"), generating
+ * (draft + QC review) the first time and caching it in the DB so tokens are never
+ * spent twice — even for REVIEW verdicts, which record the attempt so we don't keep
+ * retrying insufficient offers.
  *
  * Best-effort: if generation is unconfigured or errors, the original deal is
  * returned unchanged. Pass `force` to regenerate.
  */
 export async function ensureDealAiContent(
   deal: Deal,
-  opts?: { force?: boolean },
+  opts?: { force?: boolean; locale?: string; language?: string },
 ): Promise<Deal> {
-  // aiGeneratedAt marks a completed attempt (APPROVED, CORRECTED, or REVIEW).
-  if (!opts?.force && deal.aiGeneratedAt) return deal;
+  const locale = opts?.locale ? opts.locale.toLowerCase().split("-")[0] : "en";
+
+  // Check if copy is already generated for this locale
+  const alreadyGenerated =
+    !opts?.force &&
+    (deal.aiGeneratedAtByLang?.[locale] || (locale === "en" && deal.aiGeneratedAt));
+
+  if (alreadyGenerated) return deal;
 
   const { isAiConfigured, generateDealContent } = await import("@/lib/ai/dealContent");
   if (!isAiConfigured()) return deal;
 
   try {
-    const copy = await generateDealContent(deal);
-    await setDealAiContent(deal.id, deal.network ?? "awin", copy);
+    const copy = await generateDealContent(deal, {
+      locale,
+      language: opts?.language,
+    });
+    await setDealAiContent(deal.id, deal.network ?? "awin", copy, locale);
+
+    const nowIso = new Date().toISOString();
+    const updatedByLang = {
+      aiTitleByLang: {
+        ...(deal.aiTitleByLang || {}),
+        [locale]: copy.title || "",
+      },
+      aiDescriptionByLang: {
+        ...(deal.aiDescriptionByLang || {}),
+        [locale]: copy.description || "",
+      },
+      aiStatusByLang: {
+        ...(deal.aiStatusByLang || {}),
+        [locale]: copy.status,
+      },
+      aiIssuesByLang: {
+        ...(deal.aiIssuesByLang || {}),
+        [locale]: copy.issues,
+      },
+      aiGeneratedAtByLang: {
+        ...(deal.aiGeneratedAtByLang || {}),
+        [locale]: nowIso,
+      },
+    };
+
     return {
       ...deal,
-      aiTitle: copy.title || null,
-      aiDescription: copy.description || null,
-      aiStatus: copy.status,
-      aiIssues: copy.issues,
-      aiGeneratedAt: new Date().toISOString(),
+      ...updatedByLang,
+      ...(locale === "en"
+        ? {
+            aiTitle: copy.title || null,
+            aiDescription: copy.description || null,
+            aiStatus: copy.status,
+            aiIssues: copy.issues,
+            aiGeneratedAt: nowIso,
+          }
+        : {}),
     };
   } catch (err) {
     console.warn(
-      `[ai] Failed to generate deal copy for ${deal.network}:${deal.id}:`,
+      `[ai] Failed to generate deal copy for ${deal.network}:${deal.id} (${locale}):`,
       err instanceof Error ? err.message : err,
     );
     return deal;

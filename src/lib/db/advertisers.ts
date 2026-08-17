@@ -347,51 +347,94 @@ async function getAdvertiserByIdFromDbUncached(
 // AI-generated store page content (Claude)
 // ---------------------------------------------------------------------------
 
-/** Persist AI-generated store page content on an advertiser. */
+/** Persist AI-generated store page content on an advertiser for a specific locale. */
 export async function setAdvertiserStorePage(
   id: number,
   network: string,
   content: unknown,
+  locale: string = "en",
 ): Promise<boolean> {
+  const normLocale = locale.toLowerCase().split("-")[0];
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
+  const now = new Date();
+  const nowIso = now.toISOString();
+
+  const updateFields: Record<string, unknown> = {
+    [`aiStorePageByLang.${normLocale}`]: content,
+    [`aiStorePageAtByLang.${normLocale}`]: nowIso,
+    syncedAt: now,
+  };
+
+  // Keep legacy flat fields updated as the 'en' alias
+  if (normLocale === "en") {
+    updateFields.aiStorePage = content;
+    updateFields.aiStorePageAt = nowIso;
+  }
+
   const result = await col.updateOne(
     { network, id },
-    {
-      $set: {
-        aiStorePage: content,
-        aiStorePageAt: new Date().toISOString(),
-        syncedAt: new Date(),
-      } as Partial<AdvertiserDoc>,
-    },
+    { $set: updateFields },
   );
   return result.matchedCount > 0;
 }
 
 /**
- * Ensure an advertiser has AI store-page content, generating it the first time
- * and caching it so tokens are only spent once per merchant. Best-effort: returns
+ * Ensure an advertiser has AI store-page content for a specific locale, generating it the first time
+ * and caching it so tokens are only spent once per merchant per language. Best-effort: returns
  * the advertiser unchanged when AI is unconfigured or generation fails. Pass
  * `force` to regenerate.
  */
 export async function ensureAdvertiserStorePage(
   advertiser: Advertiser,
   deals: import("@/lib/deals").Deal[],
-  ctx: { country: string; currency: string },
-  opts?: { force?: boolean },
+  ctx: { country: string; currency: string; language?: string; locale?: string },
+  opts?: { force?: boolean; locale?: string },
 ): Promise<Advertiser> {
-  if (!opts?.force && advertiser.aiStorePage) return advertiser;
+  const locale = (opts?.locale || ctx.locale || "en").toLowerCase().split("-")[0];
+
+  // Check cache for this locale
+  const alreadyGenerated =
+    !opts?.force &&
+    (advertiser.aiStorePageByLang?.[locale] || (locale === "en" && advertiser.aiStorePage));
+
+  if (alreadyGenerated) return advertiser;
 
   const { isAiConfigured, generateStorePageContent } = await import("@/lib/ai/storeContent");
   if (!isAiConfigured()) return advertiser;
 
   try {
-    const content = await generateStorePageContent(advertiser, deals, ctx);
-    await setAdvertiserStorePage(advertiser.id, advertiser.network ?? "awin", content);
-    return { ...advertiser, aiStorePage: content, aiStorePageAt: new Date().toISOString() };
+    const content = await generateStorePageContent(advertiser, deals, {
+      ...ctx,
+      locale,
+    });
+    await setAdvertiserStorePage(advertiser.id, advertiser.network ?? "awin", content, locale);
+
+    const nowIso = new Date().toISOString();
+    const updatedByLang = {
+      aiStorePageByLang: {
+        ...(advertiser.aiStorePageByLang || {}),
+        [locale]: content as any,
+      },
+      aiStorePageAtByLang: {
+        ...(advertiser.aiStorePageAtByLang || {}),
+        [locale]: nowIso,
+      },
+    };
+
+    return {
+      ...advertiser,
+      ...updatedByLang,
+      ...(locale === "en"
+        ? {
+            aiStorePage: content as any,
+            aiStorePageAt: nowIso,
+          }
+        : {}),
+    };
   } catch (err) {
     console.warn(
-      `[ai] Failed to generate store page for ${advertiser.network}:${advertiser.id}:`,
+      `[ai] Failed to generate store page for ${advertiser.network}:${advertiser.id} (${locale}):`,
       err instanceof Error ? err.message : err,
     );
     return advertiser;

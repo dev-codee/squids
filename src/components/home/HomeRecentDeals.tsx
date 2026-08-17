@@ -1,7 +1,8 @@
-"use client";
-
 import Link from "next/link";
 import type { Deal } from "@/lib/deals";
+import { dealDisplayTitle } from "@/lib/deals";
+import { localeForCountry } from "@/lib/ai/languageNames";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 function storeSlug(name: string): string {
   return name
@@ -17,17 +18,19 @@ export default function HomeRecentDeals({
   deals: Deal[];
   country: string;
 }) {
+  const dict = useDictionary();
+  const locale = localeForCountry(country);
   return (
     <section className="py-12 bg-[#F9F9F9]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <h2 className="text-2xl font-bold text-gray-900">
-          Promo codes and deals - they really work!
+          {dict.home.recentTitle}
         </h2>
-        <p className="mt-2 text-gray-600">These people have already verified that:</p>
+        <p className="mt-2 text-gray-600">{dict.home.recentSubtitle}</p>
 
         {(!deals || deals.length === 0) ? (
           <div className="mt-10 text-center text-gray-500 py-8 border border-dashed border-gray-300 rounded-lg bg-white">
-            No deals available yet.
+            {dict.home.noDealsYet}
           </div>
         ) : (
           <div className="mt-10 grid grid-cols-1 gap-4 text-left sm:grid-cols-2 lg:grid-cols-5">
@@ -66,10 +69,10 @@ export default function HomeRecentDeals({
                     )}
                   </div>
                   <p className="mt-3 line-clamp-3 text-sm font-medium text-gray-900 group-hover:text-amber-600">
-                    {deal.aiTitle?.trim() || deal.title}
+                    {dealDisplayTitle(deal, locale)}
                   </p>
                   <span className="mt-auto pt-3 text-[11px] font-medium text-amber-600">
-                    {deal.code ? "Reveal code →" : "Get this deal →"}
+                    {deal.code ? `${dict.common.revealCode} →` : `${dict.common.getThisDeal} →`}
                   </span>
                 </Link>
               );

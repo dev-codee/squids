@@ -6,8 +6,10 @@ import Image from "next/image";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { countryFlag, countryName } from "@/lib/countries";
 import { REGION_CODES, REGION_COOKIE, REGION_COOKIE_MAX_AGE } from "@/lib/regions";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 export default function PublicHeader({ country = "" }: { country?: string }) {
+  const dict = useDictionary();
   const cc = (country || "").toUpperCase();
   const lc = cc.toLowerCase() || "us";
   const router = useRouter();
@@ -76,10 +78,10 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
   );
 
   const navLinks = [
-    { label: "Home", href: `/${lc}` },
-    { label: "Stores", href: `/${lc}/stores` },
-    { label: "Top Deals", href: `/${lc}/deals` },
-    { label: "Categories", href: `/${lc}/categories` },
+    { label: dict.header.home, href: `/${lc}` },
+    { label: dict.header.stores, href: `/${lc}/stores` },
+    { label: dict.header.topDeals, href: `/${lc}/deals` },
+    { label: dict.header.categories, href: `/${lc}/categories` },
   ];
 
   const isActive = (href: string) =>
@@ -105,7 +107,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
                 userTypedRef.current = true;
                 setSearchQuery(e.target.value);
               }}
-              placeholder="Search on Foxzil..."
+              placeholder={dict.header.searchPlaceholder}
               className="w-full rounded-full border border-gray-300 bg-white py-3 pl-5 pr-11 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
             />
             <button
@@ -193,7 +195,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
             className="cursor-default text-sm font-medium text-gray-400"
             aria-disabled="true"
           >
-            Sign in
+            {dict.header.signIn}
           </button>
         </div>
       </div>

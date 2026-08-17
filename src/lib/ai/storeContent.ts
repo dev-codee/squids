@@ -153,6 +153,18 @@ Return ONLY valid JSON matching exactly this shape (use "Not available" or omit 
 }
 No markdown, no explanation outside the JSON.`;
 
+import { languageNameForLocale } from "@/lib/ai/languageNames";
+
+function buildStoreSystemPrompt(language: string = "English"): string {
+  const langRule = `LANGUAGE INSTRUCTION (STRICT)
+Write ALL shopper-facing text (hero_heading, hero_intro, meta_title, meta_description, best_saving_strategy, merchant_overview, categories, how_to_use_coupon, buying_advice, editorial_tips, faq questions and answers, trust_information, affiliate_disclosure, etc.) in ${language}.
+When a field is unknown or not supported by input data, localize "Not available" naturally into ${language} (e.g., German: "Nicht verfügbar", French: "Non disponible", Spanish: "No disponible", Italian: "Non disponibile") or omit the field.
+Keep merchant names, brand names, product names, URLs and proper nouns verbatim. Preserve numbers, prices, currency symbols, and discounts exactly.
+Calendar activity values MUST still remain strictly one of "High", "Medium", or "Low".`;
+
+  return `${SYSTEM_PROMPT}\n\n${langRule}`;
+}
+
 /** Compact one-line summary of the offers we hold for the merchant. */
 function summariseOffers(deals: Deal[]): string {
   if (deals.length === 0) return "None on record.";
@@ -170,10 +182,18 @@ function summariseOffers(deals: Deal[]): string {
     .join("\n");
 }
 
+export interface StoreContentContext {
+  country: string;
+  currency: string;
+  language?: string;
+  locale?: string;
+}
+
 function buildInputData(
   advertiser: Advertiser,
   deals: Deal[],
-  ctx: { country: string; currency: string },
+  ctx: StoreContentContext,
+  language: string,
 ): string {
   const coupons = deals.filter((d) => d.type === "voucher");
   const promos = deals.filter((d) => d.type === "promotion");
@@ -184,6 +204,7 @@ function buildInputData(
     ["Merchant URL", advertiser.url],
     ["Country", `${countryName(ctx.country) || ctx.country} (${ctx.country})`],
     ["Currency", ctx.currency],
+    ["Target Language", language],
     ["Store Categories", advertiser.categories?.join(", ")],
     ["Merchant Description", advertiser.description],
     ["Customer Rating (internal)", advertiser.rating ? `${advertiser.rating}/5` : null],
@@ -203,22 +224,26 @@ function buildInputData(
 }
 
 /**
- * Generate store-page content for a merchant via Claude. Returns a best-effort
- * StorePageContent; fields it can't verify come back as "Not available".
+ * Generate store-page content for a merchant via Claude in the specified language.
+ * Returns a best-effort StorePageContent; fields it can't verify come back as localized "Not available".
  *
  * @throws {AiConfigError} when ANTHROPIC_API_KEY is not set.
  */
 export async function generateStorePageContent(
   advertiser: Advertiser,
   deals: Deal[],
-  ctx: { country: string; currency: string },
+  ctx: StoreContentContext,
 ): Promise<StorePageContent> {
+  const language =
+    ctx.language ||
+    (ctx.locale ? languageNameForLocale(ctx.locale) : "English");
+
   const client = getAnthropicClient();
   const response = await client.messages.create({
     model: resolveModel(),
     max_tokens: 4096,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: buildInputData(advertiser, deals, ctx) }],
+    system: buildStoreSystemPrompt(language),
+    messages: [{ role: "user", content: buildInputData(advertiser, deals, ctx, language) }],
   });
 
   const parsed = parseJsonResponse<StorePageContent>(response);

@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import type { PopularShopData } from "@/lib/db/deals";
 import { cleanAdvertiserName } from "@/lib/networks";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 function storeSlug(name: string): string {
   return cleanAdvertiserName(name)
@@ -16,15 +19,16 @@ export default function HomePopularShops({
   shops: PopularShopData[];
   country: string;
 }) {
+  const dict = useDictionary();
   return (
     <section className="py-12 bg-white">
       <div className="max-w-5xl mx-auto px-4 text-center">
-        <h2 className="text-xl font-bold text-gray-900">Popular shops</h2>
-        <p className="mt-2 text-sm text-gray-500 mb-8">Save money every time - on any purchase!</p>
+        <h2 className="text-xl font-bold text-gray-900">{dict.home.popularShopsTitle}</h2>
+        <p className="mt-2 text-sm text-gray-500 mb-8">{dict.home.exploreSubtitle}</p>
 
         {(!shops || shops.length === 0) ? (
           <div className="w-full text-center text-gray-500 py-4 border border-dashed border-gray-300 rounded-lg">
-            No popular shops yet.
+            {dict.home.noPopularShopsYet}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -53,7 +57,7 @@ export default function HomePopularShops({
                   </div>
                   <div className="h-[35%] w-full flex flex-col items-center justify-center border-t border-gray-100 pt-1 text-center">
                     <p className="truncate text-xs font-bold text-gray-800 group-hover:text-amber-600 transition-colors w-full px-1">{name}</p>
-                    <p className="text-[10px] text-gray-500 font-medium">{shop.dealCount} deals</p>
+                    <p className="text-[10px] text-gray-500 font-medium">{shop.dealCount} {dict.home.dealsLabel}</p>
                   </div>
                 </Link>
               );

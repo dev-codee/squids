@@ -180,14 +180,17 @@ function secondsUntil(endDate: string | null | undefined): number | undefined {
   return Number.isFinite(ms) && ms > 0 ? Math.floor(ms / 1000) : undefined;
 }
 
-function couponFromDeal(deal: Deal, fallbackUrl: string): CouponItem {
+import { localeForCountry } from "@/i18n";
+import { languageNameForLocale } from "@/lib/ai/languageNames";
+
+function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): CouponItem {
   return {
     id: String(deal.id),
-    title: dealDisplayTitle(deal),
+    title: dealDisplayTitle(deal, locale),
     code: deal.code,
     discount: deal.discountText || "",
     type: deal.subtype || "code",
-    description: dealDisplayDescription(deal),
+    description: dealDisplayDescription(deal, locale),
     verified: deal.status === "active",
     expiryDate: deal.endDate,
     isExclusive: deal.isExclusive,
@@ -203,6 +206,7 @@ function dealFromDeal(
   sourceCurrency: string | null | undefined,
   region: RegionConfig,
   rates: UsdRates,
+  locale?: string,
 ): DealItem {
   const placement = deal.placement || "todays";
 
@@ -212,8 +216,8 @@ function dealFromDeal(
 
   return {
     id: String(deal.id),
-    title: dealDisplayTitle(deal),
-    description: dealDisplayDescription(deal),
+    title: dealDisplayTitle(deal, locale),
+    description: dealDisplayDescription(deal, locale),
     discount: deal.discountText || "",
     originalPrice:
       deal.originalPrice != null
@@ -263,6 +267,7 @@ export async function loadStoreData(
   // Region context: prices are converted from the advertiser's native currency
   // into the URL region's currency (e.g. /de -> EUR) and formatted for its locale.
   const region = getRegionConfig(country);
+  const locale = localeForCountry(country || "US");
   const rates = await getUsdRates();
 
   const canonicalSlug = slugifyAdvertiserName(advertiser.name);
@@ -297,15 +302,20 @@ export async function loadStoreData(
   let allDeals: Deal[] = dealsResult?.deals ?? [];
 
   // First-view AI copy: generate shopper-facing title/description for deals that
-  // lack it, then cache in the DB so tokens are only spent once. Bounded per
-  // request to keep the page responsive; a no-op when ANTHROPIC_API_KEY is unset.
+  // lack it for this locale, then cache in the DB so tokens are only spent once.
+  // Bounded per request to keep the page responsive; a no-op when ANTHROPIC_API_KEY is unset.
   const AI_GEN_PER_REQUEST = 6;
   let aiBudget = AI_GEN_PER_REQUEST;
   allDeals = await Promise.all(
     allDeals.map((d) => {
-      if (aiBudget <= 0 || (d.aiTitle && d.aiDescription)) return d;
+      const hasLocaleCopy =
+        d.aiTitleByLang?.[locale] && d.aiDescriptionByLang?.[locale]
+          ? true
+          : locale === "en" && Boolean(d.aiTitle && d.aiDescription);
+
+      if (aiBudget <= 0 || hasLocaleCopy) return d;
       aiBudget -= 1;
-      return ensureDealAiContent(d);
+      return ensureDealAiContent(d, { locale });
     }),
   );
 
@@ -317,12 +327,12 @@ export async function loadStoreData(
   const coupons = allDeals
     .filter((d) => d.type === "voucher")
     .sort(exclusiveFirst)
-    .map((d) => couponFromDeal(d, websiteUrl));
+    .map((d) => couponFromDeal(d, websiteUrl, locale));
 
   const deals = allDeals
     .filter((d) => d.type === "promotion")
     .sort(exclusiveFirst)
-    .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode, region, rates));
+    .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode, region, rates, locale));
 
   const productsResult = await safeQuery(
     () => getProductsFromDb({ advertiserId: advertiser!.id, page: 1, pageSize: 50 }),
@@ -438,10 +448,15 @@ export const loadStoreAiContent = cache(
     if (!advertiser) return null;
     if (advertiser.name) advertiser.name = cleanAdvertiserName(advertiser.name);
 
-    // Cached path: already generated → return from the DB (no deals query needed).
-    if (advertiser.aiStorePage) return advertiser.aiStorePage;
-
     const region = getRegionConfig(country);
+    const locale = localeForCountry(country || "US");
+
+    // Cached path: already generated for this locale → return from the DB (no deals query needed).
+    const cachedPage =
+      advertiser.aiStorePageByLang?.[locale] ??
+      (locale === "en" ? advertiser.aiStorePage : null);
+    if (cachedPage) return cachedPage;
+
     let deals: Deal[] = [];
     try {
       const res = await getDealsFromDb({
@@ -456,10 +471,21 @@ export const loadStoreAiContent = cache(
       /* generate from advertiser metadata alone if deals can't be loaded */
     }
 
-    const updated = await ensureAdvertiserStorePage(advertiser, deals, {
-      country: region.country,
-      currency: region.currency,
-    });
-    return updated.aiStorePage ?? null;
+    const updated = await ensureAdvertiserStorePage(
+      advertiser,
+      deals,
+      {
+        country: region.country,
+        currency: region.currency,
+        locale,
+        language: languageNameForLocale(locale),
+      },
+      { locale },
+    );
+    return (
+      updated.aiStorePageByLang?.[locale] ??
+      (locale === "en" ? updated.aiStorePage : null) ??
+      null
+    );
   }
 );

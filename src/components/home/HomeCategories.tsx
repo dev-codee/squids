@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { HomeCategory } from "@/lib/db/homeSettings";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 interface MasterCategory {
   id?: string;
@@ -15,6 +16,7 @@ interface MasterCategory {
 }
 
 export default function HomeCategories({ categories: initialCategories }: { categories?: HomeCategory[] }) {
+  const dict = useDictionary();
   const params = useParams();
   const country = (params?.country as string) || "us";
   const [categories, setCategories] = useState<MasterCategory[]>([]);
@@ -45,22 +47,22 @@ export default function HomeCategories({ categories: initialCategories }: { cate
       <div className="max-w-5xl mx-auto px-4 text-center">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
           <div className="text-center sm:text-left">
-            <h2 className="text-2xl font-bold text-gray-900">Explore by Category</h2>
-            <p className="mt-1 text-sm text-gray-500">Save money every time - on any purchase!</p>
+            <h2 className="text-2xl font-bold text-gray-900">{dict.home.exploreTitle}</h2>
+            <p className="mt-1 text-sm text-gray-500">{dict.home.exploreSubtitle}</p>
           </div>
           <Link
             href={`/${country.toLowerCase()}/categories`}
             className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-hover"
           >
-            View All Categories <span aria-hidden>→</span>
+            {dict.home.viewAllCategories} <span aria-hidden>→</span>
           </Link>
         </div>
 
         {loading ? (
-          <div className="py-8 text-sm text-gray-400">Loading categories…</div>
+          <div className="py-8 text-sm text-gray-400">{dict.home.loadingCategories}</div>
         ) : categories.length === 0 ? (
           <div className="py-8 text-center text-gray-500 border border-dashed border-gray-300 rounded-lg text-sm">
-            No categories added yet.
+            {dict.home.noCategoriesYet}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 text-left">
@@ -77,7 +79,7 @@ export default function HomeCategories({ categories: initialCategories }: { cate
                 </div>
                 {typeof cat.storeCount === "number" && (
                   <span className="mt-2 block text-[10px] text-gray-400 font-medium">
-                    {cat.storeCount} {cat.storeCount === 1 ? "store" : "stores"}
+                    {cat.storeCount} {cat.storeCount === 1 ? dict.home.store : dict.home.stores}
                   </span>
                 )}
               </Link>

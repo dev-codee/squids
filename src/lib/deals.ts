@@ -116,6 +116,18 @@ export interface Deal {
   aiStatus?: string | null;
   /** Issues the QC editor fixed or flagged (empty when APPROVED). */
   aiIssues?: string[] | null;
+
+  // --- Phase 2: Per-language AI copy ---------------------------------------
+  /** AI-written shopper-facing title keyed by locale ("en", "de", "fr", "es", "it"). */
+  aiTitleByLang?: Record<string, string> | null;
+  /** AI-written shopper-facing description keyed by locale. */
+  aiDescriptionByLang?: Record<string, string> | null;
+  /** QC verdict keyed by locale ("APPROVED" | "CORRECTED" | "REVIEW"). */
+  aiStatusByLang?: Record<string, string> | null;
+  /** ISO timestamp keyed by locale. */
+  aiGeneratedAtByLang?: Record<string, string> | null;
+  /** QC issues keyed by locale. */
+  aiIssuesByLang?: Record<string, string[]> | null;
 }
 
 /**
@@ -154,12 +166,27 @@ export function stripCouponCode(text: string, code?: string | null): string {
     .trim();
 }
 
-/** Shopper-facing title/description, preferring AI copy when present. */
-export function dealDisplayTitle(deal: Deal): string {
-  return stripCouponCode(deal.aiTitle?.trim() || deal.title, deal.code);
+/** Shopper-facing title, preferring locale-specific AI copy with fallback to English and raw title. */
+export function dealDisplayTitle(deal: Deal, locale?: string): string {
+  const normLocale = locale ? locale.toLowerCase().split("-")[0] : undefined;
+  const raw =
+    (normLocale && deal.aiTitleByLang?.[normLocale]?.trim()) ||
+    deal.aiTitleByLang?.en?.trim() ||
+    deal.aiTitle?.trim() ||
+    deal.title;
+  return stripCouponCode(raw, deal.code);
 }
-export function dealDisplayDescription(deal: Deal): string {
-  return stripCouponCode(deal.aiDescription?.trim() || deal.description || "", deal.code);
+
+/** Shopper-facing description, preferring locale-specific AI copy with fallback to English and raw description. */
+export function dealDisplayDescription(deal: Deal, locale?: string): string {
+  const normLocale = locale ? locale.toLowerCase().split("-")[0] : undefined;
+  const raw =
+    (normLocale && deal.aiDescriptionByLang?.[normLocale]?.trim()) ||
+    deal.aiDescriptionByLang?.en?.trim() ||
+    deal.aiDescription?.trim() ||
+    deal.description ||
+    "";
+  return stripCouponCode(raw, deal.code);
 }
 
 export interface PagedDeals {

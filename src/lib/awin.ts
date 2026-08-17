@@ -66,6 +66,12 @@ export interface Advertiser {
   /** ISO timestamp the store page content was generated. */
   aiStorePageAt?: string | null;
 
+  // --- Phase 2: Per-language AI store page ---------------------------------
+  /** AI-generated store page content keyed by locale ("en", "de", "fr", "es", "it"). */
+  aiStorePageByLang?: Record<string, import("@/lib/ai/storeContent").StorePageContent> | null;
+  /** ISO timestamp keyed by locale. */
+  aiStorePageAtByLang?: Record<string, string> | null;
+
   /** SEO Title (custom or AI generated with max discount analysis). */
   seoTitle?: string | null;
   /** Short non-fluffy SEO Description. */

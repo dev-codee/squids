@@ -3,6 +3,7 @@ import { loadStoreData } from "@/lib/storeData";
 import StoreHeader from "@/components/store/StoreHeader";
 import LightningDealCard from "@/components/store/LightningDealCard";
 import type { DealItem } from "@/lib/storeData";
+import { getDictionary } from "@/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,10 @@ export default async function StoreDealsPage({
 }) {
   const rawSlug = params.store;
 
-  const store = await loadStoreData(rawSlug, params.country);
+  const [store, dict] = await Promise.all([
+    loadStoreData(rawSlug, params.country),
+    getDictionary(params.country),
+  ]);
   if (!store) notFound();
 
   if (rawSlug !== store.slug) {
@@ -65,53 +69,53 @@ export default async function StoreDealsPage({
         <div className="rounded-2xl bg-gradient-to-r from-red-600 via-amber-600 to-amber-500 p-8 text-white shadow-lg">
           <div className="max-w-3xl">
             <span className="inline-flex items-center rounded-lg bg-white/20 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm mb-3">
-              ⚡ Flash Sales &amp; Deals Hub
+              ⚡ {dict.dealsPage.flashHub}
             </span>
             <h1 className="text-3xl font-extrabold sm:text-4xl">
-              Today&apos;s {store.name} Deals &amp; Flash Promotions
+              {dict.dealsPage.heading.replace("{store}", store.name)}
             </h1>
             <p className="mt-2 text-sm text-red-50 leading-relaxed">
-              Don&apos;t miss out on high-discount lightning sales, daily price drops, and time-sensitive promotions.
+              {dict.dealsPage.intro}
             </p>
           </div>
         </div>
 
         {section(
-          "Today's Deals",
-          "Hand-picked featured deals for today.",
+          dict.dealsPage.todaysDeals,
+          dict.dealsPage.todaysDealsSub,
           todaysDeals,
-          { text: "Featured", className: "bg-amber-50 text-amber-700" },
+          { text: dict.dealsPage.featured, className: "bg-amber-50 text-amber-700" },
           "🌟",
         )}
         {section(
-          "Lightning Deals",
-          "Flash sales with live countdown timers & stock progress indicators.",
+          dict.dealsPage.lightningDeals,
+          dict.dealsPage.lightningDealsSub,
           lightningDeals,
-          { text: "Flash Sales", className: "bg-red-50 text-red-700" },
+          { text: dict.dealsPage.flashSales, className: "bg-red-50 text-red-700" },
           "⚡",
         )}
         {section(
-          "Limited-Time Offers",
-          "Expiring promotions with deep markdowns.",
+          dict.dealsPage.limitedOffers,
+          dict.dealsPage.limitedOffersSub,
           limitedOffers,
-          { text: "Expiring Soon", className: "bg-orange-50 text-orange-700" },
+          { text: dict.dealsPage.expiringSoon, className: "bg-orange-50 text-orange-700" },
           "⏳",
         )}
         {section(
-          "Trending Discounts",
-          "Most clicked and popular deals ranked by shoppers.",
+          dict.dealsPage.trendingDiscounts,
+          dict.dealsPage.trendingDiscountsSub,
           trendingDiscounts,
-          { text: "Trending", className: "bg-purple-50 text-purple-700" },
+          { text: dict.dealsPage.trending, className: "bg-purple-50 text-purple-700" },
           "🔥",
         )}
 
         {!hasAny && (
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
             <p className="text-sm font-semibold text-gray-700">
-              No deals published for {store.name} yet
+              {dict.dealsPage.noneTitle.replace("{store}", store.name)}
             </p>
             <p className="mt-1 text-sm text-gray-500">
-              New promotions and flash sales will show up here.
+              {dict.dealsPage.noneSub}
             </p>
           </div>
         )}

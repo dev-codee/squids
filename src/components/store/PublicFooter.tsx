@@ -1,14 +1,21 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Dictionary } from "@/i18n";
 
-export default function PublicFooter({ country = "" }: { country?: string }) {
+export default function PublicFooter({
+  country = "",
+  dict,
+}: {
+  country?: string;
+  dict: Dictionary;
+}) {
   const lc = (country || "").toLowerCase() || "us";
   const year = new Date().getFullYear();
 
   const links = [
-    { label: "Home", href: `/${lc}` },
-    { label: "About", href: `/${lc}/about` },
-    { label: "Privacy Policy", href: `/${lc}/privacy` },
+    { label: dict.footer.home, href: `/${lc}` },
+    { label: dict.footer.about, href: `/${lc}/about` },
+    { label: dict.footer.privacy, href: `/${lc}/privacy` },
   ];
 
   return (
@@ -39,13 +46,11 @@ export default function PublicFooter({ country = "" }: { country?: string }) {
 
         {/* Affiliate disclaimer */}
         <p className="mt-8 border-t border-gray-100 pt-6 text-center text-xs leading-relaxed text-gray-500">
-          Foxzil is a website that presents deals, discounts, and coupons; these deals or offers are
-          made available via different affiliate networks. Foxzil or its staff is not involved when
-          you make a purchase via these links. Foxzil earns commission through these links/deals only.
+          {dict.footer.disclaimer}
         </p>
 
         <p className="mt-4 text-center text-xs text-gray-400">
-          &copy; {year} Foxzil. All rights reserved.
+          &copy; {year} Foxzil. {dict.footer.rights}
         </p>
       </div>
     </footer>

@@ -6,6 +6,7 @@ import { getDealsFromDb } from "@/lib/db/deals";
 import { countryName, countryFlag } from "@/lib/countries";
 import AdvertiserCard from "@/components/AdvertiserCard";
 import CouponCard from "@/components/store/CouponCard";
+import { getDictionary } from "@/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,10 @@ export default async function CategoryDetailPage({
   const country = params.country.toUpperCase();
   const slug = params.slug;
 
-  const category = await getCategoryBySlug(slug);
+  const [category, dict] = await Promise.all([
+    getCategoryBySlug(slug),
+    getDictionary(country),
+  ]);
   if (!category) {
     notFound();
   }
@@ -53,7 +57,7 @@ export default async function CategoryDetailPage({
                 <span className="text-xs text-gray-400 font-mono">/{category.slug}</span>
               </div>
               <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-gray-900">
-                {category.name} Promo Codes & Deals
+                {dict.categories.promoCodesDeals.replace("{category}", category.name)}
               </h1>
             </div>
           </div>
@@ -62,7 +66,7 @@ export default async function CategoryDetailPage({
             href={`/${country.toLowerCase()}/categories`}
             className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-hover self-start sm:self-auto"
           >
-            ← All Categories
+            ← {dict.categories.allCategories}
           </Link>
         </div>
         {category.description && (
@@ -76,16 +80,20 @@ export default async function CategoryDetailPage({
       <section className="mb-12">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">
-            {category.name} Stores in {countryName(country)}
+            {dict.categories.storesInCountry
+              .replace("{category}", category.name)
+              .replace("{country}", countryName(country))}
           </h2>
           <span className="text-xs font-medium text-gray-500">
-            {advertisers.length} Stores Available
+            {dict.categories.storesAvailable.replace("{count}", String(advertisers.length))}
           </span>
         </div>
 
         {advertisers.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
-            No stores specifically listed under &quot;{category.name}&quot; for {countryName(country)} yet.
+            {dict.categories.noStores
+              .replace("{category}", category.name)
+              .replace("{country}", countryName(country))}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -105,10 +113,10 @@ export default async function CategoryDetailPage({
         <section>
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">
-              Latest {category.name} Deals & Offers
+              {dict.categories.latestDeals.replace("{category}", category.name)}
             </h2>
             <span className="text-xs font-medium text-gray-500">
-              {deals.length} Active Promotions
+              {dict.categories.activePromotions.replace("{count}", String(deals.length))}
             </span>
           </div>
 

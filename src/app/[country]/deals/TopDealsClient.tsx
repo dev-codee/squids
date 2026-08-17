@@ -6,6 +6,10 @@ import type { Deal } from "@/lib/deals";
 import { countryName } from "@/lib/countries";
 import Pagination from "@/components/Pagination";
 import SkeletonGrid from "@/components/SkeletonGrid";
+import { useDictionary } from "@/i18n/DictionaryProvider";
+
+import { dealDisplayTitle, dealDisplayDescription } from "@/lib/deals";
+import { localeForCountry } from "@/lib/ai/languageNames";
 
 const PAGE_SIZE = 24;
 
@@ -25,8 +29,12 @@ function storeSlug(name: string): string {
 }
 
 function DealCard({ deal, country }: { deal: Deal; country: string }) {
+  const dict = useDictionary();
+  const locale = localeForCountry(country);
   const slug = storeSlug(deal.advertiser.name);
   const discount = deal.discountText?.trim();
+  const title = dealDisplayTitle(deal, locale);
+  const description = dealDisplayDescription(deal, locale);
 
   return (
     <Link
@@ -56,16 +64,16 @@ function DealCard({ deal, country }: { deal: Deal; country: string }) {
           <div className="mt-0.5 flex items-center gap-1.5">
             {deal.type === "voucher" ? (
               <span className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-bold text-purple-700">
-                CODE
+                {dict.common.code}
               </span>
             ) : (
               <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
-                DEAL
+                {dict.common.deal}
               </span>
             )}
             {deal.isExclusive && (
               <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
-                EXCLUSIVE
+                {dict.common.exclusive}
               </span>
             )}
           </div>
@@ -78,11 +86,11 @@ function DealCard({ deal, country }: { deal: Deal; country: string }) {
       </div>
 
       <h3 className="mt-4 line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-amber-600">
-        {deal.aiTitle?.trim() || deal.title}
+        {title}
       </h3>
-      {(deal.aiDescription?.trim() || deal.description) && (
+      {description && (
         <p className="mt-1.5 line-clamp-2 text-xs text-gray-500">
-          {deal.aiDescription?.trim() || deal.description}
+          {description}
         </p>
       )}
 
@@ -93,12 +101,12 @@ function DealCard({ deal, country }: { deal: Deal; country: string }) {
               {deal.code}
             </span>
             <span className="ml-2 flex-shrink-0 text-xs font-medium text-amber-600">
-              Reveal →
+              {dict.common.reveal} →
             </span>
           </div>
         ) : (
           <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
-            Get this deal <span aria-hidden>→</span>
+            {dict.common.getThisDeal} <span aria-hidden>→</span>
           </span>
         )}
       </div>
@@ -107,6 +115,7 @@ function DealCard({ deal, country }: { deal: Deal; country: string }) {
 }
 
 export default function TopDealsClient({ country }: { country: string }) {
+  const dict = useDictionary();
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -156,31 +165,31 @@ export default function TopDealsClient({ country }: { country: string }) {
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8">
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-            Top Deals
+            {dict.deals.topDeals}
           </h1>
           <p className="mt-2 text-base text-gray-500">
-            The best active coupons, promo codes, and offers in {countryName(country)}.
+            {dict.deals.subtitle.replace("{country}", countryName(country))}
           </p>
         </header>
 
         {error ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
-            <p className="text-sm font-medium text-red-800">Couldn&apos;t load deals</p>
+            <p className="text-sm font-medium text-red-800">{dict.deals.couldntLoad}</p>
             <p className="mt-1 text-sm text-red-600">{error}</p>
             <button
               onClick={() => load(page)}
               className="mt-4 inline-flex items-center rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-600"
             >
-              Try again
+              {dict.common.tryAgain}
             </button>
           </div>
         ) : loading ? (
           <SkeletonGrid />
         ) : !data || data.total === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
-            <p className="text-sm font-medium text-gray-700">No active deals right now</p>
+            <p className="text-sm font-medium text-gray-700">{dict.deals.noDealsTitle}</p>
             <p className="mt-1 text-sm text-gray-500">
-              Check back soon — fresh promotions are added regularly.
+              {dict.deals.noDealsHint}
             </p>
           </div>
         ) : (

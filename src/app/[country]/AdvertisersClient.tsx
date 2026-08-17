@@ -143,10 +143,10 @@ export default function AdvertisersClient({
         ) : (
           <header className="mb-8">
             <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-              All Stores
+              {dict.stores.allStores}
             </h1>
             <p className="mt-2 text-base text-gray-500">
-              Browse every store with active offers in {countryName(country)}.
+              {dict.stores.browseSubtitle.replace("{country}", countryName(country))}
             </p>
           </header>
         )}
@@ -154,14 +154,14 @@ export default function AdvertisersClient({
         {error ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
             <p className="text-sm font-medium text-red-800">
-              Couldn&apos;t load advertisers
+              {dict.stores.couldntLoad}
             </p>
             <p className="mt-1 text-sm text-red-600">{error}</p>
             <button
               onClick={() => load(search, selectedCategory, page)}
               className="mt-4 inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover"
             >
-              Try again
+              {dict.common.tryAgain}
             </button>
           </div>
         ) : (
@@ -171,10 +171,10 @@ export default function AdvertisersClient({
             ) : !data || data.total === 0 ? (
               <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
                 <p className="text-sm font-medium text-gray-700">
-                  No advertisers match your search or filter
+                  {dict.stores.noMatchTitle}
                 </p>
                 <p className="mt-1 text-sm text-gray-500">
-                  Try clearing your search term or selecting &quot;All Categories&quot;.
+                  {dict.stores.noMatchHint}
                 </p>
                 {(search || selectedCategory) && (
                   <button
@@ -184,7 +184,7 @@ export default function AdvertisersClient({
                     }}
                     className="mt-4 text-sm font-medium text-accent hover:text-accent-hover"
                   >
-                    Clear search and category filter
+                    {dict.stores.clearFilters}
                   </button>
                 )}
               </div>

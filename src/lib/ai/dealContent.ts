@@ -148,7 +148,14 @@ Then return a verdict:
 - If the offer data is insufficient to safely create the content, set status to "REVIEW" with an empty title and description and an issues array explaining why.
 Never invent missing information. Return JSON only.`;
 
-const FULL_SYSTEM_PROMPT = `${SYSTEM_PROMPT}\n\n${QC_INSTRUCTIONS}`;
+import { languageNameForLocale } from "@/lib/ai/languageNames";
+
+function buildSystemPrompt(language: string = "English"): string {
+  const langRule = `LANGUAGE INSTRUCTION (STRICT)
+Write ALL output (title and description) in ${language}. Keep merchant names, product names, brand names and any coupon codes verbatim. Preserve numbers, prices, currency symbols and 'Up to X%' exactly. Do not translate proper nouns or brand names.`;
+
+  return `${SYSTEM_PROMPT}\n\n${langRule}\n\n${QC_INSTRUCTIONS}`;
+}
 
 export type DealCopyStatus = "APPROVED" | "CORRECTED" | "REVIEW";
 
@@ -163,20 +170,33 @@ export interface DealCopy {
   issues: string[];
 }
 
+export interface GenerateDealContentOptions {
+  /** Target natural language name e.g. "German", "French", or "English". */
+  language?: string;
+  /** Locale code e.g. "de", "fr", "es", "it", "en". Resolved to language name if language is omitted. */
+  locale?: string;
+}
+
 /**
  * Generate shopper-facing copy for a deal in a single Claude call: the model
  * drafts the title/description, self-QCs it against the raw offer data, and
- * returns a verdict. APPROVED/CORRECTED copy is safe to publish; REVIEW means the
- * offer data was insufficient (empty copy).
+ * returns a verdict in the specified language (default English).
  *
  * @throws {AiConfigError} when ANTHROPIC_API_KEY is not set.
  */
-export async function generateDealContent(deal: Deal): Promise<DealCopy> {
+export async function generateDealContent(
+  deal: Deal,
+  opts?: GenerateDealContentOptions,
+): Promise<DealCopy> {
+  const language =
+    opts?.language ||
+    (opts?.locale ? languageNameForLocale(opts.locale) : "English");
+
   const client = getAnthropicClient();
   const response = await client.messages.create({
     model: resolveModel(),
     max_tokens: 1024,
-    system: FULL_SYSTEM_PROMPT,
+    system: buildSystemPrompt(language),
     // Structured outputs guarantee a valid verdict object.
     // Note: no `effort` here — it isn't supported on Haiku 4.5.
     output_config: { format: { type: "json_schema", schema: OUTPUT_SCHEMA } },

@@ -80,7 +80,7 @@ export default async function StoreLayout({
       <CurrencyProvider region={region} usdRate={usdRate}>
         <PublicHeader country={region.country} />
         {children}
-        <PublicFooter country={region.country} />
+        <PublicFooter country={region.country} dict={dictionary} />
       </CurrencyProvider>
     </DictionaryProvider>
   );
