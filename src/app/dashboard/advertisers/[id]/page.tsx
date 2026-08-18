@@ -440,6 +440,10 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
                 name: advertiser.name,
                 logoUrl: advertiser.logoUrl,
                 network: advertiser.network,
+                url: advertiser.url,
+                region: advertiser.region,
+                countryCode: advertiser.countryCode,
+                countryCodes: advertiser.countryCodes,
               }
             : undefined
         }

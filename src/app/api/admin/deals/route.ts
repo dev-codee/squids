@@ -89,11 +89,36 @@ export async function POST(request: NextRequest) {
       ? Number(body.id)
       : await getNextDealId();
 
-    const regionCodes = Array.isArray(body.regionCodes)
+    let regionCodes = Array.isArray(body.regionCodes)
       ? body.regionCodes.map((r: string) => String(r).trim().toUpperCase())
       : typeof body.regionCodes === "string" && body.regionCodes.trim()
       ? body.regionCodes.split(",").map((r: string) => r.trim().toUpperCase())
       : [];
+
+    let trackingUrl = body.trackingUrl ? String(body.trackingUrl).trim() : null;
+
+    if (!trackingUrl || regionCodes.length === 0) {
+      try {
+        const { getAdvertiserByIdFromDb } = await import("@/lib/db/advertisers");
+        const adv = await getAdvertiserByIdFromDb(Number(body.advertiser.id));
+        if (adv) {
+          if (!trackingUrl && adv.url) {
+            trackingUrl = adv.url;
+          }
+          if (regionCodes.length === 0) {
+            if (adv.countryCodes && adv.countryCodes.length > 0) {
+              regionCodes = adv.countryCodes.map((r: string) => r.trim().toUpperCase());
+            } else if (adv.countryCode) {
+              regionCodes = [adv.countryCode.trim().toUpperCase()];
+            } else if (adv.region) {
+              regionCodes = [adv.region.trim().toUpperCase()];
+            }
+          }
+        }
+      } catch {
+        // ignore fallback lookup error
+      }
+    }
 
     const deal: Deal = {
       id,
@@ -110,7 +135,7 @@ export async function POST(request: NextRequest) {
       startDate: body.startDate ? String(body.startDate).trim() : null,
       endDate: body.endDate ? String(body.endDate).trim() : null,
       status: body.status ? String(body.status).trim() : "active",
-      trackingUrl: body.trackingUrl ? String(body.trackingUrl).trim() : null,
+      trackingUrl,
       regionCodes,
       ...parseEnrichment(body),
     };

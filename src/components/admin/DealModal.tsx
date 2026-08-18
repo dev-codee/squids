@@ -13,6 +13,10 @@ interface DealModalProps {
     name: string;
     logoUrl?: string | null;
     network?: string;
+    url?: string | null;
+    region?: string | null;
+    countryCode?: string | null;
+    countryCodes?: string[];
   };
 }
 
@@ -90,6 +94,37 @@ export default function DealModal({
     }
   }
 
+  async function handleAdvertiserIdBlur(e: React.FocusEvent<HTMLInputElement>) {
+    if (isEditing) return;
+    const rawId = e.target.value.trim();
+    if (!rawId || isNaN(Number(rawId))) return;
+    const id = Number(rawId);
+
+    try {
+      const res = await fetch(`/api/advertisers?id=${id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const adv = data.advertiser;
+      if (adv) {
+        const defaultRegion = adv.countryCodes?.length
+          ? adv.countryCodes.join(", ")
+          : (adv.countryCode || adv.region || "");
+        const defaultTrackingUrl = adv.url || "";
+
+        setFormData((f) => ({
+          ...f,
+          advertiserName: f.advertiserName ? f.advertiserName : (adv.name || ""),
+          advertiserLogoUrl: f.advertiserLogoUrl ? f.advertiserLogoUrl : (adv.logoUrl || ""),
+          network: f.network ? f.network : (adv.network || "awin"),
+          regionCodes: f.regionCodes ? f.regionCodes : defaultRegion,
+          trackingUrl: f.trackingUrl ? f.trackingUrl : defaultTrackingUrl,
+        }));
+      }
+    } catch {
+      // Ignore background fetch errors
+    }
+  }
+
   useEffect(() => {
     if (deal) {
       setFormData({
@@ -121,6 +156,12 @@ export default function DealModal({
         stockPercentage: deal.stockPercentage != null ? String(deal.stockPercentage) : "",
       });
     } else {
+      const defaultRegion = initialAdvertiser?.countryCodes?.length
+        ? initialAdvertiser.countryCodes.join(", ")
+        : (initialAdvertiser?.countryCode || initialAdvertiser?.region || "");
+
+      const defaultTrackingUrl = initialAdvertiser?.url || "";
+
       setFormData({
         ...emptyForm,
         ...(initialAdvertiser
@@ -129,6 +170,8 @@ export default function DealModal({
               advertiserName: initialAdvertiser.name,
               advertiserLogoUrl: initialAdvertiser.logoUrl || "",
               network: initialAdvertiser.network || "awin",
+              regionCodes: defaultRegion,
+              trackingUrl: defaultTrackingUrl,
             }
           : {}),
       });
@@ -301,6 +344,7 @@ export default function DealModal({
                 required
                 value={formData.advertiserId}
                 onChange={(e) => setFormData({ ...formData, advertiserId: e.target.value })}
+                onBlur={handleAdvertiserIdBlur}
                 placeholder="e.g. 1001"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
               />
