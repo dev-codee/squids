@@ -1,6 +1,7 @@
 "use client";
 
 import type { StoreReviewItem } from "@/lib/storeData";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 interface ReviewsWidgetProps {
   reviews: StoreReviewItem[];
@@ -15,15 +16,17 @@ export default function ReviewsWidget({
   totalReviews,
   storeName,
 }: ReviewsWidgetProps) {
+  const dict = useDictionary();
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-6">
         <div>
           <h3 className="text-xl font-bold text-gray-900">
-            {storeName} Community Reviews & Ratings
+            {dict.reviewsWidget.title.replace("{store}", storeName)}
           </h3>
           <p className="text-xs text-gray-500 mt-1">
-            Real savings feedback from shoppers using our {storeName} promo codes.
+            {dict.reviewsWidget.subtitle.replace("{store}", storeName)}
           </p>
         </div>
 
@@ -35,7 +38,7 @@ export default function ReviewsWidget({
               {"☆".repeat(5 - Math.floor(rating))}
             </div>
             <p className="text-xs text-amber-800 font-medium">
-              Based on {totalReviews.toLocaleString()} ratings
+              {dict.reviewsWidget.basedOnRatings.replace("{count}", totalReviews.toLocaleString())}
             </p>
           </div>
         </div>
@@ -66,7 +69,7 @@ export default function ReviewsWidget({
                 <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                Verified Savings User
+                {dict.reviewsWidget.verifiedSavingsUser}
               </div>
             )}
           </div>

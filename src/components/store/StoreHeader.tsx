@@ -3,19 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { StoreData } from "@/lib/storeData";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 interface StoreHeaderProps {
   store: StoreData;
 }
 
 export default function StoreHeader({ store }: StoreHeaderProps) {
+  const dict = useDictionary();
   const pathname = usePathname();
   const currentPath = pathname || `/${store.slug}`;
 
   const tabs = [
-    { label: "Overview & All Offers", href: `/${store.slug}` },
-    { label: "Coupons & Codes", href: `/${store.slug}/coupons`, count: store.activeCouponsCount },
-    { label: "Deals & Promotions", href: `/${store.slug}/deals`, count: store.activeDealsCount },
+    { label: dict.store.tabOverview, href: `/${store.slug}` },
+    { label: dict.store.tabCoupons, href: `/${store.slug}/coupons`, count: store.activeCouponsCount },
+    { label: dict.store.tabDeals, href: `/${store.slug}/deals`, count: store.activeDealsCount },
   ];
 
   return (
@@ -46,10 +48,10 @@ export default function StoreHeader({ store }: StoreHeaderProps) {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-                  {store.name} Promo Codes & Coupons
+                  {dict.store.verifiedOffersTitle.replace("{store}", store.name)}
                 </h1>
                 <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
-                  Verified Store
+                  {dict.store.verifiedStore}
                 </span>
               </div>
 
@@ -62,19 +64,21 @@ export default function StoreHeader({ store }: StoreHeaderProps) {
                       {"☆".repeat(5 - Math.floor(store.rating))}
                     </div>
                     <span className="font-semibold text-gray-900">{store.rating}</span>
-                    <span className="text-gray-500">({store.totalReviews.toLocaleString()} reviews)</span>
+                    <span className="text-gray-500">
+                      ({store.totalReviews.toLocaleString()} {dict.store.reviews})
+                    </span>
                   </div>
                 )}
                 {store.avgSavings && (
                   <>
                     {store.totalReviews > 0 && <span className="text-gray-300">•</span>}
                     <span className="font-medium text-emerald-600">
-                      Avg Savings: <span className="font-bold">{store.avgSavings}</span>
+                      {dict.sidebar.avgSavings}: <span className="font-bold">{store.avgSavings}</span>
                     </span>
                   </>
                 )}
                 <span className="font-medium text-gray-700">
-                  {store.activeCouponsCount} coupons · {store.activeDealsCount} deals
+                  {dict.store.couponsCount.replace("{count}", String(store.activeCouponsCount))} · {dict.store.dealsCount.replace("{count}", String(store.activeDealsCount))}
                 </span>
               </div>
             </div>
@@ -88,7 +92,7 @@ export default function StoreHeader({ store }: StoreHeaderProps) {
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
             >
-              Shop {store.name} Direct
+              {dict.store.shopDirect.replace("{store}", store.name)}
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>

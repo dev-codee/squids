@@ -1,10 +1,23 @@
+"use client";
+
 import type { StorePageContent } from "@/lib/ai/storeContent";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 /** True when a value is present and not a "Not available"-style placeholder. */
 function hasVal(v: unknown): v is string {
   if (typeof v !== "string") return false;
   const s = v.trim().toLowerCase();
-  return s !== "" && s !== "not available" && s !== "n/a" && s !== "unknown" && s !== "verification required";
+  return (
+    s !== "" &&
+    s !== "not available" &&
+    s !== "n/a" &&
+    s !== "unknown" &&
+    s !== "verification required" &&
+    s !== "nicht verfügbar" &&
+    s !== "non disponible" &&
+    s !== "no disponible" &&
+    s !== "non disponibile"
+  );
 }
 
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
@@ -32,25 +45,41 @@ const CAL_COLORS: Record<string, string> = {
   low: "bg-gray-100 text-gray-500",
 };
 
-const CAL_LABEL: Record<"high" | "medium" | "low", string> = {
-  high: "High",
-  medium: "Med",
-  low: "Low",
-};
-
 /**
- * Normalise a calendar "activity" value to a single level. The AI is asked for
- * exactly "High" | "Medium" | "Low", but older cached content sometimes stored
- * verbose strings ("High - Big Vol. active through August 20") — collapse those
- * so the calendar cells stay on one clean row.
+ * Normalise a calendar "activity" value to a single level.
  */
 function calLevel(activity?: string): "high" | "medium" | "low" | null {
   if (!activity) return null;
   const s = activity.toLowerCase();
-  if (/\b(high|peak|busy|big)\b/.test(s)) return "high";
-  if (/\b(medium|moderate|mid)\b/.test(s)) return "medium";
-  if (/\b(low|quiet|slow)\b/.test(s)) return "low";
+  if (/\b(high|peak|busy|big|hoch|eleve|élevé|alto)\b/.test(s)) return "high";
+  if (/\b(medium|moderate|mid|med|mittel|moyen|medio)\b/.test(s)) return "medium";
+  if (/\b(low|quiet|slow|niedrig|faible|bajo|basso)\b/.test(s)) return "low";
   return null;
+}
+
+const MONTH_KEY_MAP: Record<string, string> = {
+  jan: "jan", january: "jan", januar: "jan", janvier: "jan", enero: "jan", gennaio: "jan",
+  feb: "feb", february: "feb", februar: "feb", fevrier: "feb", février: "feb", febrero: "feb", febbraio: "feb",
+  mar: "mar", march: "mar", mär: "mar", marz: "mar", märz: "mar", mars: "mar", marzo: "mar",
+  apr: "apr", april: "apr", avril: "apr", abril: "apr", aprile: "apr",
+  may: "may", mai: "may", mayo: "may", maggio: "may",
+  jun: "jun", june: "jun", juni: "jun", juin: "jun", junio: "jun", giugno: "jun",
+  jul: "jul", july: "jul", juli: "jul", juillet: "jul", julio: "jul", luglio: "jul",
+  aug: "aug", august: "aug", aout: "aug", août: "aug", agosto: "aug",
+  sep: "sep", sept: "sep", september: "sep", septembre: "sep", septiembre: "sep", settembre: "sep",
+  oct: "oct", okt: "oct", october: "oct", oktober: "oct", octobre: "oct", octubre: "oct", ottobre: "oct",
+  nov: "nov", november: "nov", novembre: "nov", noviembre: "nov",
+  dec: "dec", dez: "dec", december: "dec", dezember: "dec", decembre: "dec", décembre: "dec", diciembre: "dec", dicembre: "dec",
+};
+
+function formatMonth(rawMonth: string, monthsDict?: Record<string, string>): string {
+  if (!monthsDict) return rawMonth.slice(0, 3);
+  const clean = rawMonth.trim().toLowerCase();
+  const key = MONTH_KEY_MAP[clean] || MONTH_KEY_MAP[clean.slice(0, 3)];
+  if (key && monthsDict[key]) {
+    return monthsDict[key];
+  }
+  return rawMonth.slice(0, 3);
 }
 
 export default function StoreAiSections({
@@ -60,17 +89,14 @@ export default function StoreAiSections({
   content: StorePageContent;
   storeName: string;
 }) {
+  const dict = useDictionary();
   const c = content;
 
-  const trust = c.trustpilot;
-  const google = c.google_rating;
-  const showTrustPanel =
-    hasVal(trust?.rating) ||
-    hasVal(google?.rating) ||
-    hasVal(c.typical_discount) ||
-    hasVal(c.cashback?.rate) ||
-    hasVal(c.cashback?.available) ||
-    typeof c.information_confidence === "number";
+  const calLabels = {
+    high: dict.storeAi.calHigh,
+    medium: dict.storeAi.calMed,
+    low: dict.storeAi.calLow,
+  };
 
   const bt = c.best_time_to_shop;
   const showBestTime = hasVal(bt?.season) || hasVal(bt?.reason) || (bt?.events?.length ?? 0) > 0;
@@ -91,16 +117,16 @@ export default function StoreAiSections({
 
       {/* Best time to shop + calendar */}
       {showBestTime && (
-        <Card title={`Best Time to Shop at ${storeName}`}>
+        <Card title={dict.storeAi.bestTimeToShop.replace("{store}", storeName)}>
           <div className="space-y-1.5 text-sm">
-            <InfoRow label="Best season" value={bt?.season} />
+            <InfoRow label={dict.storeAi.bestSeason} value={bt?.season} />
             {(bt?.months?.length ?? 0) > 0 && (
-              <InfoRow label="Best months" value={bt!.months!.join(", ")} />
+              <InfoRow label={dict.storeAi.bestMonths} value={bt!.months!.join(", ")} />
             )}
             {(bt?.events?.length ?? 0) > 0 && (
-              <InfoRow label="Key events" value={bt!.events!.join(", ")} />
+              <InfoRow label={dict.storeAi.keyEvents} value={bt!.events!.join(", ")} />
             )}
-            <InfoRow label="Confidence" value={bt?.confidence} />
+            <InfoRow label={dict.storeAi.confidence} value={bt?.confidence} />
           </div>
           {hasVal(bt?.reason) && <p className="mt-3 text-sm text-gray-600">{bt!.reason}</p>}
 
@@ -115,8 +141,8 @@ export default function StoreAiSections({
                       lvl ? CAL_COLORS[lvl] : "bg-gray-100 text-gray-500"
                     }`}
                   >
-                    <span className="font-semibold">{m.month.slice(0, 3)}</span>
-                    {lvl && <span className="opacity-80">{CAL_LABEL[lvl]}</span>}
+                    <span className="font-semibold">{formatMonth(m.month, dict.storeAi.months)}</span>
+                    {lvl && <span className="opacity-80">{calLabels[lvl]}</span>}
                   </div>
                 );
               })}
@@ -127,7 +153,7 @@ export default function StoreAiSections({
 
       {/* How to save the most */}
       {hasVal(c.best_saving_strategy) && (
-        <Card title={`How to Save the Most at ${storeName}`}>
+        <Card title={dict.storeAi.howToSaveMost.replace("{store}", storeName)}>
           <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
             {c.best_saving_strategy}
           </p>
@@ -136,22 +162,22 @@ export default function StoreAiSections({
 
       {/* Shipping & Delivery */}
       {showShipping && (
-        <Card title="Shipping & Delivery">
-          <InfoRow label="Free shipping" value={shipping!.free_shipping} />
-          <InfoRow label="Free over" value={shipping!.threshold} />
-          <InfoRow label="Standard cost" value={shipping!.standard_cost} />
-          <InfoRow label="Delivery time" value={shipping!.delivery_time} />
-          <InfoRow label="International" value={shipping!.international_shipping} />
+        <Card title={dict.storeAi.shippingDelivery}>
+          <InfoRow label={dict.storeAi.freeShipping} value={shipping!.free_shipping} />
+          <InfoRow label={dict.storeAi.freeOver} value={shipping!.threshold} />
+          <InfoRow label={dict.storeAi.standardCost} value={shipping!.standard_cost} />
+          <InfoRow label={dict.storeAi.deliveryTime} value={shipping!.delivery_time} />
+          <InfoRow label={dict.storeAi.international} value={shipping!.international_shipping} />
         </Card>
       )}
 
       {/* Returns & Refunds */}
       {showReturns && (
-        <Card title="Returns & Refunds">
-          <InfoRow label="Return window" value={returns!.return_window} />
-          <InfoRow label="Refund" value={returns!.refund} />
-          <InfoRow label="Exchange" value={returns!.exchange} />
-          <InfoRow label="Return shipping" value={returns!.return_shipping} />
+        <Card title={dict.storeAi.returnsRefunds}>
+          <InfoRow label={dict.storeAi.returnWindow} value={returns!.return_window} />
+          <InfoRow label={dict.storeAi.refund} value={returns!.refund} />
+          <InfoRow label={dict.storeAi.exchange} value={returns!.exchange} />
+          <InfoRow label={dict.storeAi.returnShipping} value={returns!.return_shipping} />
           {hasVal(returns!.conditions) && (
             <p className="mt-2 text-xs text-gray-500">{returns!.conditions}</p>
           )}
@@ -160,7 +186,7 @@ export default function StoreAiSections({
 
       {/* Payment methods */}
       {payments.length > 0 && (
-        <Card title="Payment Methods">
+        <Card title={dict.storeAi.paymentMethods}>
           <div className="flex flex-wrap gap-2">
             {payments.map((p) => (
               <span
@@ -176,7 +202,7 @@ export default function StoreAiSections({
 
       {/* Merchant overview */}
       {hasVal(c.merchant_overview) && (
-        <Card title={`About ${storeName}`}>
+        <Card title={dict.storeAi.aboutStore.replace("{store}", storeName)}>
           <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
             {c.merchant_overview}
           </p>
@@ -194,7 +220,7 @@ export default function StoreAiSections({
 
       {/* How to use a coupon */}
       {(c.how_to_use_coupon?.length ?? 0) > 0 && (
-        <Card title={`How to Use a ${storeName} Coupon`}>
+        <Card title={dict.storeAi.howToUseCoupon.replace("{store}", storeName)}>
           <ol className="list-decimal space-y-1.5 pl-5 text-sm text-gray-700">
             {c.how_to_use_coupon!.filter(hasVal).map((step, i) => (
               <li key={i}>{step}</li>
@@ -205,7 +231,7 @@ export default function StoreAiSections({
 
       {/* Buying advice + editorial tips */}
       {(hasVal(c.buying_advice) || (c.editorial_tips?.length ?? 0) > 0) && (
-        <Card title="Buying Advice">
+        <Card title={dict.storeAi.buyingAdvice}>
           {hasVal(c.buying_advice) && (
             <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
               {c.buying_advice}
@@ -223,7 +249,7 @@ export default function StoreAiSections({
 
       {/* FAQ */}
       {(c.faq?.length ?? 0) > 0 && (
-        <Card title="Frequently Asked Questions">
+        <Card title={dict.storeAi.faq}>
           <div className="divide-y divide-gray-100">
             {c.faq!
               .filter((f) => hasVal(f?.question) && hasVal(f?.answer))
@@ -239,7 +265,7 @@ export default function StoreAiSections({
 
       {/* Should you buy — trust conclusion */}
       {hasVal(c.trust_information) && (
-        <Card title={`Should You Buy From ${storeName}?`}>
+        <Card title={dict.storeAi.shouldYouBuy.replace("{store}", storeName)}>
           <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
             {c.trust_information}
           </p>

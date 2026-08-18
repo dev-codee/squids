@@ -77,7 +77,7 @@ export default function StoreSidebar({ store, aiContent }: StoreSidebarProps) {
       {/* Store Trust & Info Box */}
       {showTrustPanel && aiContent && (
         <div className="bg-white p-5 rounded border border-gray-200">
-          <h3 className="font-bold text-gray-900 mb-3">Store Trust & Info</h3>
+          <h3 className="font-bold text-gray-900 mb-3">{dict.sidebar.storeTrustInfo}</h3>
           <div>
             {hasVal(trust?.rating) && (
               <InfoRow
@@ -91,11 +91,11 @@ export default function StoreSidebar({ store, aiContent }: StoreSidebarProps) {
                 value={`${google!.rating}/5${hasVal(google?.review_count) ? ` (${google!.review_count})` : ""}`}
               />
             )}
-            <InfoRow label="Typical discount" value={aiContent.typical_discount} />
-            <InfoRow label="Cashback rate" value={aiContent.cashback?.rate} />
-            {!hasVal(aiContent.cashback?.rate) && <InfoRow label="Cashback" value={aiContent.cashback?.available} />}
+            <InfoRow label={dict.sidebar.typicalDiscount} value={aiContent.typical_discount} />
+            <InfoRow label={dict.sidebar.cashbackRate} value={aiContent.cashback?.rate} />
+            {!hasVal(aiContent.cashback?.rate) && <InfoRow label={dict.sidebar.cashback} value={aiContent.cashback?.available} />}
             {typeof aiContent.information_confidence === "number" && aiContent.information_confidence > 0 && (
-              <InfoRow label="Info confidence" value={`${aiContent.information_confidence}/100`} />
+              <InfoRow label={dict.sidebar.infoConfidence} value={`${aiContent.information_confidence}/100`} />
             )}
           </div>
         </div>

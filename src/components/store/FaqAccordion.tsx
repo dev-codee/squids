@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FAQItem } from "@/lib/storeData";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 interface FaqAccordionProps {
   faqs: FAQItem[];
@@ -9,6 +10,7 @@ interface FaqAccordionProps {
 }
 
 export default function FaqAccordion({ faqs, storeName }: FaqAccordionProps) {
+  const dict = useDictionary();
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const toggle = (idx: number) => {
@@ -19,10 +21,10 @@ export default function FaqAccordion({ faqs, storeName }: FaqAccordionProps) {
     <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-6">
         <h3 className="text-xl font-bold text-gray-900">
-          Frequently Asked Questions about {storeName} Coupons
+          {dict.faqWidget.title.replace("{store}", storeName)}
         </h3>
         <p className="text-xs text-gray-500 mt-1">
-          Everything you need to know about redeeming codes and saving money at {storeName}.
+          {dict.faqWidget.subtitle.replace("{store}", storeName)}
         </p>
       </div>
 

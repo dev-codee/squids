@@ -9,6 +9,7 @@ import StoreAiContent from "@/components/store/StoreAiContent";
 import StoreAiSkeleton from "@/components/store/StoreAiSkeleton";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl } from "@/lib/regions";
+import { localeForCountry } from "@/lib/ai/languageNames";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,8 @@ export async function generateMetadata({
   const store = await loadStoreData(params.store, params.country);
   if (!store) return {};
 
-  const currentMonth = new Date().toLocaleString("default", { month: "long" });
+  const locale = localeForCountry(params.country);
+  const currentMonth = new Date().toLocaleDateString(locale, { month: "long" });
   const currentYear = new Date().getFullYear();
   const siteUrl = getSiteUrl();
   const canonicalUrl = `${siteUrl}/${params.country.toLowerCase()}/${store.slug}`;
@@ -76,7 +78,8 @@ export default async function StoreMainPage({
 
   const aiContent = await loadStoreAiContent(store.slug, params.country);
 
-  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+  const locale = localeForCountry(params.country);
+  const currentMonth = new Date().toLocaleDateString(locale, { month: "long" });
   const currentYear = new Date().getFullYear();
   const dict = await getDictionary(params.country);
 

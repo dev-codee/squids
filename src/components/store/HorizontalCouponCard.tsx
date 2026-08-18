@@ -54,10 +54,10 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
         {/* Left Section - Discount Indicator */}
         <div className="sm:w-[15%] w-full bg-red-50/50 border-b sm:border-b-0 sm:border-r border-gray-100 flex flex-col items-center justify-center p-4 min-w-[120px]">
           <span className="text-xl font-extrabold text-gray-800 text-center leading-tight mb-2">
-            {coupon.discount || "DEAL"}
+            {coupon.discount || dict.common.deal}
           </span>
           <span className="bg-red-100 text-red-600 text-[10px] font-bold uppercase px-2 py-0.5 rounded shadow-sm tracking-wider">
-            {coupon.type === "code" ? "CODE" : coupon.type}
+            {coupon.type === "code" ? dict.common.code : coupon.type}
           </span>
         </div>
 
@@ -84,7 +84,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
                 <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.364 1.118l1.287 3.958c.3.922-.755 1.688-1.54 1.118l-3.367-2.447a1 1 0 00-1.176 0l-3.367 2.447c-.784.57-1.838-.196-1.539-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.343 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.285-3.958z" />
                 </svg>
-                Exclusive
+                {dict.cards.exclusive}
               </span>
             )}
           </div>
@@ -97,7 +97,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
               onClick={handleReveal}
               className="w-full relative inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600 shadow-sm overflow-hidden"
             >
-              <span className="relative z-10">{copied ? "Copied!" : revealed ? coupon.code : dict.cards.showCouponCode}</span>
+              <span className="relative z-10">{copied ? dict.cards.copied : revealed ? coupon.code : dict.cards.showCouponCode}</span>
               {!revealed && (
                 <div className="absolute right-0 top-0 h-full w-8 bg-emerald-700 clip-reveal flex items-center justify-center">
                   <span className="text-[10px]">*</span>
@@ -118,7 +118,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
           <div className="mt-2 text-[11px] text-gray-500 text-center">
             {coupon.expiryDate ? (
               <span>
-                Expires:{" "}
+                {dict.cards.expires}:{" "}
                 {new Date(coupon.expiryDate).toLocaleDateString("en-GB", {
                   day: "numeric",
                   month: "numeric",
@@ -126,7 +126,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
                 })}
               </span>
             ) : (
-              <span>Expires: Ongoing</span>
+              <span>{dict.cards.active}</span>
             )}
           </div>
         </div>
@@ -141,7 +141,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-900">Promo Code Copied!</h3>
+            <h3 className="text-xl font-bold text-gray-900">{dict.cards.promoCodeCopied}</h3>
             <p className="mt-1 text-sm text-gray-500">{coupon.title}</p>
 
             <div className="my-5 rounded-xl bg-amber-50 border-2 border-dashed border-amber-300 p-4">
@@ -151,7 +151,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
             </div>
 
             <p className="text-xs text-gray-500 mb-6">
-              Paste this code during checkout at {storeName}.
+              {dict.cards.pasteCode.replace("{store}", storeName)}
             </p>
 
             <div className="flex gap-3">
@@ -159,7 +159,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
                 onClick={() => setShowModal(false)}
                 className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
               >
-                Close
+                {dict.cards.close}
               </button>
               <a
                 href={merchantUrl}
@@ -168,7 +168,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
                 onClick={() => setShowModal(false)}
                 className="flex-1 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 text-center"
               >
-                Go to {storeName}
+                {dict.cards.goTo.replace("{store}", storeName)}
               </a>
             </div>
           </div>

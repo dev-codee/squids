@@ -104,7 +104,57 @@
     "verifiedOffersTitle": "Codes promo et offres {store} vérifiés par l'équipe Foxzil",
     "topDealsTitle": "Meilleurs Bons Plans & Promotions pour {store}",
     "noOffersYet": "Aucune offre publiée pour {store} pour le moment",
-    "couponsAppearHere": "Les coupons et bons plans apparaîtront ici une fois ajoutés."
+    "couponsAppearHere": "Les coupons et bons plans apparaîtront ici une fois ajoutés.",
+    "verifiedStore": "Boutique vérifiée",
+    "reviews": "avis",
+    "couponsCount": "{count} coupons",
+    "dealsCount": "{count} bons plans",
+    "shopDirect": "Acheter directement sur {store}",
+    "tabOverview": "Aperçu et toutes les offres",
+    "tabCoupons": "Coupons et codes promo",
+    "tabDeals": "Bons plans et promotions"
+  },
+  "storeAi": {
+    "bestTimeToShop": "Meilleur moment pour acheter chez {store}",
+    "bestSeason": "Meilleure saison",
+    "bestMonths": "Meilleurs mois",
+    "keyEvents": "Événements clés",
+    "confidence": "Indice de confiance",
+    "calHigh": "Élevé",
+    "calMed": "Moyen",
+    "calLow": "Faible",
+    "howToSaveMost": "Comment économiser au maximum chez {store}",
+    "shippingDelivery": "Livraison et expédition",
+    "freeShipping": "Livraison gratuite",
+    "freeOver": "Gratuit dès",
+    "standardCost": "Frais standard",
+    "deliveryTime": "Délai de livraison",
+    "international": "Livraison internationale",
+    "returnsRefunds": "Retours et remboursements",
+    "returnWindow": "Délai de retour",
+    "refund": "Remboursement",
+    "exchange": "Échange",
+    "returnShipping": "Frais de retour",
+    "paymentMethods": "Moyens de paiement",
+    "aboutStore": "À propos de {store}",
+    "howToUseCoupon": "Comment utiliser un code promo {store}",
+    "buyingAdvice": "Conseils d'achat et astuces",
+    "faq": "Foire Aux Questions (FAQ)",
+    "shouldYouBuy": "Faut-il acheter chez {store} ?",
+    "months": {
+      "jan": "Janv",
+      "feb": "Févr",
+      "mar": "Mars",
+      "apr": "Avr",
+      "may": "Mai",
+      "jun": "Juin",
+      "jul": "Juil",
+      "aug": "Août",
+      "sep": "Sept",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Déc"
+    }
   },
   "sidebar": {
     "dealsDetails": "Détails des Offres",
@@ -127,7 +177,27 @@
     "faqs": "FAQ",
     "noFaqs": "Aucune FAQ disponible.",
     "reviews": "Avis",
-    "noReviews": "Aucun avis pour le moment."
+    "noReviews": "Aucun avis pour le moment.",
+    "storeTrustInfo": "Confiance et informations",
+    "typicalDiscount": "Remise habituelle",
+    "cashbackRate": "Taux de cashback",
+    "cashback": "Cashback",
+    "infoConfidence": "Niveau de confiance"
+  },
+  "faqWidget": {
+    "title": "Questions fréquentes sur les codes promo {store}",
+    "subtitle": "Tout ce que vous devez savoir pour utiliser des codes et faire des économies chez {store}."
+  },
+  "reviewsWidget": {
+    "title": "Avis et évaluations de la communauté sur {store}",
+    "subtitle": "Retours réels d'acheteurs utilisant nos codes promo {store}.",
+    "basedOnRatings": "Basé sur {count} avis",
+    "verifiedSavingsUser": "Utilisateur vérifié"
+  },
+  "priceComparisonWidget": {
+    "title": "Comparateur de prix en direct",
+    "subtitle": "Comparez les prix des meilleurs produits chez {store} et d'autres marchands.",
+    "updatedHourly": "Mis à jour toutes les heures"
   },
   "cards": {
     "showCouponCode": "Voir le code promo",

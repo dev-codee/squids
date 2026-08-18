@@ -2,6 +2,7 @@
 
 import type { PriceComparisonItem } from "@/lib/storeData";
 import { useCurrency } from "@/i18n/CurrencyProvider";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 interface PriceComparisonWidgetProps {
   items: PriceComparisonItem[];
@@ -10,19 +11,20 @@ interface PriceComparisonWidgetProps {
 
 export default function PriceComparisonWidget({ items, storeName }: PriceComparisonWidgetProps) {
   const { format } = useCurrency();
+  const dict = useDictionary();
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-xl font-bold text-gray-900">
-            Real-Time Price Comparison
+            {dict.priceComparisonWidget.title}
           </h3>
           <p className="text-xs text-gray-500">
-            Compare prices for top products across {storeName} and competing retailers.
+            {dict.priceComparisonWidget.subtitle.replace("{store}", storeName)}
           </p>
         </div>
         <span className="inline-flex items-center rounded-lg bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-          Updated Hourly
+          {dict.priceComparisonWidget.updatedHourly}
         </span>
       </div>
 

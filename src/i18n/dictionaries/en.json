@@ -104,7 +104,57 @@
     "verifiedOffersTitle": "Verified {store} promo codes and offers by Foxzil Team",
     "topDealsTitle": "Top Deals & Promotions for {store}",
     "noOffersYet": "No offers published for {store} yet",
-    "couponsAppearHere": "Coupons and deals will appear here once they're added."
+    "couponsAppearHere": "Coupons and deals will appear here once they're added.",
+    "verifiedStore": "Verified Store",
+    "reviews": "reviews",
+    "couponsCount": "{count} coupons",
+    "dealsCount": "{count} deals",
+    "shopDirect": "Shop {store} Direct",
+    "tabOverview": "Overview & All Offers",
+    "tabCoupons": "Coupons & Codes",
+    "tabDeals": "Deals & Promotions"
+  },
+  "storeAi": {
+    "bestTimeToShop": "Best Time to Shop at {store}",
+    "bestSeason": "Best season",
+    "bestMonths": "Best months",
+    "keyEvents": "Key events",
+    "confidence": "Confidence",
+    "calHigh": "High",
+    "calMed": "Med",
+    "calLow": "Low",
+    "howToSaveMost": "How to Save the Most at {store}",
+    "shippingDelivery": "Shipping & Delivery",
+    "freeShipping": "Free shipping",
+    "freeOver": "Free over",
+    "standardCost": "Standard cost",
+    "deliveryTime": "Delivery time",
+    "international": "International",
+    "returnsRefunds": "Returns & Refunds",
+    "returnWindow": "Return window",
+    "refund": "Refund",
+    "exchange": "Exchange",
+    "returnShipping": "Return shipping",
+    "paymentMethods": "Payment Methods",
+    "aboutStore": "About {store}",
+    "howToUseCoupon": "How to Use a {store} Coupon",
+    "buyingAdvice": "Buying Advice",
+    "faq": "Frequently Asked Questions",
+    "shouldYouBuy": "Should You Buy From {store}?",
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
+    }
   },
   "sidebar": {
     "dealsDetails": "Deals Details",
@@ -127,7 +177,27 @@
     "faqs": "FAQs",
     "noFaqs": "No FAQs available.",
     "reviews": "Reviews",
-    "noReviews": "No reviews yet."
+    "noReviews": "No reviews yet.",
+    "storeTrustInfo": "Store Trust & Info",
+    "typicalDiscount": "Typical discount",
+    "cashbackRate": "Cashback rate",
+    "cashback": "Cashback",
+    "infoConfidence": "Info confidence"
+  },
+  "faqWidget": {
+    "title": "Frequently Asked Questions about {store} Coupons",
+    "subtitle": "Everything you need to know about redeeming codes and saving money at {store}."
+  },
+  "reviewsWidget": {
+    "title": "{store} Community Reviews & Ratings",
+    "subtitle": "Real savings feedback from shoppers using our {store} promo codes.",
+    "basedOnRatings": "Based on {count} ratings",
+    "verifiedSavingsUser": "Verified Savings User"
+  },
+  "priceComparisonWidget": {
+    "title": "Real-Time Price Comparison",
+    "subtitle": "Compare prices for top products across {store} and competing retailers.",
+    "updatedHourly": "Updated Hourly"
   },
   "cards": {
     "showCouponCode": "Show Coupon Code",
