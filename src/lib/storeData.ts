@@ -275,7 +275,7 @@ function dealFromDeal(
  * Load a store's public data from MongoDB. Returns `null` when the slug does
  * not resolve to a known advertiser (caller should render `notFound()`).
  */
-export async function loadStoreData(
+async function loadStoreDataUncached(
   slug: string,
   country?: string,
 ): Promise<StoreData | null> {
@@ -475,6 +475,15 @@ export async function loadStoreData(
     maxDiscount: seoContent.maxDiscount,
   };
 }
+
+/**
+ * Load a store's public data, deduplicated per server request via React.cache.
+ * The store page renders `generateMetadata` and the page body in the same
+ * request, both needing the store — this ensures the DB work runs once, not
+ * twice. `cache` keys on the arguments, so distinct (slug, country) pairs are
+ * fetched independently.
+ */
+export const loadStoreData = cache(loadStoreDataUncached);
 
 /**
  * Load (and, on first visit, generate) the AI store-page content for a merchant.

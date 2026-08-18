@@ -207,7 +207,7 @@ export default function AdvertiserCard({
           {advertiser.dealCount !== undefined && advertiser.dealCount > 0 && (
             <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-white text-gray-600 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm border border-gray-100 flex items-center gap-1 whitespace-nowrap group-hover:border-accent group-hover:text-accent transition-colors z-10">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400"></span>
-              {advertiser.dealCount} active {advertiser.dealCount === 1 ? "offer" : "offers"}
+              {advertiser.dealCount} total {advertiser.dealCount === 1 ? "offer" : "offers"}
             </div>
           )}
         </div>
