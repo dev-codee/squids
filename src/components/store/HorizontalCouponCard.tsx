@@ -57,7 +57,11 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
             {coupon.discount || dict.common.deal}
           </span>
           <span className="bg-red-100 text-red-600 text-[10px] font-bold uppercase px-2 py-0.5 rounded shadow-sm tracking-wider">
-            {coupon.type === "code" ? dict.common.code : coupon.type}
+            {coupon.code
+              ? coupon.type === "code"
+                ? dict.common.code
+                : coupon.type
+              : dict.common.deal}
           </span>
         </div>
 
@@ -129,6 +133,16 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
               <span>{dict.cards.active}</span>
             )}
           </div>
+          {coupon.updatedAt && (
+            <div className="mt-0.5 text-[10px] text-gray-400 text-center">
+              {dict.cards.updated}:{" "}
+              {new Date(coupon.updatedAt).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "numeric",
+                year: "2-digit",
+              })}
+            </div>
+          )}
         </div>
       </div>
 

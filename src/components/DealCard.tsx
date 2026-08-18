@@ -117,6 +117,7 @@ function CopyCodeButton({ code }: { code: string }) {
 
 const TYPE_STYLES: Record<string, string> = {
   voucher: "bg-purple-50 text-purple-700 ring-purple-600/20",
+  deal: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   promotion: "bg-blue-50 text-blue-700 ring-blue-600/20",
 };
 

@@ -63,7 +63,13 @@ export interface Deal {
   title: string;
   description: string | null;
   advertiser: DealAdvertiser;
-  type: "voucher" | "promotion";
+  /**
+   * Offer kind:
+   *  - "voucher"   → Coupon with a code (Coupons section)
+   *  - "deal"      → Coupon-style offer WITHOUT a code (Deals section)
+   *  - "promotion" → Product promotion with image/price (Promotions section)
+   */
+  type: "voucher" | "deal" | "promotion";
   code: string | null;
   startDate: string | null;
   endDate: string | null;
@@ -128,6 +134,14 @@ export interface Deal {
   aiGeneratedAtByLang?: Record<string, string> | null;
   /** QC issues keyed by locale. */
   aiIssuesByLang?: Record<string, string[]> | null;
+
+  /**
+   * Last-edited timestamp. Set on create and on every admin edit (network sync
+   * uses `$setOnInsert`, so syncing never bumps it). Used to sort offers on the
+   * store page "newest edited first". May arrive as a Date (server) or an ISO
+   * string (after cache serialization).
+   */
+  syncedAt?: string | Date | null;
 }
 
 /**

@@ -131,6 +131,7 @@ export default async function CategoryDetailPage({
                 description: deal.description || "",
                 verified: deal.status === "active",
                 expiryDate: deal.endDate,
+                updatedAt: deal.syncedAt ? new Date(deal.syncedAt).toISOString() : null,
                 isExclusive: deal.isExclusive,
                 cashbackRate: deal.cashbackRate || undefined,
                 studentVerificationReq: deal.studentVerificationReq || undefined,

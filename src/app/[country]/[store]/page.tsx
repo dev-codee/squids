@@ -27,7 +27,11 @@ export async function generateMetadata({
   const siteUrl = getSiteUrl();
   const canonicalUrl = `${siteUrl}/${params.country.toLowerCase()}/${store.slug}`;
 
-  const localizedSeo = generateStoreSeoContent(store.name, (store.deals as any) || [], locale);
+  const localizedSeo = generateStoreSeoContent(
+    store.name,
+    [...store.coupons, ...store.deals, ...store.promotions] as any,
+    locale,
+  );
 
   let title = localizedSeo.seoTitle;
   let description = localizedSeo.seoDescription;
@@ -110,7 +114,11 @@ export default async function StoreMainPage({
   const currentYear = new Date().getFullYear();
   const dict = await getDictionary(params.country);
 
-  const localizedSeo = generateStoreSeoContent(store.name, (store.deals as any) || [], locale);
+  const localizedSeo = generateStoreSeoContent(
+    store.name,
+    [...store.coupons, ...store.deals, ...store.promotions] as any,
+    locale,
+  );
   let pageTitle = localizedSeo.seoTitle;
   let pageDesc = localizedSeo.seoDescription;
 
@@ -178,7 +186,7 @@ export default async function StoreMainPage({
               )}
             </div>
 
-            {/* Coupons Section */}
+            {/* Coupons Section — vouchers with a code */}
             {store.coupons.length > 0 && (
               <section>
                 <h2 className="text-lg font-medium text-gray-700 mb-4">
@@ -194,22 +202,36 @@ export default async function StoreMainPage({
               </section>
             )}
 
-            {/* Deals Section */}
-            {store.deals && store.deals.length > 0 && (
+            {/* Deals Section — coupon-style offers without a code */}
+            {store.deals.length > 0 && (
               <section className="mt-8">
                 <h2 className="text-lg font-medium text-gray-700 mb-4">
-                  {dict.store.topDealsTitle.replace("{store}", store.name)}
+                  {dict.store.dealsTitle.replace("{store}", store.name)}
+                </h2>
+                <div className="flex flex-col gap-4">
+                  {store.deals.map((deal) => (
+                    <HorizontalCouponCard key={deal.id} coupon={deal} storeName={store.name} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Promotions Section — product promotions with image/price */}
+            {store.promotions.length > 0 && (
+              <section className="mt-8">
+                <h2 className="text-lg font-medium text-gray-700 mb-4">
+                  {dict.store.promotionsTitle.replace("{store}", store.name)}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {store.deals.map((deal) => (
-                    <LightningDealCard key={deal.id} deal={deal} />
+                  {store.promotions.map((promotion) => (
+                    <LightningDealCard key={promotion.id} deal={promotion} />
                   ))}
                 </div>
               </section>
             )}
 
             {/* Empty state — advertiser exists but has no published offers yet */}
-            {store.coupons.length === 0 && store.deals.length === 0 && (
+            {store.coupons.length === 0 && store.deals.length === 0 && store.promotions.length === 0 && (
               <div className="rounded border border-dashed border-gray-300 bg-white p-12 text-center">
                 <p className="text-sm font-semibold text-gray-700">
                   {dict.store.noOffersYet.replace("{store}", store.name)}

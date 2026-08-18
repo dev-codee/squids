@@ -137,7 +137,8 @@ export async function POST(request: NextRequest) {
         name: String(body.advertiser.name).trim(),
         logoUrl: body.advertiser.logoUrl ? String(body.advertiser.logoUrl).trim() : null,
       },
-      type: body.type === "voucher" ? "voucher" : "promotion",
+      type:
+        body.type === "voucher" ? "voucher" : body.type === "deal" ? "deal" : "promotion",
       code: body.code ? String(body.code).trim() : null,
       startDate: body.startDate ? String(body.startDate).trim() : null,
       endDate: body.endDate ? String(body.endDate).trim() : null,
@@ -189,7 +190,9 @@ export async function PUT(request: NextRequest) {
 
     if (body.title !== undefined) updateData.title = String(body.title).trim();
     if (body.description !== undefined) updateData.description = body.description ? String(body.description).trim() : null;
-    if (body.type !== undefined) updateData.type = body.type === "voucher" ? "voucher" : "promotion";
+    if (body.type !== undefined)
+      updateData.type =
+        body.type === "voucher" ? "voucher" : body.type === "deal" ? "deal" : "promotion";
     if (body.code !== undefined) updateData.code = body.code ? String(body.code).trim() : null;
     if (body.startDate !== undefined) updateData.startDate = body.startDate ? String(body.startDate).trim() : null;
     if (body.endDate !== undefined) updateData.endDate = body.endDate ? String(body.endDate).trim() : null;

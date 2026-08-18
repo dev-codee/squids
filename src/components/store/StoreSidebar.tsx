@@ -107,7 +107,21 @@ export default function StoreSidebar({ store, aiContent }: StoreSidebarProps) {
         <div className="space-y-3 text-sm">
           <div className="flex justify-between border-b border-gray-100 pb-2">
             <span className="text-gray-600">{dict.sidebar.promoCodes}</span>
-            <span className="font-semibold">{store.activeCouponsCount}</span>
+            <span className="font-semibold">{store.coupons.length}</span>
+          </div>
+          <div className="flex justify-between border-b border-gray-100 pb-2">
+            <span className="text-gray-600">{dict.sidebar.deals}</span>
+            <span className="font-semibold">{store.deals.length}</span>
+          </div>
+          <div className="flex justify-between border-b border-gray-100 pb-2">
+            <span className="text-gray-600">{dict.sidebar.promotions}</span>
+            <span className="font-semibold">{store.promotions.length}</span>
+          </div>
+          <div className="flex justify-between border-b border-gray-100 pb-2">
+            <span className="font-semibold text-gray-800">{dict.sidebar.totalOffers}</span>
+            <span className="font-bold text-gray-900">
+              {store.coupons.length + store.deals.length + store.promotions.length}
+            </span>
           </div>
           {store.avgSavings && (
             <div className="flex justify-between border-b border-gray-100 pb-2">

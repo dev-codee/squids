@@ -41,6 +41,8 @@ export interface CouponItem {
   description: string;
   verified: boolean;
   expiryDate: string | null;
+  /** Last-edited timestamp (ISO), shown as "Updated" on the card. */
+  updatedAt: string | null;
   isExclusive?: boolean;
   cashbackRate?: string;
   studentVerificationReq?: string;
@@ -57,6 +59,8 @@ export interface DealItem {
   type: "todays" | "lightning" | "limited" | "trending";
   imageUrl?: string;
   expiryDate: string | null;
+  /** Last-edited timestamp (ISO), shown as "Updated" on the card. */
+  updatedAt: string | null;
   badge?: string;
   isExclusive?: boolean;
   stockPercentage?: number;
@@ -130,8 +134,12 @@ export interface StoreData {
   description: string;
   websiteUrl: string;
   categories: string[];
+  /** Coupons — voucher offers with a code. */
   coupons: CouponItem[];
-  deals: DealItem[];
+  /** Deals — coupon-style offers without a code. */
+  deals: CouponItem[];
+  /** Promotions — product promotions with image/price. */
+  promotions: DealItem[];
   products: ProductFeedItem[];
   priceComparisons: PriceComparisonItem[];
   faqs: FAQItem[];
@@ -173,6 +181,13 @@ function formatPrice(
   return formatMoney(converted, region);
 }
 
+/** Normalize a last-edited stamp (Date or ISO string) to an ISO string, or null. */
+function toIsoDate(value: string | Date | null | undefined): string | null {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 /** Seconds remaining until an ISO end date, or undefined if past/absent. */
 function secondsUntil(endDate: string | null | undefined): number | undefined {
   if (!endDate) return undefined;
@@ -203,6 +218,7 @@ function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): Coupo
     description: dealDisplayDescription(deal, locale),
     verified: deal.status === "active",
     expiryDate: deal.endDate,
+    updatedAt: toIsoDate(deal.syncedAt),
     isExclusive: deal.isExclusive,
     cashbackRate: deal.cashbackRate || undefined,
     studentVerificationReq: deal.studentVerificationReq || undefined,
@@ -242,6 +258,7 @@ function dealFromDeal(
     type: placement,
     imageUrl: deal.imageUrl || undefined,
     expiryDate: deal.endDate,
+    updatedAt: toIsoDate(deal.syncedAt),
     badge,
     isExclusive: Boolean(deal.isExclusive),
     stockPercentage: deal.stockPercentage ?? undefined,
@@ -331,19 +348,36 @@ export async function loadStoreData(
     }),
   );
 
-  // Exclusive offers float to the top; Array.sort is stable so everything else
-  // keeps its original order.
-  const exclusiveFirst = (a: Deal, b: Deal) =>
-    Number(Boolean(b.isExclusive)) - Number(Boolean(a.isExclusive));
+  // Ordering within every section: exclusive offers pinned to the very top,
+  // then the most recently edited first. `syncedAt` is the last-edited stamp
+  // (bumped on create/admin-edit, untouched by network sync). Array.sort is
+  // stable, so items with equal keys keep their prior order.
+  const editedTime = (d: Deal) => {
+    const t = d.syncedAt ? new Date(d.syncedAt).getTime() : 0;
+    return Number.isFinite(t) ? t : 0;
+  };
+  const byExclusiveThenRecent = (a: Deal, b: Deal) => {
+    const ex = Number(Boolean(b.isExclusive)) - Number(Boolean(a.isExclusive));
+    if (ex !== 0) return ex;
+    return editedTime(b) - editedTime(a);
+  };
 
+  // Coupons: vouchers (have a code).
   const coupons = allDeals
     .filter((d) => d.type === "voucher")
-    .sort(exclusiveFirst)
+    .sort(byExclusiveThenRecent)
     .map((d) => couponFromDeal(d, websiteUrl, locale));
 
+  // Deals: coupon-style offers without a code — same card, no "show code" button.
   const deals = allDeals
+    .filter((d) => d.type === "deal")
+    .sort(byExclusiveThenRecent)
+    .map((d) => couponFromDeal(d, websiteUrl, locale));
+
+  // Promotions: product promotions with image/price (rendered as deal boxes).
+  const promotions = allDeals
     .filter((d) => d.type === "promotion")
-    .sort(exclusiveFirst)
+    .sort(byExclusiveThenRecent)
     .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode, region, rates, locale));
 
   const productsResult = await safeQuery(
@@ -418,13 +452,15 @@ export async function loadStoreData(
     rating: finalRating,
     totalReviews: reviews.length,
     activeCouponsCount: coupons.length,
-    activeDealsCount: deals.length,
+    // The "Deals & Promotions" header tab links to /deals, which lists promotions.
+    activeDealsCount: promotions.length,
     avgSavings: storeMeta.avgSavings,
     description: storeMeta.description,
     websiteUrl,
     categories: storeMeta.categories,
     coupons,
     deals,
+    promotions,
     products,
     // Sourceless sections — filled in later phases (see STORE_PAGES_PLAN.md).
     priceComparisons: [],

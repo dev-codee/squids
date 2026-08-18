@@ -39,7 +39,7 @@ export default function DealModal({
     advertiserId: "",
     advertiserName: "",
     advertiserLogoUrl: "",
-    type: "voucher" as "voucher" | "promotion",
+    type: "voucher" as "voucher" | "deal" | "promotion",
     code: "",
     startDate: "",
     endDate: "",
@@ -201,6 +201,7 @@ export default function DealModal({
       const method = isEditing ? "PUT" : "POST";
 
       const isVoucher = formData.type === "voucher";
+      const isPromotion = formData.type === "promotion";
 
       const payload = {
         ...(isEditing && formData.id ? { id: Number(formData.id) } : {}),
@@ -213,7 +214,8 @@ export default function DealModal({
           logoUrl: formData.advertiserLogoUrl || null,
         },
         type: formData.type,
-        code: formData.code || null,
+        // Only vouchers carry a code; deals and promotions never do.
+        code: isVoucher ? formData.code || null : null,
         startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         status: formData.status,
@@ -235,12 +237,12 @@ export default function DealModal({
         cashbackRate: isVoucher ? formData.cashbackRate || null : null,
         studentVerificationReq: isVoucher ? formData.studentVerificationReq || null : null,
 
-        // Promotion/deal-only
-        placement: !isVoucher ? formData.placement : null,
-        imageUrl: !isVoucher ? formData.imageUrl || null : null,
-        originalPrice: !isVoucher ? formData.originalPrice || null : null,
-        salePrice: !isVoucher ? formData.salePrice || null : null,
-        stockPercentage: !isVoucher ? formData.stockPercentage || null : null,
+        // Promotion-only (product promotions with image/price)
+        placement: isPromotion ? formData.placement : null,
+        imageUrl: isPromotion ? formData.imageUrl || null : null,
+        originalPrice: isPromotion ? formData.originalPrice || null : null,
+        salePrice: isPromotion ? formData.salePrice || null : null,
+        stockPercentage: isPromotion ? formData.stockPercentage || null : null,
       };
 
       const res = await fetch(url, {
@@ -309,10 +311,11 @@ export default function DealModal({
               <label className="block text-xs font-medium text-gray-700">Deal Type *</label>
               <select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as "voucher" | "promotion" })}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as "voucher" | "deal" | "promotion" })}
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
               >
                 <option value="voucher">Voucher / Coupon Code</option>
+                <option value="deal">Deal (No Code)</option>
                 <option value="promotion">General Promotion</option>
               </select>
             </div>
@@ -381,17 +384,19 @@ export default function DealModal({
               />
             </div>
 
-            {/* Voucher Code */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Voucher / Coupon Code</label>
-              <input
-                type="text"
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                placeholder="e.g. SAVE20"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent uppercase font-mono"
-              />
-            </div>
+            {/* Voucher Code — only vouchers have a code. Deals & promotions don't. */}
+            {formData.type === "voucher" && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700">Voucher / Coupon Code</label>
+                <input
+                  type="text"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                  placeholder="e.g. SAVE20"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent uppercase font-mono"
+                />
+              </div>
+            )}
 
             {/* Status */}
             <div>
@@ -601,7 +606,7 @@ export default function DealModal({
                   />
                 </div>
               </>
-            ) : (
+            ) : formData.type === "promotion" ? (
               <>
                 {/* Deal placement */}
                 <div>
@@ -672,7 +677,7 @@ export default function DealModal({
                   />
                 </div>
               </>
-            )}
+            ) : null}
           </div>
 
           {/* Footer Actions */}

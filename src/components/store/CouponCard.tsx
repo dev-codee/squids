@@ -127,6 +127,19 @@ export default function CouponCard({ coupon, storeName }: CouponCardProps) {
                 })}
               </span>
             )}
+            {coupon.updatedAt && (
+              <>
+                {(coupon.verified || coupon.expiryDate) && <span className="mx-1.5">•</span>}
+                <span>
+                  {dict.cards.updated}{" "}
+                  {new Date(coupon.updatedAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </>
+            )}
           </div>
 
           {coupon.code ? (

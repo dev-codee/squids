@@ -121,6 +121,17 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
         )}
       </div>
 
+      {deal.updatedAt && (
+        <p className="mt-3 text-[10px] text-gray-400">
+          {dict.cards.updated}:{" "}
+          {new Date(deal.updatedAt).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "numeric",
+            year: "2-digit",
+          })}
+        </p>
+      )}
+
       {/* Buy/Get Deal Button */}
       <a
         href={deal.affiliateUrl}

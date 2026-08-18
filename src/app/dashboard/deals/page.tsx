@@ -171,6 +171,7 @@ export default function AdminDealsPage() {
             >
               <option value="all">All Deal Types</option>
               <option value="voucher">Vouchers / Coupons Only</option>
+              <option value="deal">Deals Only (No Code)</option>
               <option value="promotion">Promotions Only</option>
             </select>
           </div>

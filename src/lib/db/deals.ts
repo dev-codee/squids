@@ -182,7 +182,8 @@ async function getDealsFromDbUncached(
   const skip = (page - 1) * pageSize;
 
   const docs = await col
-    .find(filter, { projection: { _id: 0, syncedAt: 0 } })
+    // Keep `syncedAt` (last-edited timestamp) so callers can sort by recency.
+    .find(filter, { projection: { _id: 0 } })
     .sort({ "advertiser.name": 1, title: 1 })
     .skip(skip)
     .limit(pageSize)

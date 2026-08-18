@@ -2,7 +2,7 @@
 
 export interface DealsFilters {
   search: string;
-  type: string;   // "all" | "voucher" | "promotion"
+  type: string;   // "all" | "voucher" | "deal" | "promotion"
   status: string;  // "all" | "active" | "expiringSoon"
 }
 
@@ -51,6 +51,7 @@ export default function DealsFilterBar({
       >
         <option value="all">All types</option>
         <option value="voucher">Vouchers</option>
+        <option value="deal">Deals</option>
         <option value="promotion">Promotions</option>
       </select>
 

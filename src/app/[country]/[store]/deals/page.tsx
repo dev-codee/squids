@@ -24,10 +24,10 @@ export default async function StoreDealsPage({
     redirect(`/${params.country}/${store.slug}/deals`);
   }
 
-  const todaysDeals = store.deals.filter((d) => d.type === "todays");
-  const lightningDeals = store.deals.filter((d) => d.type === "lightning");
-  const limitedOffers = store.deals.filter((d) => d.type === "limited");
-  const trendingDiscounts = store.deals.filter((d) => d.type === "trending");
+  const todaysDeals = store.promotions.filter((d) => d.type === "todays");
+  const lightningDeals = store.promotions.filter((d) => d.type === "lightning");
+  const limitedOffers = store.promotions.filter((d) => d.type === "limited");
+  const trendingDiscounts = store.promotions.filter((d) => d.type === "trending");
 
   const section = (
     title: string,
@@ -58,7 +58,7 @@ export default async function StoreDealsPage({
       </section>
     );
 
-  const hasAny = store.deals.length > 0;
+  const hasAny = store.promotions.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50/60 pb-16">

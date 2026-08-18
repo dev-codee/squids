@@ -7,6 +7,15 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { countryFlag, countryName } from "@/lib/countries";
 import { REGION_CODES, REGION_COOKIE, REGION_COOKIE_MAX_AGE } from "@/lib/regions";
 import { useDictionary } from "@/i18n/DictionaryProvider";
+import type { Advertiser } from "@/lib/awin";
+
+/** Build the public store-page slug from an advertiser name (matches AdvertiserCard). */
+function storeSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
 
 export default function PublicHeader({ country = "" }: { country?: string }) {
   const dict = useDictionary();
@@ -24,11 +33,67 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
   // so live-filtering only fires in response to real input.
   const userTypedRef = useRef(false);
 
+  // Live autocomplete: matching advertisers shown in a dropdown as you type.
+  const [suggestions, setSuggestions] = useState<Advertiser[]>([]);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const suggestDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
   const urlSearch = searchParams.get("search") || "";
 
   useEffect(() => {
     setSearchQuery(urlSearch);
   }, [urlSearch]);
+
+  // Fetch advertiser suggestions as the user types (debounced).
+  useEffect(() => {
+    if (!userTypedRef.current) return;
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      setSuggestOpen(false);
+      setSuggestLoading(false);
+      return;
+    }
+    if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current);
+    setSuggestLoading(true);
+    setSuggestOpen(true);
+    suggestDebounceRef.current = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({
+          search: q,
+          country: cc,
+          relationship: "joined",
+          requireDeals: "true",
+          pageSize: "8",
+          page: "1",
+        });
+        const res = await fetch(`/api/advertisers?${params.toString()}`);
+        const json = await res.json();
+        setSuggestions(Array.isArray(json?.advertisers) ? json.advertisers : []);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSuggestLoading(false);
+      }
+    }, 250);
+    return () => {
+      if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current);
+    };
+  }, [searchQuery, cc]);
+
+  // Close the suggestions dropdown when clicking outside the search box.
+  useEffect(() => {
+    if (!suggestOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSuggestOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [suggestOpen]);
 
   // Live-filter as the user types: debounce, then push the search term into the
   // URL. The home advertiser grid reacts to `?search=` and re-filters — no Enter
@@ -61,8 +126,16 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    setSuggestOpen(false);
     const q = searchQuery.trim();
     router.push(q ? `/${lc}?search=${encodeURIComponent(q)}` : `/${lc}`);
+  };
+
+  const selectSuggestion = (advertiser: Advertiser) => {
+    setSuggestOpen(false);
+    userTypedRef.current = false;
+    setSearchQuery(advertiser.name);
+    router.push(`/${lc}/${storeSlug(advertiser.name)}`);
   };
 
   const selectCountry = (code: string) => {
@@ -99,28 +172,83 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
 
         {/* Centered Header Search Bar Pill */}
         <div className="flex flex-1 justify-center px-2 min-w-0">
-          <form onSubmit={handleSearchSubmit} className="relative w-full max-w-md">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                userTypedRef.current = true;
-                setSearchQuery(e.target.value);
-              }}
-              placeholder={dict.header.searchPlaceholder}
-              className="w-full rounded-full border border-gray-300 bg-white py-3 pl-5 pr-11 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
-            />
-            <button
-              type="submit"
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition-colors"
-              aria-label="Search"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-            </button>
-          </form>
+          <div ref={searchRef} className="relative w-full max-w-md">
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  userTypedRef.current = true;
+                  setSearchQuery(e.target.value);
+                }}
+                onFocus={() => {
+                  if (suggestions.length > 0) setSuggestOpen(true);
+                }}
+                autoComplete="off"
+                placeholder={dict.header.searchPlaceholder}
+                className="w-full rounded-full border border-gray-300 bg-white py-3 pl-5 pr-11 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+              />
+              <button
+                type="submit"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition-colors"
+                aria-label="Search"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+              </button>
+            </form>
+
+            {/* Live advertiser suggestions dropdown */}
+            {suggestOpen && searchQuery.trim().length >= 2 && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+                {suggestLoading && suggestions.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-gray-400">Searching…</div>
+                ) : suggestions.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-gray-400">No stores found.</div>
+                ) : (
+                  <ul className="max-h-80 overflow-y-auto py-1">
+                    {suggestions.map((a) => (
+                      <li key={a.id}>
+                        <button
+                          type="button"
+                          onClick={() => selectSuggestion(a)}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-amber-50"
+                        >
+                          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                            {a.logoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={a.logoUrl}
+                                alt={`${a.name} logo`}
+                                className="h-full w-full object-contain"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span className="text-sm font-semibold text-gray-400">
+                                {a.name.charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium text-gray-800">
+                              {a.name}
+                            </span>
+                            {a.dealCount !== undefined && a.dealCount > 0 && (
+                              <span className="text-xs text-gray-400">
+                                {a.dealCount} {a.dealCount === 1 ? "offer" : "offers"}
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right side: Country dropdown & Sign in */}
