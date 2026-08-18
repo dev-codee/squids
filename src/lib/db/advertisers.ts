@@ -346,6 +346,27 @@ async function getAdvertiserByIdFromDbUncached(
   return normalizeAdvertiserDoc(doc);
 }
 
+/**
+ * Fetch a single advertiser by id WITHOUT public normalization — the raw stored
+ * `name` (with any region/WW suffix) and raw `url` are returned untouched.
+ *
+ * The admin edit UI must load this, not the public/normalized reader: cleaning
+ * the name or rewriting the URL for display and then saving it back would
+ * permanently destroy the original values. Not cached — admin routes are
+ * force-dynamic and must always see the latest write.
+ */
+export async function getRawAdvertiserById(
+  id: number,
+  network?: string,
+): Promise<Advertiser | null> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+  const filter: Record<string, unknown> = { id };
+  if (network) filter.network = network;
+  const doc = await col.findOne(filter, { projection: { _id: 0, syncedAt: 0 } });
+  return (doc as unknown as Advertiser) || null;
+}
+
 // ---------------------------------------------------------------------------
 // AI-generated store page content (Claude)
 // ---------------------------------------------------------------------------

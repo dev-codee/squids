@@ -4,6 +4,7 @@ import {
   updateAdvertiser,
   deleteAdvertiser,
   getNextAdvertiserId,
+  getRawAdvertiserById,
 } from "@/lib/db/advertisers";
 import type { Advertiser } from "@/lib/awin";
 import { revalidatePublic, CACHE_TAGS } from "@/lib/cache";
@@ -14,6 +15,43 @@ export const dynamic = "force-dynamic";
 /** Advertiser changes affect store listings, store pages, and category counts. */
 function invalidateAdvertiserCaches() {
   revalidatePublic(CACHE_TAGS.advertisers, CACHE_TAGS.categories);
+}
+
+/**
+ * GET /api/admin/advertisers?id=123[&network=awin]
+ * Fetch a single advertiser's RAW stored record (unmodified name + URL) for the
+ * admin edit form. Distinct from the public `/api/advertisers`, which cleans the
+ * name and rewrites the URL for display.
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const idRaw = request.nextUrl.searchParams.get("id");
+    if (!idRaw || isNaN(Number(idRaw))) {
+      return NextResponse.json(
+        { error: "Valid advertiser ID query parameter is required." },
+        { status: 400 },
+      );
+    }
+
+    const id = Number(idRaw);
+    const network = request.nextUrl.searchParams.get("network")?.trim() || undefined;
+    const advertiser = await getRawAdvertiserById(id, network);
+
+    if (!advertiser) {
+      return NextResponse.json(
+        { error: `Advertiser with ID ${id} not found.` },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({ advertiser });
+  } catch (error) {
+    console.error("Error fetching advertiser:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to fetch advertiser." },
+      { status: 500 },
+    );
+  }
 }
 
 /**

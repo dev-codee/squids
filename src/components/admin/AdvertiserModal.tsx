@@ -10,6 +10,59 @@ interface AdvertiserModalProps {
   advertiser: Advertiser | null; // null for Create, Advertiser for Edit
 }
 
+const EMPTY_FORM = {
+  id: "",
+  network: "awin",
+  name: "",
+  logoUrl: "",
+  status: "active",
+  relationship: "joined",
+  region: "",
+  countryCode: "",
+  currencyCode: "",
+  commission: "",
+  url: "",
+  description: "",
+  bannerUrl: "",
+  categories: "",
+  avgSavings: "",
+  rating: "",
+  isFlagship: false,
+  isPPC: false,
+  countryCodes: "",
+  seoTitle: "",
+  seoDescription: "",
+  maxDiscount: "",
+};
+
+/** Map a stored advertiser record into the flat form state. */
+function advertiserToForm(a: Advertiser): typeof EMPTY_FORM {
+  return {
+    id: String(a.id),
+    network: a.network || "awin",
+    name: a.name || "",
+    logoUrl: a.logoUrl || "",
+    status: a.status || "active",
+    relationship: a.relationship || "joined",
+    region: a.region || "",
+    countryCode: a.countryCode || "",
+    currencyCode: a.currencyCode || "",
+    commission: a.commission || "",
+    url: a.url || "",
+    description: a.description || "",
+    bannerUrl: a.bannerUrl || "",
+    categories: a.categories?.join(", ") || "",
+    avgSavings: a.avgSavings || "",
+    rating: a.rating !== undefined ? String(a.rating) : "",
+    isFlagship: a.isFlagship || false,
+    isPPC: a.isPPC || false,
+    countryCodes: a.countryCodes?.join(", ") || "",
+    seoTitle: a.seoTitle || "",
+    seoDescription: a.seoDescription || "",
+    maxDiscount: a.maxDiscount || "",
+  };
+}
+
 export default function AdvertiserModal({
   isOpen,
   onClose,
@@ -18,30 +71,7 @@ export default function AdvertiserModal({
 }: AdvertiserModalProps) {
   const isEditing = Boolean(advertiser);
 
-  const [formData, setFormData] = useState({
-    id: "",
-    network: "awin",
-    name: "",
-    logoUrl: "",
-    status: "active",
-    relationship: "joined",
-    region: "",
-    countryCode: "",
-    currencyCode: "",
-    commission: "",
-    url: "",
-    description: "",
-    bannerUrl: "",
-    categories: "",
-    avgSavings: "",
-    rating: "",
-    isFlagship: false,
-    isPPC: false,
-    countryCodes: "",
-    seoTitle: "",
-    seoDescription: "",
-    maxDiscount: "",
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,60 +120,35 @@ export default function AdvertiserModal({
 
   useEffect(() => {
     if (advertiser) {
-      setFormData({
-        id: String(advertiser.id),
-        network: advertiser.network || "awin",
-        name: advertiser.name || "",
-        logoUrl: advertiser.logoUrl || "",
+      // Seed instantly from the (possibly cleaned/normalized) list record so the
+      // form isn't empty, then overwrite with the RAW stored record so the admin
+      // edits the true name/URL rather than the public-display version.
+      setFormData(advertiserToForm(advertiser));
 
-        status: advertiser.status || "active",
-        relationship: advertiser.relationship || "joined",
-        region: advertiser.region || "",
-        countryCode: advertiser.countryCode || "",
-        currencyCode: advertiser.currencyCode || "",
-        commission: advertiser.commission || "",
-        url: advertiser.url || "",
-        description: advertiser.description || "",
-        bannerUrl: advertiser.bannerUrl || "",
-        categories: advertiser.categories?.join(", ") || "",
-        avgSavings: advertiser.avgSavings || "",
-        rating: advertiser.rating !== undefined ? String(advertiser.rating) : "",
-        isFlagship: advertiser.isFlagship || false,
-        isPPC: advertiser.isPPC || false,
-        countryCodes: advertiser.countryCodes?.join(", ") || "",
-        seoTitle: advertiser.seoTitle || "",
-        seoDescription: advertiser.seoDescription || "",
-        maxDiscount: advertiser.maxDiscount || "",
-      });
-    } else {
-      setFormData({
-        id: "",
-        network: "awin",
-        name: "",
-        logoUrl: "",
-        status: "active",
-        relationship: "joined",
-        region: "",
-        countryCode: "",
-        currencyCode: "",
-        commission: "",
-        url: "",
-        description: "",
-        bannerUrl: "",
-        categories: "",
-        avgSavings: "",
-        rating: "",
-        isFlagship: false,
-        isPPC: false,
-        countryCodes: "",
-        seoTitle: "",
-        seoDescription: "",
-        maxDiscount: "",
-      });
+      let cancelled = false;
+      const params = new URLSearchParams({ id: String(advertiser.id) });
+      if (advertiser.network) params.set("network", advertiser.network);
+      fetch(`/api/admin/advertisers?${params.toString()}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          if (!cancelled && json?.advertiser) {
+            setFormData(advertiserToForm(json.advertiser as Advertiser));
+          }
+        })
+        .catch(() => {});
+
+      setStorePageJson(
+        advertiser.aiStorePage ? JSON.stringify(advertiser.aiStorePage, null, 2) : "",
+      );
+      setAiMsg(null);
+      setError(null);
+      return () => {
+        cancelled = true;
+      };
     }
-    setStorePageJson(
-      advertiser?.aiStorePage ? JSON.stringify(advertiser.aiStorePage, null, 2) : "",
-    );
+
+    setFormData(EMPTY_FORM);
+    setStorePageJson("");
     setAiMsg(null);
     setError(null);
   }, [advertiser, isOpen]);
