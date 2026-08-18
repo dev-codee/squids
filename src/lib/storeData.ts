@@ -183,7 +183,46 @@ function secondsUntil(endDate: string | null | undefined): number | undefined {
 import { localeForCountry } from "@/i18n";
 import { languageNameForLocale } from "@/lib/ai/languageNames";
 
+export function resolveAffiliateLink(
+  network?: string | null,
+  advertiserId?: number | null,
+  url?: string | null,
+): string {
+  if (!url || url === "#") {
+    if (network === "commission-factory" && advertiserId) {
+      const cfId = process.env.CF_AFFILIATE_ID || process.env.NEXT_PUBLIC_CF_AFFILIATE_ID || "89228";
+      return `https://t.cfjump.com/${cfId}/t/${advertiserId}`;
+    }
+    if (network === "awin" && advertiserId) {
+      const awinId = process.env.AWIN_PUBLISHER_ID || "1353171";
+      return `https://www.awin1.com/awclick.php?mid=${advertiserId}&id=${awinId}`;
+    }
+    return "#";
+  }
+
+  if (
+    url.includes("cfjump.com") ||
+    url.includes("awin1.com") ||
+    url.includes("admitad.com") ||
+    url.includes("/g/")
+  ) {
+    return url;
+  }
+
+  if (network === "commission-factory" && advertiserId) {
+    const cfId = process.env.CF_AFFILIATE_ID || process.env.NEXT_PUBLIC_CF_AFFILIATE_ID || "89228";
+    return `https://t.cfjump.com/${cfId}/t/${advertiserId}`;
+  }
+  if (network === "awin" && advertiserId) {
+    const awinId = process.env.AWIN_PUBLISHER_ID || "1353171";
+    return `https://www.awin1.com/awclick.php?mid=${advertiserId}&id=${awinId}`;
+  }
+
+  return url;
+}
+
 function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): CouponItem {
+  const affUrl = resolveAffiliateLink(deal.network, deal.advertiser.id, deal.trackingUrl || fallbackUrl);
   return {
     id: String(deal.id),
     title: dealDisplayTitle(deal, locale),
@@ -196,7 +235,7 @@ function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): Coupo
     isExclusive: deal.isExclusive,
     cashbackRate: deal.cashbackRate || undefined,
     studentVerificationReq: deal.studentVerificationReq || undefined,
-    affiliateUrl: deal.trackingUrl || fallbackUrl,
+    affiliateUrl: affUrl,
   };
 }
 
@@ -213,6 +252,8 @@ function dealFromDeal(
   let badge: string | undefined;
   if (deal.isExclusive) badge = "Exclusive";
   else if (deal.stockPercentage != null) badge = `${deal.stockPercentage}% Claimed`;
+
+  const affUrl = resolveAffiliateLink(deal.network, deal.advertiser.id, deal.trackingUrl || fallbackUrl);
 
   return {
     id: String(deal.id),
@@ -234,7 +275,7 @@ function dealFromDeal(
     isExclusive: Boolean(deal.isExclusive),
     stockPercentage: deal.stockPercentage ?? undefined,
     endsInSeconds: placement === "lightning" ? secondsUntil(deal.endDate) : undefined,
-    affiliateUrl: deal.trackingUrl || fallbackUrl,
+    affiliateUrl: affUrl,
   };
 }
 
@@ -271,7 +312,7 @@ export async function loadStoreData(
   const rates = await getUsdRates();
 
   const canonicalSlug = slugifyAdvertiserName(advertiser.name);
-  const websiteUrl = advertiser.url || "#";
+  const websiteUrl = resolveAffiliateLink(advertiser.network, advertiser.id, advertiser.url);
 
   const storeMeta = {
     slug: canonicalSlug,

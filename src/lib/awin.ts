@@ -147,7 +147,11 @@ export function normaliseProgramme(
     countryCodes: programme.primaryRegion?.countryCode ? [programme.primaryRegion.countryCode] : [],
     currencyCode: programme.currencyCode || null,
     commission: formatCommission(programme),
-    url: programme.clickThroughUrl || programme.displayUrl || null,
+    url:
+      programme.clickThroughUrl ||
+      (process.env.AWIN_PUBLISHER_ID
+        ? `https://www.awin1.com/awclick.php?mid=${programme.id}&id=${process.env.AWIN_PUBLISHER_ID}`
+        : programme.displayUrl || null),
   };
 }
 

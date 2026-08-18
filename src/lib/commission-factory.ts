@@ -72,6 +72,21 @@ export interface CFMerchant {
   Status?: string; // "Active", "Pending", etc.
   CurrencyCode?: string;
   TargetUrl?: string;
+  TrackingUrl?: string;
+}
+
+export const CF_DEFAULT_AFFILIATE_ID = "89228";
+
+export function getCfAffiliateId(): string {
+  return process.env.CF_AFFILIATE_ID || process.env.NEXT_PUBLIC_CF_AFFILIATE_ID || CF_DEFAULT_AFFILIATE_ID;
+}
+
+export function getCfTrackingUrl(merchantId: number, targetUrl?: string): string {
+  const affId = getCfAffiliateId();
+  if (targetUrl && targetUrl.startsWith("http")) {
+    return `https://t.cfjump.com/${affId}/t/${merchantId}?Url=${encodeURIComponent(targetUrl)}`;
+  }
+  return `https://t.cfjump.com/${affId}/t/${merchantId}`;
 }
 
 export function normaliseCfMerchant(m: CFMerchant): Advertiser {
@@ -82,6 +97,7 @@ export function normaliseCfMerchant(m: CFMerchant): Advertiser {
     Declined: "notjoined",
   };
   const relationship = statusMap[m.Status ?? ""] ?? "joined";
+  const trackingUrl = m.TrackingUrl || getCfTrackingUrl(m.Id, m.TargetUrl || m.DisplayUrl);
 
   return {
     id: m.Id,
@@ -94,7 +110,7 @@ export function normaliseCfMerchant(m: CFMerchant): Advertiser {
     countryCode: "AU",
     currencyCode: m.CurrencyCode || "AUD",
     commission: null, // CF base merchant list doesn't readily expose a simplified commission string without the rates endpoint.
-    url: m.TargetUrl || m.DisplayUrl || null,
+    url: trackingUrl,
     description: m.Description || undefined,
     countryCodes: ["AU"],
   };
@@ -123,6 +139,8 @@ export interface CFCoupon {
 }
 
 export function normaliseCfCoupon(c: CFCoupon): Deal {
+  const trackingUrl = c.TrackingUrl || getCfTrackingUrl(c.MerchantId, c.TargetUrl);
+
   return {
     id: c.Id,
     network: "commission-factory",
@@ -138,7 +156,7 @@ export function normaliseCfCoupon(c: CFCoupon): Deal {
     startDate: c.StartDate || null,
     endDate: c.EndDate || null,
     status: "active",
-    trackingUrl: c.TrackingUrl || c.TargetUrl || null,
+    trackingUrl,
     regionCodes: ["AU"], // Defaulting to AU.
     isExclusive: false,
     discountText: null,
