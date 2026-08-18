@@ -20,37 +20,7 @@ interface DealModalProps {
   };
 }
 
-function resolveAffiliateTrackingUrl(
-  network?: string | null,
-  advertiserId?: number | string | null,
-  rawUrl?: string | null,
-): string {
-  const net = (network || "awin").toLowerCase();
-  const advId = Number(advertiserId);
-
-  // If already an affiliate tracking redirect URL, return as-is
-  if (
-    rawUrl &&
-    (rawUrl.includes("cfjump.com") ||
-      rawUrl.includes("awin1.com") ||
-      rawUrl.includes("admitad.com") ||
-      rawUrl.includes("/g/"))
-  ) {
-    return rawUrl;
-  }
-
-  // If network is Commission Factory
-  if (net === "commission-factory" && advId) {
-    return `https://t.cfjump.com/89228/t/${advId}`;
-  }
-
-  // If network is Awin
-  if (net === "awin" && advId) {
-    return `https://www.awin1.com/awclick.php?mid=${advId}&id=1353171`;
-  }
-
-  return rawUrl || "";
-}
+import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 
 export default function DealModal({
   isOpen,

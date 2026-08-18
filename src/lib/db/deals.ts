@@ -13,11 +13,22 @@ import type { AnyBulkWriteOperation } from "mongodb";
 import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
 import { cleanAdvertiserName } from "@/lib/networks";
+import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 import type { Deal, DealQuery, PagedDeals } from "@/lib/deals";
 import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE } from "@/lib/deals";
 import { CACHE_TAGS, PUBLIC_REVALIDATE } from "@/lib/cache";
 
 const COLLECTION = "deals";
+
+export function normalizeDealDoc(doc: any): Deal {
+  if (!doc) return doc;
+  doc.trackingUrl = resolveAffiliateTrackingUrl(
+    doc.network,
+    doc.advertiser?.id,
+    doc.trackingUrl,
+  );
+  return doc as Deal;
+}
 
 // ---------------------------------------------------------------------------
 // Public cached readers — served from Next's Data Cache, revalidated on a short
@@ -178,7 +189,7 @@ async function getDealsFromDbUncached(
     .toArray();
 
   return {
-    deals: docs as unknown as Deal[],
+    deals: docs.map((d) => normalizeDealDoc(d)),
     page,
     pageSize,
     total,
@@ -208,7 +219,7 @@ async function getRecentDealsUncached(
     .limit(Math.max(1, limit))
     .toArray();
 
-  return docs as unknown as Deal[];
+  return docs.map((d) => normalizeDealDoc(d));
 }
 
 /** A popular store derived from deal counts (for the homepage grid). */
@@ -409,7 +420,7 @@ function buildWelcomeDeal(a: WelcomeAdvertiser): Deal {
     startDate: null,
     endDate: null, // open-ended — survives removeExpiredDeals
     status: "active",
-    trackingUrl: a.url ?? null,
+    trackingUrl: resolveAffiliateTrackingUrl(a.network, a.id, a.url),
     regionCodes,
     discountText: WELCOME_DEAL_DEFAULTS.discountText,
     placement: "todays",
@@ -501,9 +512,32 @@ export async function generateWelcomeDeals(): Promise<{
   const welcomeDeals = await dealsCol
     .find(
       { isAutoWelcome: true },
-      { projection: { _id: 0, id: 1, network: 1, advertiser: 1 } },
+      { projection: { _id: 0, id: 1, network: 1, advertiser: 1, trackingUrl: 1 } },
     )
     .toArray();
+
+  // Backfill: re-enforce our affiliate tracking URL (with our publisher ID) on
+  // welcome deals persisted before the shared resolver existed, or whose stored
+  // link carried a foreign/plain URL. Idempotent — only writes when it changes.
+  const backfillOps: AnyBulkWriteOperation<DealDoc>[] = [];
+  for (const d of welcomeDeals) {
+    const fixed = resolveAffiliateTrackingUrl(
+      d.network,
+      d.advertiser?.id,
+      d.trackingUrl,
+    );
+    if (fixed && fixed !== d.trackingUrl) {
+      backfillOps.push({
+        updateOne: {
+          filter: { network: d.network, id: d.id },
+          update: { $set: { trackingUrl: fixed, syncedAt: now } },
+        },
+      });
+    }
+  }
+  if (backfillOps.length > 0) {
+    await dealsCol.bulkWrite(backfillOps, { ordered: false });
+  }
 
   const toRemove = welcomeDeals.filter((d) => {
     const key = `${d.network}:${d.advertiser?.id}`;
@@ -595,7 +629,8 @@ export async function getDealByCompositeId(
     { network, id },
     { projection: { _id: 0, syncedAt: 0 } },
   );
-  return (doc as unknown as Deal) || null;
+  if (!doc) return null;
+  return normalizeDealDoc(doc);
 }
 
 /** Persist AI-generated (and QC-reviewed) copy on a deal for a specific locale. */

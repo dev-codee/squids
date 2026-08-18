@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Advertiser } from "@/lib/awin";
 import { countryName, normalizeCountryCode } from "@/lib/countries";
+import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 
 const RELATIONSHIP_STYLES: Record<string, string> = {
   joined: "bg-green-50 text-green-700 ring-green-600/20",
@@ -138,7 +139,7 @@ export default function AdvertiserCard({
       {/* External store link when not clickable as internal page */}
       {!country && !adminHref && advertiser.url && (
         <a
-          href={advertiser.url}
+          href={resolveAffiliateTrackingUrl(advertiser.network, advertiser.id, advertiser.url)}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover"

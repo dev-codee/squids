@@ -8,6 +8,7 @@ import {
 import type { Deal, CouponSubtype, DealPlacement } from "@/lib/deals";
 import { revalidatePublic, CACHE_TAGS } from "@/lib/cache";
 import { logActivity } from "@/lib/db/activity-logs";
+import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 
 export const dynamic = "force-dynamic";
 
@@ -120,24 +121,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const net = (body.network || "awin").toLowerCase();
-    const advId = Number(body.advertiser.id);
-
-    if (
-      trackingUrl &&
-      !trackingUrl.includes("cfjump.com") &&
-      !trackingUrl.includes("awin1.com") &&
-      !trackingUrl.includes("admitad.com") &&
-      !trackingUrl.includes("/g/")
-    ) {
-      if (net === "commission-factory" && advId) {
-        const cfId = process.env.CF_AFFILIATE_ID || process.env.NEXT_PUBLIC_CF_AFFILIATE_ID || "89228";
-        trackingUrl = `https://t.cfjump.com/${cfId}/t/${advId}`;
-      } else if (net === "awin" && advId) {
-        const awinId = process.env.AWIN_PUBLISHER_ID || "1353171";
-        trackingUrl = `https://www.awin1.com/awclick.php?mid=${advId}&id=${awinId}`;
-      }
-    }
+    trackingUrl = resolveAffiliateTrackingUrl(
+      body.network,
+      body.advertiser?.id,
+      trackingUrl,
+    );
 
     const deal: Deal = {
       id,
@@ -207,25 +195,11 @@ export async function PUT(request: NextRequest) {
     if (body.endDate !== undefined) updateData.endDate = body.endDate ? String(body.endDate).trim() : null;
     if (body.trackingUrl !== undefined) {
       let tUrl = body.trackingUrl ? String(body.trackingUrl).trim() : null;
-      const net = (body.network || "awin").toLowerCase();
-      const advId = Number(body.advertiser?.id);
-
-      if (
-        tUrl &&
-        !tUrl.includes("cfjump.com") &&
-        !tUrl.includes("awin1.com") &&
-        !tUrl.includes("admitad.com") &&
-        !tUrl.includes("/g/")
-      ) {
-        if (net === "commission-factory" && advId) {
-          const cfId = process.env.CF_AFFILIATE_ID || process.env.NEXT_PUBLIC_CF_AFFILIATE_ID || "89228";
-          tUrl = `https://t.cfjump.com/${cfId}/t/${advId}`;
-        } else if (net === "awin" && advId) {
-          const awinId = process.env.AWIN_PUBLISHER_ID || "1353171";
-          tUrl = `https://www.awin1.com/awclick.php?mid=${advId}&id=${awinId}`;
-        }
-      }
-      updateData.trackingUrl = tUrl;
+      updateData.trackingUrl = resolveAffiliateTrackingUrl(
+        body.network,
+        body.advertiser?.id,
+        tUrl,
+      );
     }
     if (body.aiTitle !== undefined) updateData.aiTitle = body.aiTitle ? String(body.aiTitle).trim() : null;
     if (body.aiDescription !== undefined) updateData.aiDescription = body.aiDescription ? String(body.aiDescription).trim() : null;

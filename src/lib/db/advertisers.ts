@@ -13,6 +13,7 @@ import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
 import { normalizeCountryCode, foreignCountrySignals } from "@/lib/countries";
 import { cleanAdvertiserName } from "@/lib/networks";
+import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 import { CACHE_TAGS, PUBLIC_REVALIDATE } from "@/lib/cache";
 import type {
   Advertiser,
@@ -26,6 +27,15 @@ const COLLECTION = "advertisers";
 
 interface AdvertiserDoc extends Advertiser {
   syncedAt: Date;
+}
+
+export function normalizeAdvertiserDoc(doc: any): Advertiser {
+  if (!doc) return doc;
+  if (doc.name) {
+    doc.name = cleanAdvertiserName(doc.name);
+  }
+  doc.url = resolveAffiliateTrackingUrl(doc.network, doc.id, doc.url);
+  return doc as Advertiser;
 }
 
 // ---------------------------------------------------------------------------
@@ -307,15 +317,10 @@ async function getAdvertisersFromDbUncached(
     }
   }
 
-  // Ensure names are clean of WW suffixes
-  for (const doc of docs) {
-    if (doc.name) {
-      doc.name = cleanAdvertiserName(doc.name);
-    }
-  }
+  const normalizedDocs = docs.map((doc) => normalizeAdvertiserDoc(doc));
 
   return {
-    advertisers: docs as unknown as Advertiser[],
+    advertisers: normalizedDocs,
     page,
     pageSize,
     total,
@@ -337,10 +342,8 @@ async function getAdvertiserByIdFromDbUncached(
   const filter: Record<string, unknown> = { id };
   if (network) filter.network = network;
   const doc = await col.findOne(filter, { projection: { _id: 0, syncedAt: 0 } });
-  if (doc && doc.name) {
-    (doc as any).name = cleanAdvertiserName(doc.name);
-  }
-  return (doc as unknown as Advertiser) || null;
+  if (!doc) return null;
+  return normalizeAdvertiserDoc(doc);
 }
 
 // ---------------------------------------------------------------------------
@@ -519,10 +522,7 @@ async function getAdvertiserBySlugUncached(slug: string): Promise<Advertiser | n
   );
 
   const result = (exact ?? candidates[0]) as unknown as Advertiser;
-  if (result && result.name) {
-    result.name = cleanAdvertiserName(result.name);
-  }
-  return result;
+  return normalizeAdvertiserDoc(result);
 }
 
 // ---------------------------------------------------------------------------

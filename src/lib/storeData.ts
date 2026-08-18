@@ -182,43 +182,14 @@ function secondsUntil(endDate: string | null | undefined): number | undefined {
 
 import { localeForCountry } from "@/i18n";
 import { languageNameForLocale } from "@/lib/ai/languageNames";
+import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 
-export function resolveAffiliateLink(
+function resolveAffiliateLink(
   network?: string | null,
-  advertiserId?: number | null,
+  advertiserId?: number | string | null,
   url?: string | null,
 ): string {
-  if (!url || url === "#") {
-    if (network === "commission-factory" && advertiserId) {
-      const cfId = process.env.CF_AFFILIATE_ID || process.env.NEXT_PUBLIC_CF_AFFILIATE_ID || "89228";
-      return `https://t.cfjump.com/${cfId}/t/${advertiserId}`;
-    }
-    if (network === "awin" && advertiserId) {
-      const awinId = process.env.AWIN_PUBLISHER_ID || "1353171";
-      return `https://www.awin1.com/awclick.php?mid=${advertiserId}&id=${awinId}`;
-    }
-    return "#";
-  }
-
-  if (
-    url.includes("cfjump.com") ||
-    url.includes("awin1.com") ||
-    url.includes("admitad.com") ||
-    url.includes("/g/")
-  ) {
-    return url;
-  }
-
-  if (network === "commission-factory" && advertiserId) {
-    const cfId = process.env.CF_AFFILIATE_ID || process.env.NEXT_PUBLIC_CF_AFFILIATE_ID || "89228";
-    return `https://t.cfjump.com/${cfId}/t/${advertiserId}`;
-  }
-  if (network === "awin" && advertiserId) {
-    const awinId = process.env.AWIN_PUBLISHER_ID || "1353171";
-    return `https://www.awin1.com/awclick.php?mid=${advertiserId}&id=${awinId}`;
-  }
-
-  return url;
+  return resolveAffiliateTrackingUrl(network, advertiserId, url);
 }
 
 function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): CouponItem {

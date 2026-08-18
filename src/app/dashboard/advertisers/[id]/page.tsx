@@ -9,6 +9,7 @@ import DealCardSkeleton from "@/components/DealCardSkeleton";
 import Pagination from "@/components/Pagination";
 import AdvertiserModal from "@/components/admin/AdvertiserModal";
 import DealModal from "@/components/admin/DealModal";
+import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 
 const PAGE_SIZE = 24;
 
@@ -219,7 +220,7 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
                   {advertiser.currencyCode && <span>Currency: {advertiser.currencyCode}</span>}
                   {advertiser.url && (
                     <a
-                      href={advertiser.url}
+                      href={resolveAffiliateTrackingUrl(advertiser.network, advertiser.id, advertiser.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium text-accent hover:underline"
