@@ -8,8 +8,8 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: "Foxzil - Promo codes and deals",
-  description: "Browse verified deals, vouchers, and promo codes from top advertisers on Foxzil.",
+  title: "Coupon Codes and Deals",
+  description: "Browse verified deals, vouchers, and coupon codes from top advertisers.",
   icons: {
     icon: "/logo.png",
   },

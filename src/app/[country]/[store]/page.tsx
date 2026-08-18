@@ -11,6 +11,8 @@ import { getDictionary } from "@/i18n";
 import { getSiteUrl } from "@/lib/regions";
 import { localeForCountry } from "@/lib/ai/languageNames";
 
+import { generateStoreSeoContent } from "@/lib/ai/storeSeo";
+
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
@@ -22,13 +24,39 @@ export async function generateMetadata({
   if (!store) return {};
 
   const locale = localeForCountry(params.country);
-  const currentMonth = new Date().toLocaleDateString(locale, { month: "long" });
-  const currentYear = new Date().getFullYear();
   const siteUrl = getSiteUrl();
   const canonicalUrl = `${siteUrl}/${params.country.toLowerCase()}/${store.slug}`;
 
-  const title = store.seoTitle || `${store.name} Promo Codes & Up to ${store.maxDiscount || "50% Off"} (${currentMonth} ${currentYear})`;
-  const description = store.seoDescription || `Save up to ${store.maxDiscount || "50% off"} at ${store.name} with verified promo codes, discount vouchers, and deals for ${currentMonth} ${currentYear}.`;
+  const localizedSeo = generateStoreSeoContent(store.name, (store.deals as any) || [], locale);
+
+  let title = localizedSeo.seoTitle;
+  let description = localizedSeo.seoDescription;
+
+  if (locale === "en" && store.seoTitle) {
+    title = store.seoTitle
+      .replace(/promo\s*codes?/gi, "Coupon Codes")
+      .replace(/promo\s*code/gi, "Coupon Code");
+  }
+  if (locale === "en" && store.seoDescription) {
+    description = store.seoDescription
+      .replace(/promo\s*codes?/gi, "coupon codes")
+      .replace(/promo\s*code/gi, "coupon code");
+  }
+
+  if (title) {
+    title = title
+      .replace(/\s*-\s*Foxzil\b/gi, "")
+      .replace(/\bFoxzil\b\s*-\s*/gi, "")
+      .trim();
+  }
+  if (description) {
+    description = description
+      .replace(/\bon Foxzil\b/gi, "")
+      .replace(/\bby Foxzil Team\b/gi, "")
+      .replace(/\bFoxzil\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
 
   return {
     title,
@@ -40,7 +68,6 @@ export async function generateMetadata({
       title,
       description,
       url: canonicalUrl,
-      siteName: "Foxzil",
       images: store.logoUrl ? [{ url: store.logoUrl, alt: `${store.name} logo` }] : [],
       type: "website",
     },
@@ -83,13 +110,43 @@ export default async function StoreMainPage({
   const currentYear = new Date().getFullYear();
   const dict = await getDictionary(params.country);
 
+  const localizedSeo = generateStoreSeoContent(store.name, (store.deals as any) || [], locale);
+  let pageTitle = localizedSeo.seoTitle;
+  let pageDesc = localizedSeo.seoDescription;
+
+  if (locale === "en" && store.seoTitle) {
+    pageTitle = store.seoTitle
+      .replace(/promo\s*codes?/gi, "Coupon Codes")
+      .replace(/promo\s*code/gi, "Coupon Code");
+  }
+  if (locale === "en" && store.seoDescription) {
+    pageDesc = store.seoDescription
+      .replace(/promo\s*codes?/gi, "coupon codes")
+      .replace(/promo\s*code/gi, "coupon code");
+  }
+
+  if (pageTitle) {
+    pageTitle = pageTitle
+      .replace(/\s*-\s*Foxzil\b/gi, "")
+      .replace(/\bFoxzil\b\s*-\s*/gi, "")
+      .trim();
+  }
+  if (pageDesc) {
+    pageDesc = pageDesc
+      .replace(/\bon Foxzil\b/gi, "")
+      .replace(/\bby Foxzil Team\b/gi, "")
+      .replace(/\bFoxzil\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: store.name,
     url: `${getSiteUrl()}/${params.country.toLowerCase()}/${store.slug}`,
     logo: store.logoUrl || undefined,
-    description: store.seoDescription || `Verified promo codes, discount coupons, and offers for ${store.name}.`,
+    description: pageDesc,
   };
 
   return (
@@ -112,11 +169,11 @@ export default async function StoreMainPage({
             {/* Top Header */}
             <div className="bg-white p-6 rounded border border-gray-200 shadow-sm">
               <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                {store.seoTitle || dict.store.promoCodeTitle.replace("{store}", store.name).replace("{month}", currentMonth).replace("{year}", String(currentYear))}
+                {pageTitle || dict.store.promoCodeTitle.replace("{store}", store.name).replace("{month}", currentMonth).replace("{year}", String(currentYear))}
               </h1>
-              {store.seoDescription && (
+              {pageDesc && (
                 <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                  {store.seoDescription}
+                  {pageDesc}
                 </p>
               )}
             </div>

@@ -413,7 +413,7 @@ export default function DealModal({
 
             {/* Voucher Code */}
             <div>
-              <label className="block text-xs font-medium text-gray-700">Voucher / Promo Code</label>
+              <label className="block text-xs font-medium text-gray-700">Voucher / Coupon Code</label>
               <input
                 type="text"
                 value={formData.code}
@@ -601,7 +601,7 @@ export default function DealModal({
                     onChange={(e) => setFormData({ ...formData, subtype: e.target.value })}
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                   >
-                    <option value="code">Standard Promo Code</option>
+                    <option value="code">Standard Coupon Code</option>
                     <option value="student">Student Discount</option>
                     <option value="cashback">Cashback Offer</option>
                   </select>

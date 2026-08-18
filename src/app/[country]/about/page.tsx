@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 const COUNTRY_CODE_RE = /^[A-Za-z]{2}$/;
 
 export const metadata: Metadata = {
-  title: "About Foxzil",
+  title: "About Us",
   description:
-    "Learn about Foxzil — a platform presenting deals, discounts, and coupons from affiliate networks.",
+    "Learn more about our platform presenting verified deals, discounts, and coupon codes from top merchants.",
 };
 
 export default async function AboutPage({ params }: { params: { country: string } }) {

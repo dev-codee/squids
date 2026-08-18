@@ -635,7 +635,7 @@ export default function ActivityLogsPage() {
                     <th className="px-4 py-3">Deal Title</th>
                     <th className="px-4 py-3">Store Name</th>
                     <th className="px-4 py-3">Network</th>
-                    <th className="px-4 py-3">Promo Code</th>
+                    <th className="px-4 py-3">Coupon Code</th>
                     <th className="px-4 py-3">Discount</th>
                     <th className="px-4 py-3 text-right">Synced At</th>
                   </tr>

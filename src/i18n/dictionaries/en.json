@@ -28,12 +28,12 @@
     "loading": "Loading…"
   },
   "home": {
-    "heroTitle": "Promo codes and deals - they really work!",
+    "heroTitle": "Coupon codes and deals - they really work!",
     "heroSubtitle": "Merchants and stores available in",
     "categories": "Categories",
     "searchPlaceholder": "Search for stores or categories...",
     "popularStores": "Popular Stores",
-    "recentTitle": "Promo codes and deals - they really work!",
+    "recentTitle": "Coupon codes and deals - they really work!",
     "recentSubtitle": "These people have already verified that:",
     "noDealsYet": "No deals available yet.",
     "exploreTitle": "Explore by Category",
@@ -60,7 +60,7 @@
   },
   "deals": {
     "topDeals": "Top Deals",
-    "subtitle": "The best active coupons, promo codes, and offers in {country}.",
+    "subtitle": "The best active coupons, coupon codes, and offers in {country}.",
     "couldntLoad": "Couldn't load deals",
     "noDealsTitle": "No active deals right now",
     "noDealsHint": "Check back soon — fresh promotions are added regularly."
@@ -68,13 +68,13 @@
   "categories": {
     "catalog": "Catalog",
     "browseTitle": "Browse Coupons & Deals by Category",
-    "browseSubtitle": "Explore discounts, promo codes, and offers organized by shopping category.",
+    "browseSubtitle": "Explore discounts, coupon codes, and offers organized by shopping category.",
     "category": "Category",
     "featured": "Featured",
     "storesCount": "{count} Stores",
     "exploreDeals": "Explore Deals",
     "allCategories": "All Categories",
-    "promoCodesDeals": "{category} Promo Codes & Deals",
+    "promoCodesDeals": "{category} Coupon Codes & Deals",
     "storesInCountry": "{category} Stores in {country}",
     "storesAvailable": "{count} Stores Available",
     "noStores": "No stores specifically listed under \"{category}\" for {country} yet.",
@@ -83,7 +83,7 @@
   },
   "about": {
     "title": "About Foxzil",
-    "p1": "Foxzil is a website that presents deals, discounts, and coupons collected from a range of online stores. Our goal is to help shoppers find genuine savings in one place — from promo codes and cashback to seasonal offers and flash sales.",
+    "p1": "Foxzil is a website that presents deals, discounts, and coupons collected from a range of online stores. Our goal is to help shoppers find genuine savings in one place — from coupon codes and cashback to seasonal offers and flash sales.",
     "p2": "The deals and offers you see here are made available via different affiliate networks. When you click through and shop, you pay the same price as usual — Foxzil simply earns a small commission from the network, which keeps this service free for you.",
     "p3": "Foxzil or its staff is not involved when you make a purchase via these links. Any order, payment, delivery, or support is handled directly by the store you shop with."
   },
@@ -100,8 +100,8 @@
     "contactBody": "If you have any questions about this Privacy Policy, please reach out to us through the website."
   },
   "store": {
-    "promoCodeTitle": "{store} promo code - {month} {year} - Foxzil",
-    "verifiedOffersTitle": "Verified {store} promo codes and offers by Foxzil Team",
+    "promoCodeTitle": "{store} coupon code - {month} {year}",
+    "verifiedOffersTitle": "Verified {store} coupon codes and offers",
     "topDealsTitle": "Top Deals & Promotions for {store}",
     "noOffersYet": "No offers published for {store} yet",
     "couponsAppearHere": "Coupons and deals will appear here once they're added.",
@@ -158,7 +158,7 @@
   },
   "sidebar": {
     "dealsDetails": "Deals Details",
-    "promoCodes": "Promo Codes",
+    "promoCodes": "Coupon Codes",
     "avgSavings": "Avg Savings",
     "lastUpdated": "Last Updated",
     "affiliateDisclaimer": "We use affiliate links and may receive a commission.",
@@ -190,7 +190,7 @@
   },
   "reviewsWidget": {
     "title": "{store} Community Reviews & Ratings",
-    "subtitle": "Real savings feedback from shoppers using our {store} promo codes.",
+    "subtitle": "Real savings feedback from shoppers using our {store} coupon codes.",
     "basedOnRatings": "Based on {count} ratings",
     "verifiedSavingsUser": "Verified Savings User"
   },
@@ -216,19 +216,19 @@
     "copied": "Copied!",
     "copyCode": "Copy Code",
     "showCode": "Show Code",
-    "promoCodeCopied": "Promo Code Copied!",
+    "promoCodeCopied": "Coupon Code Copied!",
     "pasteCode": "Paste this code during checkout at {store}.",
     "close": "Close",
     "goTo": "Go to {store}"
   },
   "couponsPage": {
     "officialDirectory": "Official {store} Coupon Directory",
-    "heading": "Verified {store} Promo Codes & Discounts",
+    "heading": "Verified {store} Coupon Codes & Discounts",
     "intro": "Browse tested voucher codes, student discounts, and cashback rebate deals. Copy your code and save instantly on {store}.",
     "verifiedCoupons": "Verified Coupons",
     "verifiedCouponsSub": "Active discount codes for this store.",
     "activeCodes": "Active Codes",
-    "promoCodes": "Promo Codes",
+    "promoCodes": "Coupon Codes",
     "promoCodesSub": "Copy and paste at checkout for instant percentage or dollar savings.",
     "codes": "Codes",
     "studentDiscounts": "Student Discounts",

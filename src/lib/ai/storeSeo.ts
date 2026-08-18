@@ -87,27 +87,64 @@ export function analyzeMaxDiscount(deals: Deal[]): {
 }
 
 /**
- * Generate a short, non-fluffy SEO title and description for a store page.
+ * Generate a short, non-fluffy, localized SEO title and description for a store page.
  */
 export function generateStoreSeoContent(
   storeName: string,
   deals: Deal[],
+  locale = "en",
 ): StoreSeoResult {
   const cleanName = cleanAdvertiserName(storeName);
   const { maxDiscountText } = analyzeMaxDiscount(deals);
 
-  const currentMonth = new Date().toLocaleString("default", { month: "long" });
+  const lang = (locale || "en").toLowerCase().slice(0, 2);
+  const currentMonth = new Date().toLocaleDateString(lang, { month: "long" });
   const currentYear = new Date().getFullYear();
 
   let seoTitle: string;
   let seoDescription: string;
 
-  if (maxDiscountText) {
-    seoTitle = `${cleanName} Promo Codes & Up to ${maxDiscountText} Off (${currentMonth} ${currentYear})`;
-    seoDescription = `Save up to ${maxDiscountText} off at ${cleanName} with verified promo codes, discount vouchers, and deals for ${currentMonth} ${currentYear}.`;
+  if (lang === "de") {
+    if (maxDiscountText) {
+      seoTitle = `${cleanName} Gutscheincodes & bis zu ${maxDiscountText} Rabatt (${currentMonth} ${currentYear})`;
+      seoDescription = `Sparen Sie bis zu ${maxDiscountText} bei ${cleanName} mit verifizierten Gutscheincodes, Rabatten und Angeboten für ${currentMonth} ${currentYear}.`;
+    } else {
+      seoTitle = `${cleanName} Gutscheincodes, Rabatte & Angebote (${currentMonth} ${currentYear})`;
+      seoDescription = `Finden Sie verifizierte ${cleanName} Gutscheincodes, Rabatte und tägliche Angebote für ${currentMonth} ${currentYear}. Täglich aktualisiert.`;
+    }
+  } else if (lang === "fr") {
+    if (maxDiscountText) {
+      seoTitle = `Codes promo ${cleanName} & jusqu'à ${maxDiscountText} de réduction (${currentMonth} ${currentYear})`;
+      seoDescription = `Économisez jusqu'à ${maxDiscountText} chez ${cleanName} avec des codes promo vérifiés, des bons de réduction et des offres pour ${currentMonth} ${currentYear}.`;
+    } else {
+      seoTitle = `Codes promo ${cleanName}, bons de réduction & offres (${currentMonth} ${currentYear})`;
+      seoDescription = `Trouvez des codes promo vérifiés, des bons de réduction et des offres quotidiennes pour ${cleanName} (${currentMonth} ${currentYear}). Mis à jour quotidiennement.`;
+    }
+  } else if (lang === "es") {
+    if (maxDiscountText) {
+      seoTitle = `Códigos de descuento ${cleanName} y hasta ${maxDiscountText} de ahorro (${currentMonth} ${currentYear})`;
+      seoDescription = `Ahorra hasta un ${maxDiscountText} en ${cleanName} con códigos de descuento verificados, cupones y ofertas para ${currentMonth} ${currentYear}.`;
+    } else {
+      seoTitle = `Códigos de descuento ${cleanName}, cupones y ofertas (${currentMonth} ${currentYear})`;
+      seoDescription = `Encuentra códigos de descuento verificados, cupones y ofertas diarias para ${cleanName} (${currentMonth} ${currentYear}). Actualizado a diario.`;
+    }
+  } else if (lang === "it") {
+    if (maxDiscountText) {
+      seoTitle = `Codici sconto ${cleanName} e fino al ${maxDiscountText} di risparmio (${currentMonth} ${currentYear})`;
+      seoDescription = `Risparmia fino al ${maxDiscountText} su ${cleanName} con codici sconto verificati, coupon e offerte per ${currentMonth} ${currentYear}.`;
+    } else {
+      seoTitle = `Codici sconto ${cleanName}, coupon e offerte (${currentMonth} ${currentYear})`;
+      seoDescription = `Trova codici sconto verificati, coupon e offerte giornaliere per ${cleanName} (${currentMonth} ${currentYear}). Aggiornato quotidianamente.`;
+    }
   } else {
-    seoTitle = `${cleanName} Promo Codes, Vouchers & Deals (${currentMonth} ${currentYear})`;
-    seoDescription = `Find verified ${cleanName} promo codes, discount vouchers, and daily deals for ${currentMonth} ${currentYear}. Updated daily.`;
+    // English & default: ALWAYS use "Coupon Code" / "Coupon Codes" instead of "Promo Code"
+    if (maxDiscountText) {
+      seoTitle = `${cleanName} Coupon Codes & Up to ${maxDiscountText} Off (${currentMonth} ${currentYear})`;
+      seoDescription = `Save up to ${maxDiscountText} off at ${cleanName} with verified coupon codes, discount vouchers, and deals for ${currentMonth} ${currentYear}.`;
+    } else {
+      seoTitle = `${cleanName} Coupon Codes, Vouchers & Deals (${currentMonth} ${currentYear})`;
+      seoDescription = `Find verified ${cleanName} coupon codes, discount vouchers, and daily deals for ${currentMonth} ${currentYear}. Updated daily.`;
+    }
   }
 
   return {
@@ -124,22 +161,38 @@ export function generateStoreSeoContent(
 export async function ensureAdvertiserSeo(
   advertiser: Advertiser,
   deals: Deal[],
+  locale = "en",
 ): Promise<{
   seoTitle: string;
   seoDescription: string;
   maxDiscount: string | null;
 }> {
-  // 1. If admin or AI has already saved SEO title & description, return existing
-  if (advertiser.seoTitle && advertiser.seoDescription) {
+  // 1. If admin or AI has already saved SEO title & description for English, return clean existing
+  if (locale === "en" && advertiser.seoTitle && advertiser.seoDescription) {
+    const cleanedTitle = advertiser.seoTitle
+      .replace(/promo\s*codes?/gi, "Coupon Codes")
+      .replace(/promo\s*code/gi, "Coupon Code")
+      .replace(/\s*-\s*Foxzil\b/gi, "")
+      .replace(/\bFoxzil\b\s*-\s*/gi, "")
+      .trim();
+    const cleanedDesc = advertiser.seoDescription
+      .replace(/promo\s*codes?/gi, "coupon codes")
+      .replace(/promo\s*code/gi, "coupon code")
+      .replace(/\bon Foxzil\b/gi, "")
+      .replace(/\bby Foxzil Team\b/gi, "")
+      .replace(/\bFoxzil\b/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+
     return {
-      seoTitle: advertiser.seoTitle,
-      seoDescription: advertiser.seoDescription,
+      seoTitle: cleanedTitle,
+      seoDescription: cleanedDesc,
       maxDiscount: advertiser.maxDiscount ?? null,
     };
   }
 
-  // 2. Otherwise compute from deals & store name
-  const generated = generateStoreSeoContent(advertiser.name, deals);
+  // 2. Otherwise compute from deals & store name in target locale
+  const generated = generateStoreSeoContent(advertiser.name, deals, locale);
 
   // If advertiser has custom override for title or description, honor it
   const finalTitle = advertiser.seoTitle || generated.seoTitle;

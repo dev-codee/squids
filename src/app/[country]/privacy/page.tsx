@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 const COUNTRY_CODE_RE = /^[A-Za-z]{2}$/;
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Foxzil",
-  description: "How Foxzil handles data and affiliate tracking.",
+  title: "Privacy Policy",
+  description: "How we handle data, cookies, and affiliate tracking.",
 };
 
 export default async function PrivacyPage({ params }: { params: { country: string } }) {

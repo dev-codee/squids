@@ -100,8 +100,8 @@
     "contactBody": "Se hai domande su questa Informativa sulla privacy, contattaci tramite il sito web."
   },
   "store": {
-    "promoCodeTitle": "Codice sconto {store} - {month} {year} - Foxzil",
-    "verifiedOffersTitle": "Codici sconto e offerte {store} verificati dal team Foxzil",
+    "promoCodeTitle": "Codice sconto {store} - {month} {year}",
+    "verifiedOffersTitle": "Codici sconto e offerte {store} verificati",
     "topDealsTitle": "Migliori Offerte e Promozioni per {store}",
     "noOffersYet": "Nessuna offerta ancora pubblicata per {store}",
     "couponsAppearHere": "I coupon e le offerte appariranno qui una volta aggiunti.",

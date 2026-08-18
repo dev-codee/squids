@@ -514,7 +514,7 @@ export default function AdvertiserModal({
                   type="text"
                   value={formData.seoTitle}
                   onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
-                  placeholder="e.g. Nike Promo Codes & Up to 50% Off Coupons (March 2026)"
+                  placeholder="e.g. Nike Coupon Codes & Up to 50% Off (March 2026)"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
@@ -530,7 +530,7 @@ export default function AdvertiserModal({
                   rows={2}
                   value={formData.seoDescription}
                   onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
-                  placeholder="e.g. Save up to 50% off at Nike with verified promo codes, discount vouchers, and deals for March 2026."
+                  placeholder="e.g. Save up to 50% off at Nike with verified coupon codes, discount vouchers, and deals for March 2026."
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                 />
               </div>
