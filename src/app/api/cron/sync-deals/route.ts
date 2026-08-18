@@ -122,8 +122,18 @@ export async function GET(request: NextRequest) {
 
   // ── Commission Factory ───────────────────────────────────────────────────
   try {
-    const { fetchCfCoupons } = await import("@/lib/commission-factory");
-    const cfDeals = await fetchCfCoupons();
+    const { fetchCfCoupons, fetchCfPromotions } = await import("@/lib/commission-factory");
+    const cfCoupons = await fetchCfCoupons();
+    // Promotions live on a separate CF endpoint/creative type. Fetch them too,
+    // but don't let a promotions failure block the coupon sync.
+    let cfPromotions: Awaited<ReturnType<typeof fetchCfPromotions>> = [];
+    try {
+      cfPromotions = await fetchCfPromotions();
+    } catch (promoErr) {
+      const pmsg = promoErr instanceof Error ? promoErr.message : "Unknown error";
+      console.warn("[cron/sync-deals] CF promotions fetch failed (non-fatal):", pmsg);
+    }
+    const cfDeals = [...cfCoupons, ...cfPromotions];
 
     const cfResult = await upsertDeals(cfDeals);
     let cfStale = 0;
@@ -137,6 +147,8 @@ export async function GET(request: NextRequest) {
 
     results.cf = {
       count: cfDeals.length,
+      coupons: cfCoupons.length,
+      promotions: cfPromotions.length,
       upserted: cfResult.upserted,
       modified: cfResult.modified,
       staleRemoved: cfStale,
@@ -144,7 +156,8 @@ export async function GET(request: NextRequest) {
 
     console.log(
       `[cron/sync-deals] CF: ${cfDeals.length} deals ` +
-        `(${cfResult.upserted} new, ${cfResult.modified} updated, ${cfStale} stale removed)`,
+        `(${cfCoupons.length} coupons + ${cfPromotions.length} promotions; ` +
+        `${cfResult.upserted} new, ${cfResult.modified} updated, ${cfStale} stale removed)`,
     );
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";

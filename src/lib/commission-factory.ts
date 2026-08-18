@@ -151,7 +151,8 @@ export function normaliseCfCoupon(c: CFCoupon): Deal {
       name: c.MerchantName,
       logoUrl: c.MerchantAvatarUrl || null,
     },
-    type: c.Code ? "voucher" : "promotion",
+    // A code → voucher (Coupons section); no code → coupon-style "deal".
+    type: c.Code ? "voucher" : "deal",
     code: c.Code || null,
     startDate: c.StartDate || null,
     endDate: c.EndDate || null,
@@ -166,6 +167,67 @@ export function normaliseCfCoupon(c: CFCoupon): Deal {
 export async function fetchCfCoupons(): Promise<Deal[]> {
   const raw = await cfFetch<CFCoupon>("Coupons");
   return raw.map(normaliseCfCoupon);
+}
+
+// ===========================================================================
+// Phase 2b — Promotions (a separate CF creative type from Coupons)
+// ===========================================================================
+
+/**
+ * A Commission Factory "Promotion" (Creatives → Promotions). Unlike Coupons,
+ * the Promotion type has no structured coupon Code — any code lives inside the
+ * free-text terms. We map these to our code-less "deal" type.
+ */
+export interface CFPromotion {
+  Id: number;
+  DateCreated?: string;
+  DateModified?: string;
+  MerchantId: number;
+  MerchantName: string;
+  MerchantAvatarUrl?: string;
+  Description?: string;
+  TargetUrl?: string;
+  TermsAndConditions?: string;
+  StartDate?: string | null;
+  EndDate?: string | null;
+  TrackingUrl?: string;
+}
+
+/**
+ * CF Coupons and Promotions are separate ID spaces that can collide. Our deals
+ * are keyed on (network, id), so offset promotion IDs to keep them distinct
+ * from CF coupon IDs. CF creative IDs are small integers, so this never clashes.
+ */
+export const CF_PROMOTION_ID_OFFSET = 2_000_000_000;
+
+export function normaliseCfPromotion(p: CFPromotion): Deal {
+  const trackingUrl = p.TrackingUrl || getCfTrackingUrl(p.MerchantId, p.TargetUrl);
+
+  return {
+    id: p.Id + CF_PROMOTION_ID_OFFSET,
+    network: "commission-factory",
+    title: p.Description || "Special Offer",
+    description: p.TermsAndConditions || p.Description || null,
+    advertiser: {
+      id: p.MerchantId,
+      name: p.MerchantName,
+      logoUrl: p.MerchantAvatarUrl || null,
+    },
+    type: "deal", // CF promotions carry no structured code → coupon-style "deal".
+    code: null,
+    startDate: p.StartDate || null,
+    endDate: p.EndDate || null,
+    status: "active",
+    trackingUrl,
+    regionCodes: ["AU"], // Defaulting to AU.
+    isExclusive: false,
+    discountText: null,
+  };
+}
+
+export async function fetchCfPromotions(): Promise<Deal[]> {
+  const raw = await cfFetch<CFPromotion>("Promotions");
+  return raw.map(normaliseCfPromotion);
 }
 
 // ===========================================================================
