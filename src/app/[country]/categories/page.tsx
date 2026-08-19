@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCategories } from "@/lib/db/categories";
+import { getCategoriesForCountry } from "@/lib/db/categories";
 import { countryName, countryFlag } from "@/lib/countries";
 import { getDictionary } from "@/i18n";
 
@@ -11,7 +11,10 @@ export default async function PublicCategoriesPage({
   params: { country: string };
 }) {
   const country = params.country.toUpperCase();
-  const [categories, dict] = await Promise.all([getCategories(), getDictionary(country)]);
+  const [categories, dict] = await Promise.all([
+    getCategoriesForCountry(country),
+    getDictionary(country),
+  ]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">

@@ -23,7 +23,7 @@ export default function HomeCategories({ categories: initialCategories }: { cate
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/categories")
+    fetch(`/api/categories?country=${encodeURIComponent(country)}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.categories && data.categories.length > 0) {
@@ -40,7 +40,7 @@ export default function HomeCategories({ categories: initialCategories }: { cate
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [initialCategories]);
+  }, [initialCategories, country]);
 
   return (
     <section className="py-12 bg-[#F9F9F9]">

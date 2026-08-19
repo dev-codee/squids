@@ -229,11 +229,49 @@ async function getCategoryBySlugUncached(slug: string): Promise<Category | null>
   return doc ? mapDoc(doc) : null;
 }
 
+/**
+ * Fetch categories with `storeCount` computed for a specific country/region,
+ * matching the same filter the category page uses. Falls back to the stored
+ * global `storeCount` for any category whose per-country count fails.
+ */
+async function getCategoriesForCountryUncached(
+  country: string,
+  query?: { search?: string; featuredOnly?: boolean },
+): Promise<Category[]> {
+  const categories = await getCategoriesUncached(query);
+  const { countAdvertisersByCategory } = await import("@/lib/db/advertisers");
+
+  return Promise.all(
+    categories.map(async (cat) => {
+      try {
+        const storeCount = await countAdvertisersByCategory(country, cat.name);
+        return { ...cat, storeCount };
+      } catch (err) {
+        console.error(
+          `[db/categories] Error counting stores for "${cat.name}" in ${country}:`,
+          err,
+        );
+        return cat;
+      }
+    }),
+  );
+}
+
 /** Cached category listing for public pages. */
 export const getCategories = unstable_cache(
   getCategoriesUncached,
   ["public:categories-list"],
   { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.categories] },
+);
+
+/** Cached, country-scoped category listing (per-region store counts). */
+export const getCategoriesForCountry = unstable_cache(
+  getCategoriesForCountryUncached,
+  ["public:categories-by-country"],
+  {
+    revalidate: PUBLIC_REVALIDATE,
+    tags: [CACHE_TAGS.categories, CACHE_TAGS.advertisers],
+  },
 );
 
 /** Cached single category by slug for public pages. */

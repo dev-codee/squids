@@ -154,6 +154,22 @@ function buildFilter(query: AdvertiserQuery & { network?: string }): Record<stri
 }
 
 /**
+ * Count advertisers matching a category within a given country/region, using the
+ * exact same country + category filter as the public listing. This keeps the
+ * per-region "N stores" badge on category boxes in sync with the number of
+ * stores the category page actually renders for that country.
+ */
+export async function countAdvertisersByCategory(
+  country: string,
+  categoryName: string,
+): Promise<number> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+  const filter = buildFilter({ country, category: categoryName } as AdvertiserQuery);
+  return col.countDocuments(filter);
+}
+
+/**
  * Fetch facets (distinct regions, relationships, countries, categories) from the full dataset.
  */
 export async function getAdvertiserFacets(): Promise<AdvertiserFacets> {
