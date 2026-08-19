@@ -19,6 +19,31 @@ export interface StoreSeoResult {
   maxDiscount: string | null;
 }
 
+/** Canonical, fixed store-title format with an auto-updating month & year. */
+export function formatStoreTitle(storeName: string, date = new Date()): string {
+  const cleanName = cleanAdvertiserName(storeName);
+  const month = date.toLocaleDateString("en-US", { month: "long" });
+  const year = date.getFullYear();
+  return `${cleanName}. Verified Coupon codes and offers for the ${month} ${year}`;
+}
+
+const EN_MONTHS =
+  "January|February|March|April|May|June|July|August|September|October|November|December";
+
+/**
+ * Keep the "... for the <Month> <Year>" portion of a cached English store title
+ * in sync with the current date, so previously generated/saved titles never show
+ * a stale month or year.
+ */
+export function refreshStoreTitleDate(title: string, date = new Date()): string {
+  const month = date.toLocaleDateString("en-US", { month: "long" });
+  const year = date.getFullYear();
+  return title.replace(
+    new RegExp(`(${EN_MONTHS})\\s+\\d{4}`, "i"),
+    `${month} ${year}`,
+  );
+}
+
 /**
  * Scan all store deals and coupons to find the maximum discount percentage
  * or top savings phrase (e.g., "70%", "50%", "$20 Off").
@@ -101,48 +126,43 @@ export function generateStoreSeoContent(
   const currentMonth = new Date().toLocaleDateString(lang, { month: "long" });
   const currentYear = new Date().getFullYear();
 
-  let seoTitle: string;
+  // Store title format is fixed for every AI/auto-generated store, with the
+  // month & year auto-updating from the current date. Kept in English so the
+  // "Verified Coupon codes and offers for the" phrasing is identical everywhere.
+  const titleMonth = new Date().toLocaleDateString("en-US", { month: "long" });
+  const seoTitle = `${cleanName}. Verified Coupon codes and offers for the ${titleMonth} ${currentYear}`;
+
   let seoDescription: string;
 
   if (lang === "de") {
     if (maxDiscountText) {
-      seoTitle = `${cleanName} Gutscheincodes & bis zu ${maxDiscountText} Rabatt (${currentMonth} ${currentYear})`;
       seoDescription = `Sparen Sie bis zu ${maxDiscountText} bei ${cleanName} mit verifizierten Gutscheincodes, Rabatten und Angeboten für ${currentMonth} ${currentYear}.`;
     } else {
-      seoTitle = `${cleanName} Gutscheincodes, Rabatte & Angebote (${currentMonth} ${currentYear})`;
       seoDescription = `Finden Sie verifizierte ${cleanName} Gutscheincodes, Rabatte und tägliche Angebote für ${currentMonth} ${currentYear}. Täglich aktualisiert.`;
     }
   } else if (lang === "fr") {
     if (maxDiscountText) {
-      seoTitle = `Codes promo ${cleanName} & jusqu'à ${maxDiscountText} de réduction (${currentMonth} ${currentYear})`;
       seoDescription = `Économisez jusqu'à ${maxDiscountText} chez ${cleanName} avec des codes promo vérifiés, des bons de réduction et des offres pour ${currentMonth} ${currentYear}.`;
     } else {
-      seoTitle = `Codes promo ${cleanName}, bons de réduction & offres (${currentMonth} ${currentYear})`;
       seoDescription = `Trouvez des codes promo vérifiés, des bons de réduction et des offres quotidiennes pour ${cleanName} (${currentMonth} ${currentYear}). Mis à jour quotidiennement.`;
     }
   } else if (lang === "es") {
     if (maxDiscountText) {
-      seoTitle = `Códigos de descuento ${cleanName} y hasta ${maxDiscountText} de ahorro (${currentMonth} ${currentYear})`;
       seoDescription = `Ahorra hasta un ${maxDiscountText} en ${cleanName} con códigos de descuento verificados, cupones y ofertas para ${currentMonth} ${currentYear}.`;
     } else {
-      seoTitle = `Códigos de descuento ${cleanName}, cupones y ofertas (${currentMonth} ${currentYear})`;
       seoDescription = `Encuentra códigos de descuento verificados, cupones y ofertas diarias para ${cleanName} (${currentMonth} ${currentYear}). Actualizado a diario.`;
     }
   } else if (lang === "it") {
     if (maxDiscountText) {
-      seoTitle = `Codici sconto ${cleanName} e fino al ${maxDiscountText} di risparmio (${currentMonth} ${currentYear})`;
       seoDescription = `Risparmia fino al ${maxDiscountText} su ${cleanName} con codici sconto verificati, coupon e offerte per ${currentMonth} ${currentYear}.`;
     } else {
-      seoTitle = `Codici sconto ${cleanName}, coupon e offerte (${currentMonth} ${currentYear})`;
       seoDescription = `Trova codici sconto verificati, coupon e offerte giornaliere per ${cleanName} (${currentMonth} ${currentYear}). Aggiornato quotidianamente.`;
     }
   } else {
     // English & default: ALWAYS use "Coupon Code" / "Coupon Codes" instead of "Promo Code"
     if (maxDiscountText) {
-      seoTitle = `${cleanName} Coupon Codes & Up to ${maxDiscountText} Off (${currentMonth} ${currentYear})`;
       seoDescription = `Save up to ${maxDiscountText} off at ${cleanName} with verified coupon codes, discount vouchers, and deals for ${currentMonth} ${currentYear}.`;
     } else {
-      seoTitle = `${cleanName} Coupon Codes, Vouchers & Deals (${currentMonth} ${currentYear})`;
       seoDescription = `Find verified ${cleanName} coupon codes, discount vouchers, and daily deals for ${currentMonth} ${currentYear}. Updated daily.`;
     }
   }
@@ -169,12 +189,14 @@ export async function ensureAdvertiserSeo(
 }> {
   // 1. If admin or AI has already saved SEO title & description for English, return clean existing
   if (locale === "en" && advertiser.seoTitle && advertiser.seoDescription) {
-    const cleanedTitle = advertiser.seoTitle
-      .replace(/promo\s*codes?/gi, "Coupon Codes")
-      .replace(/promo\s*code/gi, "Coupon Code")
-      .replace(/\s*-\s*Foxzil\b/gi, "")
-      .replace(/\bFoxzil\b\s*-\s*/gi, "")
-      .trim();
+    const cleanedTitle = refreshStoreTitleDate(
+      advertiser.seoTitle
+        .replace(/promo\s*codes?/gi, "Coupon Codes")
+        .replace(/promo\s*code/gi, "Coupon Code")
+        .replace(/\s*-\s*Foxzil\b/gi, "")
+        .replace(/\bFoxzil\b\s*-\s*/gi, "")
+        .trim(),
+    );
     const cleanedDesc = advertiser.seoDescription
       .replace(/promo\s*codes?/gi, "coupon codes")
       .replace(/promo\s*code/gi, "coupon code")

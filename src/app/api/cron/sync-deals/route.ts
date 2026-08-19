@@ -5,6 +5,7 @@ import {
   removeExpiredDeals,
   removeStaleDeals,
   generateWelcomeDeals,
+  generateBrandDeals,
 } from "@/lib/db/deals";
 import { updateSyncTime, recordSyncError } from "@/lib/db/sync-meta";
 
@@ -216,6 +217,25 @@ export async function GET(request: NextRequest) {
     console.warn("[cron/sync-deals] Welcome-deal generation failed (non-fatal):", msg);
     await recordSyncError("welcome:deals", msg).catch(() => {});
     results.welcome = { error: msg };
+  }
+
+  // ── Brand deals ───────────────────────────────────────────────────────────
+  // Ensure EVERY advertiser has the generic "Best Discounts & Deals" deal
+  // (codeless, carrying the store's affiliate link). Idempotent, so newly
+  // synced advertisers pick one up automatically.
+  try {
+    const brand = await generateBrandDeals();
+    await updateSyncTime("brand:deals", brand.created);
+    results.brand = brand;
+    console.log(
+      `[cron/sync-deals] Brand: ${brand.created} created, ${brand.removed} removed ` +
+        `(${brand.advertisers} advertisers)`,
+    );
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[cron/sync-deals] Brand-deal generation failed (non-fatal):", msg);
+    await recordSyncError("brand:deals", msg).catch(() => {});
+    results.brand = { error: msg };
   }
 
   return NextResponse.json({

@@ -557,13 +557,183 @@ export async function generateWelcomeDeals(): Promise<{
   return { created, removed, joined: joinedKeys.size };
 }
 
+// ---------------------------------------------------------------------------
+// Auto "brand" deals — one generic "Best Discounts & Deals" offer per advertiser
+// ---------------------------------------------------------------------------
+
+/**
+ * Deterministic id band for auto-generated brand deals: `BASE + advertiserId`.
+ * Sits above the welcome band so the two never collide, and (being >=
+ * WELCOME_DEAL_ID_BASE) it's automatically skipped by `removeStaleDeals`, which
+ * only prunes ids below that base.
+ */
+const BRAND_DEAL_ID_BASE = 2_000_000_000;
+
+/** Copy for the generic brand deal. `{name}` is the advertiser's actual name. */
+export const BRAND_DEAL_COPY = {
+  title: (name: string) => `Best Discounts & Deals at ${name}`,
+  description: (name: string) =>
+    `Welcome to ${name}! Discover the latest discounts, exclusive deals, and money-saving offers. Shop smarter, save more, and never miss a great deal.`,
+};
+
+/** Build (but don't persist) the brand Deal for an advertiser. */
+function buildBrandDeal(a: WelcomeAdvertiser): Deal {
+  const network = a.network ?? "awin";
+  const name = cleanAdvertiserName(a.name);
+  const regionCodes =
+    Array.isArray(a.countryCodes) && a.countryCodes.length > 0
+      ? a.countryCodes.map((c) => String(c).toUpperCase())
+      : a.countryCode
+      ? [String(a.countryCode).toUpperCase()]
+      : [];
+
+  return {
+    id: BRAND_DEAL_ID_BASE + a.id,
+    network,
+    title: BRAND_DEAL_COPY.title(name),
+    description: BRAND_DEAL_COPY.description(name),
+    advertiser: {
+      id: a.id,
+      name,
+      logoUrl: a.logoUrl ?? null,
+    },
+    // Codeless "Deal" — rendered as a "Get Deal" coupon card (no code shown).
+    type: "deal",
+    code: null,
+    startDate: null,
+    endDate: null, // open-ended — survives removeExpiredDeals
+    status: "active",
+    // Carries our affiliate/tracking link with our publisher ID.
+    trackingUrl: resolveAffiliateTrackingUrl(a.network, a.id, a.url),
+    regionCodes,
+    isBrandDeal: true,
+  };
+}
+
+/**
+ * Ensure **every** advertiser in the DB has the generic "Best Discounts & Deals"
+ * brand deal — a codeless `type: "deal"` carrying the store's affiliate tracking
+ * link (with our publisher ID).
+ *
+ * Idempotent: uses `$setOnInsert`, so re-running never overwrites an admin's
+ * later edits. Also backfills the tracking URL to keep our publisher ID enforced,
+ * and self-cleans brand deals whose advertiser no longer exists.
+ *
+ * @returns counts of brand deals created and removed, plus advertisers seen.
+ */
+export async function generateBrandDeals(): Promise<{
+  created: number;
+  removed: number;
+  advertisers: number;
+}> {
+  const db = await getDb();
+  const dealsCol = db.collection<DealDoc>(COLLECTION);
+  const advCol = db.collection("advertisers");
+
+  await dealsCol.createIndex({ network: 1, id: 1 }, { unique: true });
+
+  const advertisers = (await advCol
+    .find(
+      {},
+      {
+        projection: {
+          _id: 0,
+          id: 1,
+          network: 1,
+          name: 1,
+          logoUrl: 1,
+          url: 1,
+          countryCode: 1,
+          countryCodes: 1,
+        },
+      },
+    )
+    .toArray()) as unknown as WelcomeAdvertiser[];
+
+  const now = new Date();
+  const advKeys = new Set<string>();
+  const ops: AnyBulkWriteOperation<DealDoc>[] = [];
+
+  for (const a of advertisers) {
+    if (!a?.id || !a.name) continue;
+    const network = a.network ?? "awin";
+    advKeys.add(`${network}:${BRAND_DEAL_ID_BASE + a.id}`);
+
+    const brand = buildBrandDeal(a);
+    ops.push({
+      updateOne: {
+        filter: { network: brand.network, id: brand.id },
+        update: { $setOnInsert: { ...brand, syncedAt: now } },
+        upsert: true,
+      },
+    });
+  }
+
+  let created = 0;
+  if (ops.length > 0) {
+    const res = await dealsCol.bulkWrite(ops, { ordered: false });
+    created = res.upsertedCount;
+  }
+
+  // Re-enforce our affiliate tracking URL (with our publisher ID) on existing
+  // brand deals, and drop any whose advertiser has since been removed.
+  const brandDeals = await dealsCol
+    .find(
+      { isBrandDeal: true },
+      { projection: { _id: 0, id: 1, network: 1, advertiser: 1, trackingUrl: 1 } },
+    )
+    .toArray();
+
+  const backfillOps: AnyBulkWriteOperation<DealDoc>[] = [];
+  const orphaned: { network: string; id: number }[] = [];
+  for (const d of brandDeals) {
+    if (!advKeys.has(`${d.network}:${d.id}`)) {
+      orphaned.push({ network: d.network, id: d.id });
+      continue;
+    }
+    const fixed = resolveAffiliateTrackingUrl(
+      d.network,
+      d.advertiser?.id,
+      d.trackingUrl,
+    );
+    if (fixed && fixed !== d.trackingUrl) {
+      backfillOps.push({
+        updateOne: {
+          filter: { network: d.network, id: d.id },
+          update: { $set: { trackingUrl: fixed, syncedAt: now } },
+        },
+      });
+    }
+  }
+  if (backfillOps.length > 0) {
+    await dealsCol.bulkWrite(backfillOps, { ordered: false });
+  }
+
+  let removed = 0;
+  if (orphaned.length > 0) {
+    const res = await dealsCol.deleteMany({
+      isBrandDeal: true,
+      $or: orphaned.map((d) => ({ network: d.network, id: d.id })),
+    });
+    removed = res.deletedCount;
+  }
+
+  return { created, removed, advertisers: advKeys.size };
+}
+
 /**
  * Get the next available deal ID for newly created items.
  */
 export async function getNextDealId(): Promise<number> {
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
-  const maxDoc = await col.find({}).sort({ id: -1 }).limit(1).toArray();
+  // Ignore the auto-generated welcome/brand deal bands (>= WELCOME_DEAL_ID_BASE)
+  // so manually created deals keep their compact 900000+ ids.
+  const maxDoc = await col
+    .find({ id: { $lt: WELCOME_DEAL_ID_BASE } })
+    .sort({ id: -1 })
+    .limit(1)
+    .toArray();
   const maxId = maxDoc.length > 0 ? maxDoc[0].id : 0;
   return Math.max(maxId + 1, 900000); // 900000+ range for custom created deals
 }

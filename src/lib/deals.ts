@@ -111,6 +111,14 @@ export interface Deal {
    */
   isAutoWelcome?: boolean;
 
+  /**
+   * True when this deal was auto-generated as the generic "Best Discounts &
+   * Deals" brand deal for an advertiser (one per store, codeless `type: "deal"`).
+   * Uses `$setOnInsert` so admin edits survive re-runs, and lives in a high id
+   * band so stale-removal never wipes it.
+   */
+  isBrandDeal?: boolean;
+
   // --- AI-generated copy (Claude) ------------------------------------------
   /** AI-written shopper-facing title. Preferred over `title` on public pages. */
   aiTitle?: string | null;

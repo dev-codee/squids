@@ -11,7 +11,7 @@ import { getDictionary } from "@/i18n";
 import { getSiteUrl } from "@/lib/regions";
 import { localeForCountry } from "@/lib/ai/languageNames";
 
-import { generateStoreSeoContent } from "@/lib/ai/storeSeo";
+import { generateStoreSeoContent, refreshStoreTitleDate } from "@/lib/ai/storeSeo";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +37,11 @@ export async function generateMetadata({
   let description = localizedSeo.seoDescription;
 
   if (locale === "en" && store.seoTitle) {
-    title = store.seoTitle
-      .replace(/promo\s*codes?/gi, "Coupon Codes")
-      .replace(/promo\s*code/gi, "Coupon Code");
+    title = refreshStoreTitleDate(
+      store.seoTitle
+        .replace(/promo\s*codes?/gi, "Coupon Codes")
+        .replace(/promo\s*code/gi, "Coupon Code"),
+    );
   }
   if (locale === "en" && store.seoDescription) {
     description = store.seoDescription
@@ -123,9 +125,11 @@ export default async function StoreMainPage({
   let pageDesc = localizedSeo.seoDescription;
 
   if (locale === "en" && store.seoTitle) {
-    pageTitle = store.seoTitle
-      .replace(/promo\s*codes?/gi, "Coupon Codes")
-      .replace(/promo\s*code/gi, "Coupon Code");
+    pageTitle = refreshStoreTitleDate(
+      store.seoTitle
+        .replace(/promo\s*codes?/gi, "Coupon Codes")
+        .replace(/promo\s*code/gi, "Coupon Code"),
+    );
   }
   if (locale === "en" && store.seoDescription) {
     pageDesc = store.seoDescription
