@@ -52,10 +52,13 @@ IMPORTANT TITLE RULES
 Never invent a discount. Never convert "up to" into a guaranteed discount. Never remove important eligibility conditions. Never use excessive capitalization or emojis. Do not use "Amazing Deal", "Huge Savings", "Don't Miss Out", "Act Now", "Best Deal Ever" unless genuinely justified. Do not repeat the merchant name unnecessarily. Do not use misleading urgency. Do not claim "lowest price", "best price", "exclusive", "guaranteed", "massive", "unbeatable" unless explicitly supported by input data. Preserve product names exactly where possible.
 
 COUPON CODE RULE (STRICT)
-NEVER include the coupon code itself in the title or the description, and never write phrases like "with code X", "use code X", "using code X", "enter code X at checkout", "apply code X", or "code: X". The code is revealed separately by a "Show Coupon Code" button, so repeating it is redundant. Describe the offer purely by its benefit and conditions (discount, product/category, minimum spend, customer type). Do not even reference "the code" or "at checkout".
+NEVER include a coupon/voucher/promo code string anywhere in the title or description, and never write phrases like "with code X", "use code X", "using code X", "enter code X at checkout", "apply code X", or "code: X". The code is revealed separately by a "Show Coupon Code" button, so repeating it is redundant. Describe the offer purely by its benefit and conditions (discount, product/category, minimum spend, customer type). Do not even reference "the code" or "at checkout".
+
+DATE RULE (STRICT)
+NEVER mention any date, calendar year, or time reference in the title or description. Do NOT write expiry / "valid until" / "ends on" / "expires" text, do NOT write "as of", "updated", "checked on", "this month", "in 2025", "in 2026", or any specific day, month-with-year, or year. Validity and expiry are displayed separately by the system. Describe the offer only by its benefit and conditions — never by when it starts, ends, or was checked.
 
 DESCRIPTION RULES
-Write ONE concise description between 25 and 55 words. First sentence explains the saving; second explains the products/categories or the most important condition. Mention important restrictions naturally. If an expiration date is provided, do NOT repeat it (the system displays expiry separately). NEVER include the coupon code or "use code … at checkout" phrasing (the code is shown separately). Do not simply rewrite the title. Structure: "[Benefit]. [What is included]. [Important condition/restriction if applicable]."
+Write ONE concise description between 25 and 55 words. First sentence explains the saving; second explains the products/categories or the most important condition. Mention important restrictions naturally. NEVER mention any date, year, expiry or "valid until" text (the system displays validity separately). NEVER include the coupon code or "use code … at checkout" phrasing (the code is shown separately). Do not simply rewrite the title. Structure: "[Benefit]. [What is included]. [Important condition/restriction if applicable]."
 
 ANTI-DUPLICATION RULE
 Identify the main differentiating attribute (discount, product, category, subscription, customer type, minimum spend, payment method, membership, new-customer status, specific game/brand, shipping, cashback, starting price) and emphasize it. Never produce generic filler like "Save big on selected products."
@@ -94,10 +97,11 @@ function buildInputData(deal: Deal): string {
     ["Cashback Rate", deal.cashbackRate],
     ["Raw Offer Text", deal.title],
     ["Additional Offer Detail", deal.description],
-    ["Coupon Code", deal.code],
+    // Signal that a code exists WITHOUT passing the string — the model must
+    // never print it, and can't leak what it never receives.
+    ["Has Coupon Code", deal.code ? "Yes" : null],
     ["Eligible Customers", deal.studentVerificationReq ? "Students (verification required)" : null],
-    ["Expiration Date", deal.endDate],
-    ["Start Date", deal.startDate],
+    // Start/expiry dates deliberately omitted — the copy must never mention dates.
     ["Region", region],
     ["Landing Page", deal.trackingUrl],
     ["Verified Status", deal.status],
@@ -135,12 +139,13 @@ After drafting, act as the final quality-control editor and verify the title and
 4. "Up to" accuracy
 5. Eligibility accuracy
 6. Minimum-spend accuracy
-7. Expiration accuracy
-8. No unsupported claims
-9. No misleading wording
-10. No duplicate/generic wording
-11. Natural human readability
-12. Clear shopper benefit
+7. No dates, calendar years, expiry or "valid until" text anywhere
+8. No coupon/voucher code string anywhere
+9. No unsupported claims
+10. No misleading wording
+11. No duplicate/generic wording
+12. Natural human readability
+13. Clear shopper benefit
 
 Then return a verdict:
 - If the content is accurate and useful, set status to "APPROVED" with an empty issues array.

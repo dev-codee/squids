@@ -24,7 +24,7 @@ export function formatStoreTitle(storeName: string, date = new Date()): string {
   const cleanName = cleanAdvertiserName(storeName);
   const month = date.toLocaleDateString("en-US", { month: "long" });
   const year = date.getFullYear();
-  return `${cleanName}. Verified Coupon codes and offers for the ${month} ${year}`;
+  return `${cleanName} Verified Coupon codes and offers for the ${month} ${year}`;
 }
 
 const EN_MONTHS =
@@ -130,7 +130,7 @@ export function generateStoreSeoContent(
   // month & year auto-updating from the current date. Kept in English so the
   // "Verified Coupon codes and offers for the" phrasing is identical everywhere.
   const titleMonth = new Date().toLocaleDateString("en-US", { month: "long" });
-  const seoTitle = `${cleanName}. Verified Coupon codes and offers for the ${titleMonth} ${currentYear}`;
+  const seoTitle = `${cleanName} Verified Coupon codes and offers for the ${titleMonth} ${currentYear}`;
 
   let seoDescription: string;
 
@@ -195,6 +195,8 @@ export async function ensureAdvertiserSeo(
         .replace(/promo\s*code/gi, "Coupon Code")
         .replace(/\s*-\s*Foxzil\b/gi, "")
         .replace(/\bFoxzil\b\s*-\s*/gi, "")
+        // Drop the legacy dot after the store name: "Name. Verified…" → "Name Verified…"
+        .replace(/\.\s+(Verified\b)/i, " $1")
         .trim(),
     );
     const cleanedDesc = advertiser.seoDescription

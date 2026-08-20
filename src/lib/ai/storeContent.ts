@@ -110,7 +110,7 @@ WHAT YOU MAY WRITE FREELY (grounded in the offers/categories provided)
 - typical_discount: a range only if supported by the current offers (e.g. "Up to 70%"); otherwise "Not available".
 
 RATINGS / SHIPPING / RETURNS / PAYMENT / WARRANTY / CASHBACK
-Only fill these from the input. Do NOT combine Trustpilot and Google into one score. Do not present an old rating without a date. If unknown, set fields to "Not available". For best_time_to_shop, only claim a season/event when historical or promotional evidence is provided; otherwise set confidence "Low" and reason "Not enough historical data".
+Only fill these from the input. Do NOT combine Trustpilot and Google into one score. Never output a checked_date (leave it ""), and never attach a date or year to a rating. If unknown, set fields to "Not available". For best_time_to_shop, only claim a season/event when historical or promotional evidence is provided; otherwise set confidence "Low" and reason "Not enough historical data".
 
 AI WRITING RULES
 Avoid: "Unlock incredible savings", "Don't miss out", "Shop smarter", "Perfect for everyone", "Treat yourself", "Unbeatable prices", "Ultimate shopping destination". Prefer specific facts over promotional adjectives.
@@ -118,8 +118,11 @@ Avoid: "Unlock incredible savings", "Don't miss out", "Shop smarter", "Perfect f
 COUPON CODE RULE (STRICT)
 NEVER print specific promo/voucher/coupon code strings (e.g. "BV110", "B100", "SAVE20") anywhere in the output — not in best_saving_strategy, buying_advice, how_to_use_coupon, faq, hero_intro, merchant_overview or any other field. The codes are revealed separately by a "Show Code" button, so naming them is redundant and quickly goes stale. Describe savings by their BENEFIT and CONDITIONS instead (discount amount/percentage, order minimum, product/category, customer type) — e.g. "apply the highest-value code at checkout; fixed-amount discounts apply above set order minimums, and a percentage-off code covers sitewide orders — use whichever saves more". Never write "use code X", "with code X", or list code names.
 
+DATE RULE (STRICT)
+NEVER mention specific dates, calendar years, or time-stamped phrases anywhere in the output. Do NOT write expiry / "valid until" / "ends on" dates, "as of", "last updated", "checked on <date>", or any year (e.g. 2024, 2025, 2026). Always leave every checked_date field empty (""). You MAY use evergreen month names and seasons in best_time_to_shop and shopping_calendar (e.g. "November", "post-holiday sales", "summer") because these never go stale — but NEVER attach a year to them and never present them as a fixed deadline.
+
 CALENDAR RULE
-For each shopping_calendar entry, "activity" MUST be exactly ONE word: "High", "Medium", or "Low". Never add explanations, dates, or extra text to the activity value.
+For each shopping_calendar entry, "activity" MUST be exactly ONE word: "High", "Medium", or "Low". Never add explanations, dates, years, or extra text to the activity value. The "month" value must be a bare month name (e.g. "January") with no year.
 
 CONFIDENCE & REVIEW
 Set information_confidence 0-100 based on how complete/recent the verified data is. Set review_required true (with review_reasons) if important fields could not be verified. Always include an affiliate_disclosure noting the site may earn commission from links.
@@ -176,7 +179,8 @@ function summariseOffers(deals: Deal[]): string {
       // Deliberately NOT passing d.code — store-page prose must never name
       // specific promo/voucher codes (they are revealed via "Show Code").
       if (d.cashbackRate) parts.push(`cashback: ${d.cashbackRate}`);
-      if (d.endDate) parts.push(`expires: ${d.endDate.slice(0, 10)}`);
+      // Deliberately NOT passing expiry dates — store-page prose must never
+      // mention any date (validity/expiry is displayed separately).
       return `- ${parts.join(" | ")}`;
     })
     .join("\n");
@@ -212,7 +216,7 @@ function buildInputData(
     ["Cashback", cashbackDeal?.cashbackRate || (cashbackDeal ? "Available" : null)],
     ["Active Coupons Count", String(coupons.length)],
     ["Active Deals Count", String(promos.length)],
-    ["Last Verified", new Date().toISOString().slice(0, 10)],
+    // "Last Verified" date deliberately omitted — the copy must never output a date.
   ];
 
   const body = lines
