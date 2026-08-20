@@ -14,3 +14,24 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+
+  # Cron sidecar: triggers the sync endpoints on a schedule. Talks to the app
+  # over the internal Docker network (affiliate-app:3000), so nothing needs to
+  # be exposed publicly. Replaces Vercel Cron, which does not run on a VPS.
+  cron:
+    image: alpine:3.20
+    container_name: affiliate-cron
+    restart: always
+    depends_on:
+      - affiliate-app
+    env_file:
+      - .env.local            # provides CRON_SECRET
+    environment:
+      - SYNC_APP_URL=http://affiliate-app:3000
+      # Twice a day at 03:00 and 15:00. Edit to taste (cron syntax).
+      - SYNC_SCHEDULE=0 3,15 * * *
+      # Optional: set the container timezone so the schedule is local, not UTC.
+      # - TZ=Europe/Berlin
+    volumes:
+      - ./scripts/cron:/cron:ro
+    entrypoint: ["/bin/sh", "/cron/entrypoint.sh"]

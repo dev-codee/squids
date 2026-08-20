@@ -10,6 +10,10 @@ import {
 import { updateSyncTime, recordSyncError } from "@/lib/db/sync-meta";
 
 export const dynamic = "force-dynamic";
+// With ~11k+ joined Awin coupons the feed spans ~115 pages; combined with the
+// other networks and welcome/brand-deal generation, the default function limit
+// isn't enough. 300s is the Vercel Pro ceiling. Lower this if your plan caps it.
+export const maxDuration = 300;
 
 /**
  * Verify the request came from Vercel Cron (or an authorised caller).
@@ -46,8 +50,14 @@ export async function GET(request: NextRequest) {
     const awinDeals: Deal[] = [];
     let page = 1;
     const pageSize = 100;
+    // Paginate until Awin returns a short page (i.e. we've drained the feed).
+    // The high ceiling is only a runaway guard — 500 pages × 100 = 50k coupons —
+    // NOT a business cap. The real stop condition is `deals.length < pageSize`.
+    // (Previously capped at 10 pages / 1000 deals, which silently dropped every
+    // joined coupon past the first 1000 — e.g. advertiser 80881's voucher.)
+    const MAX_PAGES = 500;
 
-    while (page <= 10) {
+    while (page <= MAX_PAGES) {
       try {
         const { deals } = await fetchDeals({ page, pageSize });
         if (!deals || deals.length === 0) break;
