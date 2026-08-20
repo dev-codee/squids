@@ -272,6 +272,30 @@ function dealFromDeal(
 // ---------------------------------------------------------------------------
 
 /**
+ * Fire-and-forget warmer that generates missing locale copy for the deals that
+ * didn't fit in a request's synchronous budget, with bounded concurrency so we
+ * don't hammer the AI provider. Each result is cached in MongoDB by
+ * ensureDealAiContent, so once warmed the store renders fully translated.
+ */
+async function warmDealLocaleCopy(deals: Deal[], locale: string): Promise<void> {
+  const CONCURRENCY = 3;
+  for (let i = 0; i < deals.length; i += CONCURRENCY) {
+    const batch = deals.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      batch.map((d) =>
+        ensureDealAiContent(d, { locale }).catch((err) => {
+          console.warn(
+            `[ai] Background locale warm failed for ${d.network ?? "awin"}:${d.id} (${locale}):`,
+            err instanceof Error ? err.message : err,
+          );
+          return d;
+        }),
+      ),
+    );
+  }
+}
+
+/**
  * Load a store's public data from MongoDB. Returns `null` when the slug does
  * not resolve to a known advertiser (caller should render `notFound()`).
  */
@@ -332,21 +356,38 @@ async function loadStoreDataUncached(
 
   // First-view AI copy: generate shopper-facing title/description for deals that
   // lack it for this locale, then cache in the DB so tokens are only spent once.
-  // Bounded per request to keep the page responsive; a no-op when ANTHROPIC_API_KEY is unset.
-  const AI_GEN_PER_REQUEST = 6;
-  let aiBudget = AI_GEN_PER_REQUEST;
-  allDeals = await Promise.all(
-    allDeals.map((d) => {
-      const hasLocaleCopy =
-        d.aiTitleByLang?.[locale] && d.aiDescriptionByLang?.[locale]
-          ? true
-          : locale === "en" && Boolean(d.aiTitle && d.aiDescription);
+  // A no-op when ANTHROPIC_API_KEY is unset (ensureDealAiContent returns as-is).
+  const hasLocaleCopy = (d: Deal) =>
+    d.aiTitleByLang?.[locale] && d.aiDescriptionByLang?.[locale]
+      ? true
+      : locale === "en" && Boolean(d.aiTitle && d.aiDescription);
 
-      if (aiBudget <= 0 || hasLocaleCopy) return d;
-      aiBudget -= 1;
-      return ensureDealAiContent(d, { locale });
-    }),
-  );
+  const missingLocaleCopy = allDeals.filter((d) => !hasLocaleCopy(d));
+
+  // Generate a bounded batch synchronously so the current render improves right
+  // away without blocking on a large store's entire deal list.
+  const AI_GEN_PER_REQUEST = 6;
+  const syncBatch = missingLocaleCopy.slice(0, AI_GEN_PER_REQUEST);
+  if (syncBatch.length > 0) {
+    const generated = await Promise.all(
+      syncBatch.map((d) => ensureDealAiContent(d, { locale })),
+    );
+    const byKey = new Map(
+      generated.map((d) => [`${d.network ?? "awin"}:${d.id}`, d]),
+    );
+    allDeals = allDeals.map(
+      (d) => byKey.get(`${d.network ?? "awin"}:${d.id}`) ?? d,
+    );
+  }
+
+  // Warm the remaining locale copy in the background (fire-and-forget) so the
+  // whole store is fully translated by the next visit instead of leaking English
+  // for the overflow deals across many page loads. Safe on the persistent
+  // standalone server; a no-op when AI is unconfigured.
+  const backgroundBatch = missingLocaleCopy.slice(AI_GEN_PER_REQUEST);
+  if (backgroundBatch.length > 0) {
+    void warmDealLocaleCopy(backgroundBatch, locale);
+  }
 
   // Ordering within every section: exclusive offers pinned to the very top,
   // then the most recently edited first. `syncedAt` is the last-edited stamp
