@@ -19,12 +19,39 @@ export interface StoreSeoResult {
   maxDiscount: string | null;
 }
 
-/** Canonical, fixed store-title format with an auto-updating month & year. */
-export function formatStoreTitle(storeName: string, date = new Date()): string {
+/**
+ * Localized "Verified Coupon codes and offers for the" phrasing, keyed by the
+ * 2-letter language code. Used so the store title reads in the region's language
+ * just like the rest of the store-page copy.
+ */
+const STORE_TITLE_PHRASE: Record<string, string> = {
+  en: "Verified Coupon codes and offers for the",
+  de: "Verifizierte Gutscheincodes und Angebote für",
+  fr: "Codes promo vérifiés et offres pour",
+  es: "Códigos de descuento verificados y ofertas para",
+  it: "Codici sconto verificati e offerte per",
+};
+
+/** Capitalize the first letter (localized month names are lowercase in fr/es/it). */
+function capitalizeFirst(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * Canonical store-title format with an auto-updating, localized month & year and
+ * a phrase translated into the region's language.
+ */
+export function formatStoreTitle(
+  storeName: string,
+  date = new Date(),
+  locale = "en",
+): string {
   const cleanName = cleanAdvertiserName(storeName);
-  const month = date.toLocaleDateString("en-US", { month: "long" });
+  const lang = (locale || "en").toLowerCase().slice(0, 2);
+  const phrase = STORE_TITLE_PHRASE[lang] ?? STORE_TITLE_PHRASE.en;
+  const month = capitalizeFirst(date.toLocaleDateString(lang, { month: "long" }));
   const year = date.getFullYear();
-  return `${cleanName} Verified Coupon codes and offers for the ${month} ${year}`;
+  return `${cleanName} ${phrase} ${month} ${year}`;
 }
 
 const EN_MONTHS =
@@ -127,10 +154,9 @@ export function generateStoreSeoContent(
   const currentYear = new Date().getFullYear();
 
   // Store title format is fixed for every AI/auto-generated store, with the
-  // month & year auto-updating from the current date. Kept in English so the
-  // "Verified Coupon codes and offers for the" phrasing is identical everywhere.
-  const titleMonth = new Date().toLocaleDateString("en-US", { month: "long" });
-  const seoTitle = `${cleanName} Verified Coupon codes and offers for the ${titleMonth} ${currentYear}`;
+  // month, year, and phrasing auto-localized to the region so the title reads in
+  // the local language just like the rest of the store-page copy.
+  const seoTitle = formatStoreTitle(storeName, new Date(), locale);
 
   let seoDescription: string;
 
@@ -218,30 +244,40 @@ export async function ensureAdvertiserSeo(
   // 2. Otherwise compute from deals & store name in target locale
   const generated = generateStoreSeoContent(advertiser.name, deals, locale);
 
-  // If advertiser has custom override for title or description, honor it
-  const finalTitle = advertiser.seoTitle || generated.seoTitle;
-  const finalDesc = advertiser.seoDescription || generated.seoDescription;
+  // The admin-editable cached seoTitle/seoDescription are stored in English only,
+  // so for non-English regions always use the freshly generated, localized copy
+  // (otherwise the title/description would leak English into a translated page).
+  const isEnglish = (locale || "en").toLowerCase().slice(0, 2) === "en";
+
+  // If advertiser has custom override for title or description, honor it (English only)
+  const finalTitle = (isEnglish && advertiser.seoTitle) || generated.seoTitle;
+  const finalDesc = (isEnglish && advertiser.seoDescription) || generated.seoDescription;
   const finalMaxDisc = advertiser.maxDiscount || generated.maxDiscount;
 
-  // 3. Persist to MongoDB so it is saved for all subsequent visits and editable in Admin
-  try {
-    const db = await getDb();
-    await db.collection("advertisers").updateOne(
-      { id: advertiser.id, network: advertiser.network ?? "awin" },
-      {
-        $set: {
-          seoTitle: finalTitle,
-          seoDescription: finalDesc,
-          maxDiscount: finalMaxDisc,
-          seoGeneratedAt: new Date(),
+  // 3. Persist to MongoDB so it is saved for all subsequent visits and editable in
+  // Admin. Only the canonical English copy is cached in the (locale-agnostic) doc;
+  // non-English titles/descriptions are localized on the fly so a translated visit
+  // never overwrites the shared field and leaks its language into other locales.
+  if (isEnglish) {
+    try {
+      const db = await getDb();
+      await db.collection("advertisers").updateOne(
+        { id: advertiser.id, network: advertiser.network ?? "awin" },
+        {
+          $set: {
+            seoTitle: finalTitle,
+            seoDescription: finalDesc,
+            maxDiscount: finalMaxDisc,
+            seoGeneratedAt: new Date(),
+          },
         },
-      },
-    );
-  } catch (err) {
-    console.warn(
-      `[seo] Failed to persist SEO content for ${advertiser.name}:`,
-      err,
-    );
+      );
+    } catch (err) {
+      console.warn(
+        `[seo] Failed to persist SEO content for ${advertiser.name}:`,
+        err,
+      );
+    }
   }
 
   return {
