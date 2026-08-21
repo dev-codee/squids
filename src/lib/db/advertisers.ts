@@ -243,13 +243,18 @@ async function getAdvertisersFromDbUncached(
       {
         $lookup: {
           from: "deals",
-          let: { advId: "$id", advNetwork: "$network" },
+          let: { advId: "$id", advNetwork: "$network", advIdStr: { $toString: "$id" } },
           pipeline: [
             {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ["$advertiser.id", "$$advId"] },
+                    {
+                      $or: [
+                        { $eq: ["$advertiser.id", "$$advId"] },
+                        { $eq: ["$advertiser.id", "$$advIdStr"] },
+                      ],
+                    },
                     { $eq: ["$network", "$$advNetwork"] },
                   ],
                 },
@@ -279,7 +284,7 @@ async function getAdvertisersFromDbUncached(
       {
         $lookup: {
           from: "deals",
-          let: { advId: "$id", advNetwork: "$network" },
+          let: { advId: "$id", advNetwork: "$network", advIdStr: { $toString: "$id" } },
           pipeline: [
             {
               $match: {
@@ -288,8 +293,7 @@ async function getAdvertisersFromDbUncached(
                     {
                       $or: [
                         { $eq: ["$advertiser.id", "$$advId"] },
-                        { $eq: ["$advertiser.id", { $toString: "$$advId" }] },
-                        { $eq: [{ $toString: "$advertiser.id" }, { $toString: "$$advId" }] },
+                        { $eq: ["$advertiser.id", "$$advIdStr"] },
                       ],
                     },
                     { $eq: ["$network", "$$advNetwork"] },
@@ -383,7 +387,7 @@ async function getShowcaseAdvertisersUncached(
         // Count deals for ONLY these `limit` advertisers, not the whole set.
         $lookup: {
           from: "deals",
-          let: { advId: "$id", advNetwork: "$network" },
+          let: { advId: "$id", advNetwork: "$network", advIdStr: { $toString: "$id" } },
           pipeline: [
             {
               $match: {
@@ -392,8 +396,7 @@ async function getShowcaseAdvertisersUncached(
                     {
                       $or: [
                         { $eq: ["$advertiser.id", "$$advId"] },
-                        { $eq: ["$advertiser.id", { $toString: "$$advId" }] },
-                        { $eq: [{ $toString: "$advertiser.id" }, { $toString: "$$advId" }] },
+                        { $eq: ["$advertiser.id", "$$advIdStr"] },
                       ],
                     },
                     { $eq: ["$network", "$$advNetwork"] },
