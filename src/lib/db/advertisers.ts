@@ -214,7 +214,7 @@ export async function getAdvertiserFacets(): Promise<AdvertiserFacets> {
  * Returns the same `PagedAdvertisers` shape the API route expects.
  */
 async function getAdvertisersFromDbUncached(
-  query: AdvertiserQuery & { network?: string },
+  query: AdvertiserQuery & { network?: string; withFacets?: boolean },
 ): Promise<PagedAdvertisers | null> {
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
@@ -224,7 +224,12 @@ async function getAdvertisersFromDbUncached(
   if (count === 0) return null;
 
   const filter = buildFilter(query);
-  const facets = await getAdvertiserFacets();
+  // Facets require 4 full-collection distinct() scans; only the admin dashboard
+  // consumes them. Skip on public listings (homepage/stores) to keep the query
+  // well under the serverless response deadline.
+  const facets = query.withFacets
+    ? await getAdvertiserFacets()
+    : { regions: [], relationships: [], countries: [], categories: [] };
 
   const pageSize = Math.min(
     Math.max(1, query.pageSize || DEFAULT_PAGE_SIZE),

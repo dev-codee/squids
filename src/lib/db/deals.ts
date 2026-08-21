@@ -76,6 +76,9 @@ export async function upsertDeals(
 
   // Ensure composite unique index for multi-network support
   await col.createIndex({ network: 1, id: 1 }, { unique: true });
+  // Index the $lookup key used by the advertiser listing (requireDeals) so the
+  // "does this advertiser have any deals?" join is an index hit, not a scan.
+  await col.createIndex({ network: 1, "advertiser.id": 1 });
 
   const now = new Date();
   const ops = deals.map((d) => ({

@@ -70,23 +70,44 @@ export default function AdvertisersClient({
     async (currentSearch: string, currentCategory: string, currentPage: number) => {
       setLoading(true);
       setError(null);
-      try {
-        const params = new URLSearchParams({
-          page: String(currentPage),
-          pageSize: String(PAGE_SIZE),
-          country,
-          relationship: "joined",
-          requireDeals: "true",
-        });
-        if (currentSearch) params.set("search", currentSearch);
-        if (currentCategory) params.set("category", currentCategory);
 
-        const res = await fetch(`/api/advertisers?${params.toString()}`);
-        const json = await res.json();
-        if (!res.ok) {
-          throw new Error(json?.error ?? "Failed to load advertisers.");
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        pageSize: String(PAGE_SIZE),
+        country,
+        relationship: "joined",
+        requireDeals: "true",
+      });
+      if (currentSearch) params.set("search", currentSearch);
+      if (currentCategory) params.set("category", currentCategory);
+      const url = `/api/advertisers?${params.toString()}`;
+
+      // Fetch with a timeout, retrying once on a transient network failure
+      // (e.g. a truncated/timed-out response) before surfacing the error wall.
+      const fetchOnce = async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
+        try {
+          const res = await fetch(url, { signal: controller.signal });
+          const json = await res.json();
+          if (!res.ok) {
+            throw new Error(json?.error ?? "Failed to load advertisers.");
+          }
+          return json as PageData;
+        } finally {
+          clearTimeout(timeout);
         }
-        setData(json as PageData);
+      };
+
+      try {
+        let result: PageData;
+        try {
+          result = await fetchOnce();
+        } catch {
+          // One automatic retry for transient failures.
+          result = await fetchOnce();
+        }
+        setData(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong.");
       } finally {

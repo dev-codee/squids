@@ -56,6 +56,8 @@ export default function AdminAdvertisersPage() {
         const params = new URLSearchParams({
           page: String(currentPage),
           pageSize: String(PAGE_SIZE),
+          // Admin dashboard renders the facet filters, so request them here.
+          withFacets: "true",
         });
         if (currentFilters.search) params.set("search", currentFilters.search);
         if (currentFilters.region) params.set("region", currentFilters.region);

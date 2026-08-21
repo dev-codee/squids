@@ -51,6 +51,9 @@ export async function GET(request: NextRequest) {
     page: Number.parseInt(params.get("page") ?? "1", 10) || 1,
     pageSize: Number.parseInt(params.get("pageSize") ?? "", 10) || undefined,
     requireDeals: params.get("requireDeals") === "true",
+    // Only compute facets (4 full-collection scans) when the caller needs them
+    // (admin dashboard). Public listings omit this to stay fast.
+    withFacets: params.get("withFacets") === "true",
   };
 
 

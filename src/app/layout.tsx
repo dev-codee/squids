@@ -14,14 +14,15 @@ export const metadata: Metadata = {
     icon: "/logo.png",
   },
   robots: {
-    index: false,
-    follow: false,
-    nocache: true,
+    index: true,
+    follow: true,
     googleBot: {
-      index: false,
-      follow: false,
-      noimageindex: true,
+      index: true,
+      follow: true,
     },
+  },
+  verification: {
+    google: "1AmY1d7beFPQ4YfWB3io_5QczTIInMCbim4HfpH0c_A",
   },
 };
 
