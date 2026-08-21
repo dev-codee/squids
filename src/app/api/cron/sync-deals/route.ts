@@ -6,7 +6,9 @@ import {
   removeStaleDeals,
   generateWelcomeDeals,
   generateBrandDeals,
+  backfillManualDeals,
 } from "@/lib/db/deals";
+import { backfillManualAdvertisers } from "@/lib/db/advertisers";
 import { updateSyncTime, recordSyncError } from "@/lib/db/sync-meta";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +43,26 @@ export async function GET(request: NextRequest) {
   }
 
   const results: Record<string, unknown> = {};
+
+  // Self-healing: mark any pre-existing manual deals/advertisers (created before
+  // the isManual flag existed) so the stale-removal below never deletes them.
+  // Idempotent — a no-op once everything is marked. Runs BEFORE any removal.
+  try {
+    const [dealsMarked, advertisersMarked] = await Promise.all([
+      backfillManualDeals(),
+      backfillManualAdvertisers(),
+    ]);
+    results.manualBackfill = { dealsMarked, advertisersMarked };
+    if (dealsMarked > 0 || advertisersMarked > 0) {
+      console.log(
+        `[cron/sync-deals] Manual backfill: ${dealsMarked} deals, ${advertisersMarked} advertisers marked`,
+      );
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.warn("[cron/sync-deals] Manual backfill failed (non-fatal):", msg);
+    results.manualBackfill = { error: msg };
+  }
 
   // Remove expired deals across all networks first
   const expired = await removeExpiredDeals();

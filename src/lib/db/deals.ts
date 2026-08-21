@@ -365,9 +365,40 @@ export async function removeStaleDeals(
     // Ids in the welcome band are auto-generated and intentionally absent from
     // any network feed, so they must never be treated as "stale" — even after an
     // admin edits them and the isAutoWelcome flag is cleared.
+    //
+    // Manually created deals are likewise absent from every network feed (they
+    // live in the 900000+ band, which is BELOW WELCOME_DEAL_ID_BASE, so the id
+    // guard above does NOT protect them). Without this exclusion the next sync
+    // would delete every admin-added deal.
+    isManual: { $ne: true },
   });
 
   return result.deletedCount;
+}
+
+/**
+ * One-time self-healing backfill: stamp `isManual: true` on admin-created deals
+ * that predate the flag, so stale-removal no longer wipes them.
+ *
+ * Manual deals live in the compact 900000+ band (below WELCOME_DEAL_ID_BASE);
+ * welcome deals (>= 1e9) and brand deals (>= 2e9) are excluded by the id range,
+ * and auto-welcome deals are excluded by the flag. Idempotent — only touches
+ * docs still missing `isManual`, so it's a no-op once everything is marked.
+ *
+ * @returns Number of deals newly marked.
+ */
+export async function backfillManualDeals(): Promise<number> {
+  const db = await getDb();
+  const col = db.collection<DealDoc>(COLLECTION);
+  const result = await col.updateMany(
+    {
+      id: { $gte: 900000, $lt: WELCOME_DEAL_ID_BASE },
+      isAutoWelcome: { $ne: true },
+      isManual: { $ne: true },
+    },
+    { $set: { isManual: true } },
+  );
+  return result.modifiedCount;
 }
 
 // ---------------------------------------------------------------------------
@@ -753,6 +784,9 @@ export async function createDeal(deal: Deal): Promise<Deal> {
   const doc: DealDoc = {
     ...deal,
     network: deal.network ?? "awin",
+    // Mark as admin-created so the network sync's stale-removal never wipes it
+    // (manual deals are, by definition, absent from every network feed).
+    isManual: true,
     syncedAt: new Date(),
   };
 
@@ -762,7 +796,7 @@ export async function createDeal(deal: Deal): Promise<Deal> {
     { upsert: true }
   );
 
-  return deal;
+  return { ...deal, isManual: true };
 }
 
 /**

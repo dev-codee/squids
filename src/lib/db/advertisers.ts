@@ -351,6 +351,83 @@ async function getAdvertisersFromDbUncached(
 }
 
 /**
+ * Lightweight "showcase" reader for the home page.
+ *
+ * The full `getAdvertisersFromDbUncached` with `requireDeals` runs a `$lookup`
+ * into the deals collection for EVERY matching advertiser (thousands), twice
+ * (count + page), *before* paginating — which is what makes the home fetch time
+ * out. This path instead sorts + limits FIRST, then computes deal counts for
+ * only the handful of returned advertisers, so cost is O(limit), not O(all).
+ *
+ * No total/pagination: the home page is a fixed showcase, and the full browsable
+ * grid lives on the /stores page (which still uses the paginated reader).
+ */
+async function getShowcaseAdvertisersUncached(
+  query: AdvertiserQuery & { network?: string },
+): Promise<PagedAdvertisers | null> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+
+  const count = await col.estimatedDocumentCount();
+  if (count === 0) return null;
+
+  const filter = buildFilter(query);
+  const limit = Math.min(Math.max(1, query.pageSize || 12), MAX_PAGE_SIZE);
+
+  const docs = await col
+    .aggregate([
+      { $match: filter },
+      { $sort: { isFlagship: -1, name: 1 } },
+      { $limit: limit },
+      {
+        // Count deals for ONLY these `limit` advertisers, not the whole set.
+        $lookup: {
+          from: "deals",
+          let: { advId: "$id", advNetwork: "$network" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    {
+                      $or: [
+                        { $eq: ["$advertiser.id", "$$advId"] },
+                        { $eq: ["$advertiser.id", { $toString: "$$advId" }] },
+                        { $eq: [{ $toString: "$advertiser.id" }, { $toString: "$$advId" }] },
+                      ],
+                    },
+                    { $eq: ["$network", "$$advNetwork"] },
+                  ],
+                },
+              },
+            },
+            { $count: "n" },
+          ],
+          as: "dealAgg",
+        },
+      },
+      {
+        $addFields: {
+          dealCount: { $ifNull: [{ $arrayElemAt: ["$dealAgg.n", 0] }, 0] },
+        },
+      },
+      { $project: { _id: 0, syncedAt: 0, dealAgg: 0 } },
+    ])
+    .toArray();
+
+  const normalizedDocs = docs.map((doc) => normalizeAdvertiserDoc(doc));
+
+  return {
+    advertisers: normalizedDocs,
+    page: 1,
+    pageSize: limit,
+    total: normalizedDocs.length,
+    totalPages: 1,
+    facets: { regions: [], relationships: [], countries: [], categories: [] },
+  };
+}
+
+/**
  * Get a single advertiser by ID from MongoDB.
  * Optionally scoped by network; defaults to any network.
  */
@@ -579,6 +656,13 @@ export const getAdvertisersFromDb = unstable_cache(
   { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers] },
 );
 
+/** Cached showcase listing — lightweight, limited, for home page only. */
+export const getShowcaseAdvertisersFromDb = unstable_cache(
+  getShowcaseAdvertisersUncached,
+  ["public:advertisers-showcase"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers] },
+);
+
 /** Cached single-advertiser lookup by id. */
 export const getAdvertiserByIdFromDb = unstable_cache(
   getAdvertiserByIdFromDbUncached,
@@ -624,9 +708,32 @@ export async function removeStaleAdvertisers(
   const result = await col.deleteMany({
     network,
     id: { $nin: currentIds },
+    // Manually created advertisers are never present in any network feed, so
+    // without this exclusion the next sync would delete every admin-added store.
+    isManual: { $ne: true },
   });
 
   return result.deletedCount;
+}
+
+/**
+ * One-time self-healing backfill: stamp `isManual: true` on admin-created
+ * advertisers that predate the flag, so stale-removal no longer wipes them.
+ *
+ * Manual advertisers are assigned ids in the 900000+ band (`getNextAdvertiserId`),
+ * which no network feed uses. Idempotent — only touches docs still missing
+ * `isManual`, so it's a no-op once everything is marked.
+ *
+ * @returns Number of advertisers newly marked.
+ */
+export async function backfillManualAdvertisers(): Promise<number> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+  const result = await col.updateMany(
+    { id: { $gte: 900000 }, isManual: { $ne: true } },
+    { $set: { isManual: true } },
+  );
+  return result.modifiedCount;
 }
 
 /**
@@ -652,6 +759,9 @@ export async function createAdvertiser(advertiser: Advertiser): Promise<Advertis
   const doc: AdvertiserDoc = {
     ...advertiser,
     network: advertiser.network ?? "awin",
+    // Mark as admin-created so the network sync's stale-removal never wipes it
+    // (manual advertisers are, by definition, absent from every network feed).
+    isManual: true,
     syncedAt: new Date(),
   };
 
@@ -661,7 +771,7 @@ export async function createAdvertiser(advertiser: Advertiser): Promise<Advertis
     { upsert: true }
   );
 
-  return advertiser;
+  return { ...advertiser, isManual: true };
 }
 
 /**

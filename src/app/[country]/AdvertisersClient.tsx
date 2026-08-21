@@ -18,7 +18,8 @@ import { useDictionary } from "@/i18n/DictionaryProvider";
 
 import { useSearchParams } from "next/navigation";
 
-const PAGE_SIZE = 35;
+const HOME_PAGE_SIZE = 12;
+const STORES_PAGE_SIZE = 35;
 
 interface PageData {
   advertisers: Advertiser[];
@@ -71,13 +72,16 @@ export default function AdvertisersClient({
       setLoading(true);
       setError(null);
 
+      const pageSize = isHome ? HOME_PAGE_SIZE : STORES_PAGE_SIZE;
       const params = new URLSearchParams({
         page: String(currentPage),
-        pageSize: String(PAGE_SIZE),
+        pageSize: String(pageSize),
         country,
         relationship: "joined",
         requireDeals: "true",
       });
+      // Showcase mode: lightweight pre-limited query for home page
+      if (isHome) params.set("showcase", "true");
       if (currentSearch) params.set("search", currentSearch);
       if (currentCategory) params.set("category", currentCategory);
       const url = `/api/advertisers?${params.toString()}`;
@@ -217,13 +221,15 @@ export default function AdvertisersClient({
                   ))}
                 </div>
 
-                <Pagination
-                  page={data.page}
-                  totalPages={data.totalPages}
-                  total={data.total}
-                  pageSize={data.pageSize}
-                  onPageChange={goToPage}
-                />
+                {!isHome && (
+                  <Pagination
+                    page={data.page}
+                    totalPages={data.totalPages}
+                    total={data.total}
+                    pageSize={data.pageSize}
+                    onPageChange={goToPage}
+                  />
+                )}
               </>
             )}
           </div>

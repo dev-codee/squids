@@ -119,6 +119,13 @@ export interface Deal {
    */
   isBrandDeal?: boolean;
 
+  /**
+   * True when this deal was created manually by an admin (not sourced from a
+   * network feed). Manual deals are never present in any network's API response,
+   * so stale-removal must skip them — otherwise the next sync would delete them.
+   */
+  isManual?: boolean;
+
   // --- AI-generated copy (Claude) ------------------------------------------
   /** AI-written shopper-facing title. Preferred over `title` on public pages. */
   aiTitle?: string | null;

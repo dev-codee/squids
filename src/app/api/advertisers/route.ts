@@ -5,7 +5,7 @@ import {
   AwinConfigError,
   AwinApiError,
 } from "@/lib/awin";
-import { getAdvertisersFromDb } from "@/lib/db/advertisers";
+import { getAdvertisersFromDb, getShowcaseAdvertisersFromDb } from "@/lib/db/advertisers";
 
 // Always run on the server, never statically prerendered.
 export const dynamic = "force-dynamic";
@@ -15,6 +15,9 @@ export const dynamic = "force-dynamic";
  *
  * Primary: reads from MongoDB (fast, no Awin rate-limit concerns).
  * Fallback: fetches directly from Awin if MongoDB is empty or unavailable.
+ *
+ * Pass `showcase=true` for the home page: it limits FIRST, then computes deal
+ * counts only for the returned rows — O(limit) instead of O(all advertisers).
  */
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -41,6 +44,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Advertiser not found." }, { status: 404 });
   }
 
+  const isShowcase = params.get("showcase") === "true";
+
   const query = {
     search: params.get("search") ?? undefined,
     region: params.get("region") ?? undefined,
@@ -60,6 +65,15 @@ export async function GET(request: NextRequest) {
   try {
     // Try MongoDB first
     try {
+      // Showcase path: lightweight, pre-limited query for home page.
+      // Avoids the expensive $lookup-then-paginate pattern.
+      if (isShowcase) {
+        const showcaseResult = await getShowcaseAdvertisersFromDb(query);
+        if (showcaseResult) {
+          return NextResponse.json(showcaseResult);
+        }
+      }
+
       const dbResult = await getAdvertisersFromDb(query);
       if (dbResult) {
         return NextResponse.json(dbResult);
