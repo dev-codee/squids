@@ -305,7 +305,10 @@ async function loadStoreDataUncached(
 ): Promise<StoreData | null> {
   let advertiser: Advertiser | null = null;
   try {
-    advertiser = await getAdvertiserBySlug(slug);
+    // Region-scoped: resolve the slug to the advertiser matching this URL's
+    // country, so same-named stores across networks don't collide (e.g. the AU
+    // myBrainCo with 13 deals vs. a same-named US record with only a brand deal).
+    advertiser = await getAdvertiserBySlug(slug, country);
   } catch (error) {
     // If MongoDB connection fails, log it and return null (which renders a 404)
     console.warn("MongoDB error in getAdvertiserBySlug:", error);
@@ -539,7 +542,7 @@ export const loadStoreAiContent = cache(
   ): Promise<StorePageContent | null> => {
     let advertiser: Advertiser | null = null;
     try {
-      advertiser = await getAdvertiserBySlug(slug);
+      advertiser = await getAdvertiserBySlug(slug, country);
     } catch {
       return null;
     }

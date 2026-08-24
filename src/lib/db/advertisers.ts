@@ -24,6 +24,8 @@ import type {
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/awin";
 
 const COLLECTION = "advertisers";
+/** Deals collection — read here to rank same-slug advertisers by real deal count. */
+const COLLECTION_DEALS = "deals";
 
 interface AdvertiserDoc extends Advertiser {
   syncedAt: Date;
@@ -581,6 +583,36 @@ function escapeRegExp(s: string): string {
 }
 
 /**
+ * Score how well an advertiser matches a requested country/region.
+ *
+ * The store URL is region-scoped (`/[country]/[store]`), so when the same brand
+ * exists on multiple networks (e.g. an Awin "myBrainCo" for US and a Commission
+ * Factory "myBrainCo" for AU), the one whose region matches the URL must win.
+ *
+ *  - 3 → serves the exact requested country
+ *  - 1 → worldwide/global, or no region data (safe generic fallback)
+ *  - 0 → serves a *different* country (should only be chosen as a last resort)
+ */
+function advertiserRegionScore(
+  a: Advertiser,
+  country?: string,
+): number {
+  const cc = normalizeCountryCode(country);
+  if (!cc || cc === "WW") return 1; // no country context — treat all as neutral
+
+  const codes = new Set<string>();
+  if (Array.isArray(a.countryCodes)) {
+    for (const c of a.countryCodes) codes.add(normalizeCountryCode(c));
+  }
+  if (a.countryCode) codes.add(normalizeCountryCode(a.countryCode));
+  if (a.region) codes.add(normalizeCountryCode(a.region));
+
+  if (codes.has(cc)) return 3;
+  if (codes.size === 0 || codes.has("WW")) return 1;
+  return 0;
+}
+
+/**
  * Resolve a store slug (e.g. "amazon", "best-buy") to an advertiser.
  *
  * Advertisers have no dedicated slug field, so we match the slug against the
@@ -588,10 +620,17 @@ function escapeRegExp(s: string): string {
  * hyphen tolerates any run of non-alphanumeric characters ("best-buy" ↔ "Best Buy").
  * A JS slug re-check disambiguates when the regex has multiple hits.
  *
- * When multiple networks match, prefer the one with active deals, then the
- * first found (deterministic by sort order).
+ * When the same slug exists on multiple networks/regions, resolution is:
+ *   1. region match for the requested `country` (region-specific stores),
+ *   2. then the record carrying the most real (non-auto-generated) deals,
+ *   3. then any deals, then a `joined` relationship — deterministic tiebreaks.
+ * This keeps `/au/mybrainco` on the AU merchant (13 deals) instead of a
+ * same-named US merchant that only has an auto-generated brand deal.
  */
-async function getAdvertiserBySlugUncached(slug: string): Promise<Advertiser | null> {
+async function getAdvertiserBySlugUncached(
+  slug: string,
+  country?: string,
+): Promise<Advertiser | null> {
   let normalized = slug.trim().toLowerCase();
   if (!normalized) return null;
 
@@ -638,13 +677,80 @@ async function getAdvertiserBySlugUncached(slug: string): Promise<Advertiser | n
 
   if (candidates.length === 0) return null;
 
-  // Prefer an exact slug match; otherwise take the first regex candidate.
-  const exact = candidates.find(
+  // Prefer exact slug matches; fall back to the loose regex hits if none match
+  // exactly (so partial/legacy names still resolve).
+  const exact = candidates.filter(
     (a) => slugifyAdvertiserName((a as unknown as Advertiser).name) === normalized,
   );
+  const pool = (exact.length > 0 ? exact : candidates) as unknown as Advertiser[];
 
-  const result = (exact ?? candidates[0]) as unknown as Advertiser;
-  return normalizeAdvertiserDoc(result);
+  if (pool.length === 1) {
+    return normalizeAdvertiserDoc(pool[0]);
+  }
+
+  // Count real (non-auto-generated) deals per candidate so we can prefer the
+  // record shoppers actually have offers for. Auto welcome/brand deals don't
+  // count — a store that only has those is effectively empty.
+  const dealsCol = db.collection(COLLECTION_DEALS);
+  const ids = pool.map((a) => a.id);
+  const dealRows = await dealsCol
+    .aggregate([
+      { $match: { "advertiser.id": { $in: [...ids, ...ids.map(String)] } } },
+      {
+        $group: {
+          _id: { network: "$network", advId: "$advertiser.id" },
+          total: { $sum: 1 },
+          real: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$isAutoWelcome", true] },
+                    { $ne: ["$isBrandDeal", true] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ])
+    .toArray();
+
+  const countKey = (network: string | undefined, id: number | string) =>
+    `${network ?? "awin"}:${Number(id)}`;
+  const counts = new Map<string, { total: number; real: number }>();
+  for (const r of dealRows) {
+    counts.set(countKey(r._id.network, r._id.advId), {
+      total: r.total,
+      real: r.real,
+    });
+  }
+
+  // Region first (region-specific stores), then real deals, then any deals,
+  // then a joined relationship — all deterministic so results never flap.
+  const scored = pool
+    .map((a) => {
+      const c = counts.get(countKey(a.network, a.id)) ?? { total: 0, real: 0 };
+      return {
+        a,
+        region: advertiserRegionScore(a, country),
+        real: c.real,
+        total: c.total,
+        joined: a.relationship === "joined" ? 1 : 0,
+      };
+    })
+    .sort(
+      (x, y) =>
+        y.region - x.region ||
+        y.real - x.real ||
+        y.total - x.total ||
+        y.joined - x.joined,
+    );
+
+  return normalizeAdvertiserDoc(scored[0].a);
 }
 
 // ---------------------------------------------------------------------------
