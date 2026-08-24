@@ -4,6 +4,7 @@ import {
   upsertDeals,
   removeExpiredDeals,
   removeStaleDeals,
+  removeLegacyCfPromotions,
   generateWelcomeDeals,
   generateBrandDeals,
   backfillManualDeals,
@@ -176,6 +177,13 @@ export async function GET(request: NextRequest) {
         "commission-factory",
       );
     }
+    // Self-heal: drop legacy CF promotions written under the old 2e9 offset
+    // (now re-created at the 3e9 band above), which collided with brand deals.
+    // Guarded on a successful promotions fetch so a transient failure — which
+    // yields no fresh 3e9 promotions — can't strip the old copies with nothing
+    // to replace them. Idempotent no-op once the DB is clean.
+    const cfLegacyRemoved =
+      cfPromotions.length > 0 ? await removeLegacyCfPromotions() : 0;
     await updateSyncTime("commission-factory:deals", cfDeals.length);
 
     results.cf = {
@@ -185,6 +193,7 @@ export async function GET(request: NextRequest) {
       upserted: cfResult.upserted,
       modified: cfResult.modified,
       staleRemoved: cfStale,
+      legacyPromotionsRemoved: cfLegacyRemoved,
     };
 
     console.log(

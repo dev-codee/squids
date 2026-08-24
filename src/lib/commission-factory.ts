@@ -194,11 +194,21 @@ export interface CFPromotion {
 }
 
 /**
- * CF Coupons and Promotions are separate ID spaces that can collide. Our deals
- * are keyed on (network, id), so offset promotion IDs to keep them distinct
- * from CF coupon IDs. CF creative IDs are small integers, so this never clashes.
+ * Reserved id band for CF promotions: `p.Id + CF_PROMOTION_ID_OFFSET`.
+ *
+ * Our deals are keyed on `(network, id)`. The band MUST sit above the
+ * auto-generated deal bases in `@/lib/db/deals` so it never collides:
+ *   - welcome deals: 1e9 + advertiserId
+ *   - brand deals:   2e9 + advertiserId
+ *
+ * The previous value (2e9) overlapped the brand-deal band, so a CF promotion
+ * whose creative `Id` equalled a CF advertiser's `id` collided with that
+ * advertiser's brand deal and one silently masked the other on upsert. 3e9
+ * gives promotions their own 1e9-wide slot (creative Ids are small integers,
+ * far below 1e9). Being >= 1e9 it also stays exempt from `removeStaleDeals`,
+ * so a transient `fetchCfPromotions` failure can't wipe existing promotions.
  */
-export const CF_PROMOTION_ID_OFFSET = 2_000_000_000;
+export const CF_PROMOTION_ID_OFFSET = 3_000_000_000;
 
 export function normaliseCfPromotion(p: CFPromotion): Deal {
   const trackingUrl = p.TrackingUrl || getCfTrackingUrl(p.MerchantId, p.TargetUrl);

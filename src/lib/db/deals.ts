@@ -600,8 +600,37 @@ export async function generateWelcomeDeals(): Promise<{
  * Sits above the welcome band so the two never collide, and (being >=
  * WELCOME_DEAL_ID_BASE) it's automatically skipped by `removeStaleDeals`, which
  * only prunes ids below that base.
+ *
+ * Id band map (see also CF_PROMOTION_ID_OFFSET in @/lib/commission-factory):
+ *   [900000,  1e9) → manual admin deals
+ *   [1e9,     2e9) → welcome deals  (1e9 + advertiserId)
+ *   [2e9,     3e9) → brand deals    (2e9 + advertiserId)
+ *   [3e9,     4e9) → CF promotions  (3e9 + creativeId)
  */
 const BRAND_DEAL_ID_BASE = 2_000_000_000;
+
+/**
+ * One-time self-healing: remove CF promotions written under the legacy 2e9
+ * offset, which overlapped the brand-deal band. The sync re-creates them at the
+ * new 3e9 band on the same run, so this only drops the stale/colliding copies.
+ *
+ * Scoped to the brand-deal band `[2e9, 3e9)` on the CF network, excluding brand
+ * deals (isBrandDeal) and any admin-marked deal (isManual), so genuine brand
+ * deals for CF advertisers are never touched. Idempotent — a no-op once clean.
+ *
+ * @returns Number of legacy promotions removed.
+ */
+export async function removeLegacyCfPromotions(): Promise<number> {
+  const db = await getDb();
+  const col = db.collection<DealDoc>(COLLECTION);
+  const result = await col.deleteMany({
+    network: "commission-factory",
+    id: { $gte: BRAND_DEAL_ID_BASE, $lt: 3_000_000_000 },
+    isBrandDeal: { $ne: true },
+    isManual: { $ne: true },
+  });
+  return result.deletedCount;
+}
 
 /** Copy for the generic brand deal. `{name}` is the advertiser's actual name. */
 export const BRAND_DEAL_COPY = {
