@@ -142,5 +142,5 @@ export function getSiteUrl(): string {
   }
   const vercel = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_VERCEL_URL;
   if (vercel) return `https://${vercel.replace(/\/$/, "")}`;
-  return "http://localhost:3000";
+  return "https://foxzil.com";
 }
