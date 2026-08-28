@@ -130,8 +130,16 @@ export function regionName(region: RegionConfig): string {
  * then localhost for local development.
  */
 export function getSiteUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
-  if (explicit) return explicit.replace(/\/$/, "");
+  let explicit = process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicit) {
+    explicit = explicit.replace(/\/$/, "");
+    // Ensure protocol is present — fixes sitemap URLs like "foxzil.com/us"
+    // which Google Search Console rejects as invalid.
+    if (!/^https?:\/\//i.test(explicit)) {
+      explicit = `https://${explicit}`;
+    }
+    return explicit;
+  }
   const vercel = process.env.VERCEL_URL || process.env.NEXT_PUBLIC_VERCEL_URL;
   if (vercel) return `https://${vercel.replace(/\/$/, "")}`;
   return "http://localhost:3000";
