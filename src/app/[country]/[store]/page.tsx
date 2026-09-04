@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { loadStoreData, loadStoreAiContent } from "@/lib/storeData";
 import { Suspense } from "react";
@@ -249,9 +249,8 @@ export default async function StoreMainPage({
           </div>
         </div>
 
-        {/* AI-generated store content — full width below the offers.
-            Streamed in with a skeleton fallback while Claude generates it
-            on first visit. */}
+        {/* AI-generated store content — temporarily hidden from UI */}
+        {/*
         <div className="mt-8">
           <Suspense fallback={<StoreAiSkeleton />}>
             <StoreAiContent
@@ -261,6 +260,7 @@ export default async function StoreMainPage({
             />
           </Suspense>
         </div>
+        */}
       </main>
     </div>
   );
