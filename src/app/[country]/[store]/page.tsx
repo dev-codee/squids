@@ -84,11 +84,11 @@ export async function generateMetadata({
       images: store.logoUrl ? [store.logoUrl] : [],
     },
     robots: {
-      index: false,
-      follow: false,
+      index: true,
+      follow: true,
       googleBot: {
-        index: false,
-        follow: false,
+        index: true,
+        follow: true,
       },
     },
   };
