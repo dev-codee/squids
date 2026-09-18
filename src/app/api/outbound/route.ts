@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { recordOutboundClick } from "@/lib/db/clicks";
 import { appendNetworkSubId, resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
-import { ATTRIBUTION_COOKIE_NAME, VisitorAttribution } from "@/components/tracking/AttributionCapture";
+import { ATTRIBUTION_COOKIE_NAME, VisitorAttribution } from "@/lib/attribution";
 import { getAdvertiserBySlug } from "@/lib/db/advertisers";
 
 export const dynamic = "force-dynamic";
@@ -65,15 +65,22 @@ export async function GET(request: NextRequest) {
   const attrCookie = request.cookies.get(ATTRIBUTION_COOKIE_NAME)?.value;
   if (attrCookie) {
     try {
-      const parsed: VisitorAttribution = JSON.parse(decodeURIComponent(attrCookie));
-      gclid = gclid || parsed.gclid;
-      gbraid = gbraid || parsed.gbraid;
-      wbraid = wbraid || parsed.wbraid;
-      utm_source = utm_source || parsed.utm_source;
-      utm_medium = utm_medium || parsed.utm_medium;
-      utm_campaign = utm_campaign || parsed.utm_campaign;
-    } catch {
-      /* ignore JSON parse errors */
+      let raw = attrCookie;
+      try { raw = decodeURIComponent(attrCookie); } catch {}
+      let parsed: any = JSON.parse(raw);
+      if (typeof parsed === "string") {
+        try { parsed = JSON.parse(parsed); } catch {}
+      }
+      if (parsed && typeof parsed === "object") {
+        gclid = gclid || parsed.gclid;
+        gbraid = gbraid || parsed.gbraid;
+        wbraid = wbraid || parsed.wbraid;
+        utm_source = utm_source || parsed.utm_source;
+        utm_medium = utm_medium || parsed.utm_medium;
+        utm_campaign = utm_campaign || parsed.utm_campaign;
+      }
+    } catch (err) {
+      console.warn("[api/outbound] Failed to parse attribution cookie:", err, "raw value:", attrCookie);
     }
   }
 
@@ -116,7 +123,12 @@ export async function GET(request: NextRequest) {
     searchParams.get("format") === "json";
 
   if (acceptsJson) {
-    return NextResponse.json({ url: trackedUrl, clickId });
+    return NextResponse.json({
+      url: trackedUrl,
+      clickId,
+      gclid,
+      cookiesReceived: request.cookies.getAll().map((c) => ({ name: c.name, value: c.value })),
+    });
   }
 
   return NextResponse.redirect(trackedUrl, 307);
