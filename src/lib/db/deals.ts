@@ -923,10 +923,13 @@ export async function ensureDealAiContent(
 ): Promise<Deal> {
   const locale = opts?.locale ? opts.locale.toLowerCase().split("-")[0] : "en";
 
-  // Check if copy is already generated for this locale
+  // Check if valid copy is already generated for this locale
   const alreadyGenerated =
     !opts?.force &&
-    (deal.aiGeneratedAtByLang?.[locale] || (locale === "en" && deal.aiGeneratedAt));
+    Boolean(
+      (deal.aiTitleByLang?.[locale] && deal.aiDescriptionByLang?.[locale]) ||
+        (locale === "en" && deal.aiTitle && deal.aiDescription),
+    );
 
   if (alreadyGenerated) return deal;
 

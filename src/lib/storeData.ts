@@ -278,20 +278,17 @@ function dealFromDeal(
  * ensureDealAiContent, so once warmed the store renders fully translated.
  */
 async function warmDealLocaleCopy(deals: Deal[], locale: string): Promise<void> {
-  const CONCURRENCY = 3;
-  for (let i = 0; i < deals.length; i += CONCURRENCY) {
-    const batch = deals.slice(i, i + CONCURRENCY);
-    await Promise.all(
-      batch.map((d) =>
-        ensureDealAiContent(d, { locale }).catch((err) => {
-          console.warn(
-            `[ai] Background locale warm failed for ${d.network ?? "awin"}:${d.id} (${locale}):`,
-            err instanceof Error ? err.message : err,
-          );
-          return d;
-        }),
-      ),
-    );
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  for (const d of deals) {
+    try {
+      await ensureDealAiContent(d, { locale });
+      await sleep(600);
+    } catch (err) {
+      console.warn(
+        `[ai] Background locale warm failed for ${d.network ?? "awin"}:${d.id} (${locale}):`,
+        err instanceof Error ? err.message : err,
+      );
+    }
   }
 }
 
@@ -369,12 +366,18 @@ async function loadStoreDataUncached(
 
   // Generate a bounded batch synchronously so the current render improves right
   // away without blocking on a large store's entire deal list.
-  const AI_GEN_PER_REQUEST = 6;
+  const AI_GEN_PER_REQUEST = 4;
   const syncBatch = missingLocaleCopy.slice(0, AI_GEN_PER_REQUEST);
   if (syncBatch.length > 0) {
-    const generated = await Promise.all(
-      syncBatch.map((d) => ensureDealAiContent(d, { locale })),
-    );
+    const generated: Deal[] = [];
+    for (const d of syncBatch) {
+      try {
+        const updated = await ensureDealAiContent(d, { locale });
+        generated.push(updated);
+      } catch {
+        generated.push(d);
+      }
+    }
     const byKey = new Map(
       generated.map((d) => [`${d.network ?? "awin"}:${d.id}`, d]),
     );

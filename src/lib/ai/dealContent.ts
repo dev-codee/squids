@@ -201,6 +201,7 @@ export async function generateDealContent(
     model: resolveModel(),
     maxTokens: 1024,
     jsonMode: true,
+    jsonSchema: OUTPUT_SCHEMA,
     messages: [
       {
         role: "system",

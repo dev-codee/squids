@@ -76,29 +76,42 @@ export async function callPerplexity(
     };
   }
 
-  const res = await fetch("https://api.perplexity.ai/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const maxRetries = 3;
 
-  if (!res.ok) {
-    const errorBody = await res.text().catch(() => "");
-    throw new Error(
-      `Perplexity API error (HTTP ${res.status}): ${errorBody || res.statusText}`,
-    );
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const res = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 429 && attempt < maxRetries) {
+      console.warn(`[perplexity] Rate limit 429 hit. Retrying in ${attempt * 1.5}s (attempt ${attempt}/${maxRetries})...`);
+      await sleep(attempt * 1500);
+      continue;
+    }
+
+    if (!res.ok) {
+      const errorBody = await res.text().catch(() => "");
+      throw new Error(
+        `Perplexity API error (HTTP ${res.status}): ${errorBody || res.statusText}`,
+      );
+    }
+
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content;
+    if (typeof text !== "string") {
+      throw new Error("Perplexity API returned empty response content.");
+    }
+
+    return text;
   }
 
-  const data = await res.json();
-  const text = data.choices?.[0]?.message?.content;
-  if (typeof text !== "string") {
-    throw new Error("Perplexity API returned empty response content.");
-  }
-
-  return text;
+  throw new Error("Perplexity API request failed after retries.");
 }
 
 /**
