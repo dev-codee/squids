@@ -169,9 +169,10 @@ export async function recordSyncError(
 
 /**
  * Get sync status for all entities (useful for a dashboard/health endpoint).
+ * Excludes legacy non-prefixed keys ("advertisers", "deals", "transactions").
  */
 export async function getAllSyncStatus(): Promise<SyncMetaDoc[]> {
   const db = await getDb();
   const col = db.collection<SyncMetaDoc>(COLLECTION);
-  return col.find({}).toArray();
+  return col.find({ entity: { $regex: /:/ } }).toArray();
 }
