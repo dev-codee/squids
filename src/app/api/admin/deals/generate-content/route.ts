@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   if (!isAiConfigured()) {
     return NextResponse.json(
-      { error: "AI is not configured. Set ANTHROPIC_API_KEY on the server." },
+      { error: "AI is not configured. Set PERPLEXITY_API_KEY on the server." },
       { status: 400 },
     );
   }

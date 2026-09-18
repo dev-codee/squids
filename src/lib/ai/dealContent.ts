@@ -9,7 +9,7 @@
 import type { Deal } from "@/lib/deals";
 import { countryName } from "@/lib/countries";
 import {
-  getAnthropicClient,
+  callPerplexity,
   resolveModel,
   parseJsonResponse,
 } from "@/lib/ai/client";
@@ -197,18 +197,20 @@ export async function generateDealContent(
     opts?.language ||
     (opts?.locale ? languageNameForLocale(opts.locale) : "English");
 
-  const client = getAnthropicClient();
-  const response = await client.messages.create({
+  const rawResponse = await callPerplexity({
     model: resolveModel(),
-    max_tokens: 1024,
-    system: buildSystemPrompt(language),
-    // Structured outputs guarantee a valid verdict object.
-    // Note: no `effort` here — it isn't supported on Haiku 4.5.
-    output_config: { format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
-    messages: [{ role: "user", content: buildInputData(deal) }],
+    maxTokens: 1024,
+    jsonMode: true,
+    messages: [
+      {
+        role: "system",
+        content: `${buildSystemPrompt(language)}\n\nYou must output JSON conforming to: {"status": "APPROVED" | "CORRECTED" | "REVIEW", "title": string, "description": string, "issues": string[]}`,
+      },
+      { role: "user", content: buildInputData(deal) },
+    ],
   });
 
-  const parsed = parseJsonResponse<Partial<DealCopy>>(response);
+  const parsed = parseJsonResponse<Partial<DealCopy>>(rawResponse);
   const status = parsed.status;
   if (status !== "APPROVED" && status !== "CORRECTED" && status !== "REVIEW") {
     throw new Error(`AI returned an unknown status: ${String(status)}`);

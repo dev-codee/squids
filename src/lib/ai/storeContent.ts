@@ -13,7 +13,7 @@
 import type { Advertiser } from "@/lib/awin";
 import type { Deal } from "@/lib/deals";
 import { countryName } from "@/lib/countries";
-import { getAnthropicClient, resolveModel, parseJsonResponse } from "@/lib/ai/client";
+import { callPerplexity, resolveModel, parseJsonResponse } from "@/lib/ai/client";
 
 export { AiConfigError, isAiConfigured } from "@/lib/ai/client";
 
@@ -242,15 +242,20 @@ export async function generateStorePageContent(
     ctx.language ||
     (ctx.locale ? languageNameForLocale(ctx.locale) : "English");
 
-  const client = getAnthropicClient();
-  const response = await client.messages.create({
+  const rawResponse = await callPerplexity({
     model: resolveModel(),
-    max_tokens: 4096,
-    system: buildStoreSystemPrompt(language),
-    messages: [{ role: "user", content: buildInputData(advertiser, deals, ctx, language) }],
+    maxTokens: 4096,
+    jsonMode: true,
+    messages: [
+      {
+        role: "system",
+        content: `${buildStoreSystemPrompt(language)}\n\nYou must return valid JSON strictly conforming to the requested StorePageContent schema.`,
+      },
+      { role: "user", content: buildInputData(advertiser, deals, ctx, language) },
+    ],
   });
 
-  const parsed = parseJsonResponse<StorePageContent>(response);
+  const parsed = parseJsonResponse<StorePageContent>(rawResponse);
   if (!parsed || typeof parsed !== "object") {
     throw new Error("AI returned invalid store-page content.");
   }

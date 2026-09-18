@@ -1,50 +1,118 @@
 /**
- * Shared Anthropic (Claude) client helpers.
+ * Shared Perplexity AI client helpers.
  *
- * Server-side only — reads ANTHROPIC_API_KEY / AI_MODEL from the environment and
- * must never run in the browser.
+ * Server-side only — reads PERPLEXITY_API_KEY / AI_MODEL from the environment and
+ * must never run in the browser. Uses Perplexity's OpenAI-compatible API.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-
-/** Thrown when the Anthropic API key isn't configured. Lets callers no-op cleanly. */
+/** Thrown when the Perplexity API key isn't configured. Lets callers no-op cleanly. */
 export class AiConfigError extends Error {}
 
-/** Default model — override with AI_MODEL (or ANTHROPIC_MODEL). */
-const DEFAULT_MODEL = "claude-opus-4-8";
+/** Default model — override with PERPLEXITY_MODEL or AI_MODEL. */
+const DEFAULT_MODEL = "sonar";
 
-/** Resolve the configured model, preferring AI_MODEL. */
+/** Resolve the configured model, preferring PERPLEXITY_MODEL or AI_MODEL. */
 export function resolveModel(): string {
-  return process.env.AI_MODEL || process.env.ANTHROPIC_MODEL || DEFAULT_MODEL;
+  return (
+    process.env.PERPLEXITY_MODEL ||
+    process.env.AI_MODEL ||
+    process.env.ANTHROPIC_MODEL ||
+    DEFAULT_MODEL
+  );
+}
+
+/** Get configured API key (supports PERPLEXITY_API_KEY with fallbacks). */
+export function getApiKey(): string | undefined {
+  return (
+    process.env.PERPLEXITY_API_KEY ||
+    process.env.AI_API_KEY ||
+    process.env.ANTHROPIC_API_KEY
+  );
 }
 
 /** True when AI generation is available (key present). Safe to call anywhere. */
 export function isAiConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(getApiKey());
 }
 
-let cachedClient: Anthropic | null = null;
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
 
-/** Lazily construct the Anthropic client, throwing AiConfigError if unconfigured. */
-export function getAnthropicClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new AiConfigError(
-      "Missing ANTHROPIC_API_KEY. Set it to enable AI generation.",
-    );
-  }
-  if (!cachedClient) cachedClient = new Anthropic({ apiKey });
-  return cachedClient;
+export interface PerplexityCompletionOptions {
+  model?: string;
+  messages: ChatMessage[];
+  maxTokens?: number;
+  temperature?: number;
+  jsonMode?: boolean;
 }
 
 /**
- * Read the single text block of a Claude response and JSON-parse it. Tolerant of
- * models that wrap JSON in ```` ```json ```` fences or add surrounding prose:
- * strips fences and falls back to the outermost `{...}` / `[...]` span.
+ * Calls Perplexity AI Chat Completions API via standard fetch.
  */
-export function parseJsonResponse<T>(response: Anthropic.Message): T {
-  const textBlock = response.content.find((b) => b.type === "text");
-  const raw = textBlock && "text" in textBlock ? textBlock.text : "";
+export async function callPerplexity(
+  options: PerplexityCompletionOptions,
+): Promise<string> {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new AiConfigError(
+      "Missing PERPLEXITY_API_KEY. Set it in your environment to enable AI generation.",
+    );
+  }
+
+  const model = options.model || resolveModel();
+  const payload: Record<string, any> = {
+    model,
+    messages: options.messages,
+    max_tokens: options.maxTokens || 2048,
+    temperature: options.temperature ?? 0.2,
+  };
+
+  if (options.jsonMode) {
+    payload.response_format = { type: "json_object" };
+  }
+
+  const res = await fetch("https://api.perplexity.ai/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text().catch(() => "");
+    throw new Error(
+      `Perplexity API error (HTTP ${res.status}): ${errorBody || res.statusText}`,
+    );
+  }
+
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (typeof text !== "string") {
+    throw new Error("Perplexity API returned empty response content.");
+  }
+
+  return text;
+}
+
+/**
+ * Tolerant JSON parser for AI outputs: parses raw strings, markdown fenced JSON,
+ * or outermost object/array spans.
+ */
+export function parseJsonResponse<T>(rawOrResponse: any): T {
+  let raw = "";
+  if (typeof rawOrResponse === "string") {
+    raw = rawOrResponse;
+  } else if (rawOrResponse && typeof rawOrResponse === "object") {
+    const textBlock = rawOrResponse.content?.find?.((b: any) => b.type === "text");
+    raw =
+      textBlock?.text ||
+      rawOrResponse.choices?.[0]?.message?.content ||
+      JSON.stringify(rawOrResponse);
+  }
 
   const candidates: string[] = [];
   const trimmed = raw.trim();
