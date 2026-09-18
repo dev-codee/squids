@@ -1,36 +1,87 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import type { CouponItem } from "@/lib/storeData";
 import { useDictionary } from "@/i18n/DictionaryProvider";
+import { trackCouponEvent, GtmCouponEventName } from "@/lib/gtm";
 
 interface HorizontalCouponCardProps {
   coupon: CouponItem;
   storeName: string;
+  market?: string;
+  merchantId?: string;
 }
 
-export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCouponCardProps) {
+export default function HorizontalCouponCard({
+  coupon,
+  storeName,
+  market,
+  merchantId,
+}: HorizontalCouponCardProps) {
   const dict = useDictionary();
+  const params = useParams();
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
-  const merchantUrl =
-    coupon.affiliateUrl || `https://www.${storeName.toLowerCase()}.com`;
+  // Derive market & merchantId with fallbacks to route params or store name
+  const routeCountry =
+    (typeof params?.country === "string" ? params.country : "") || "AU";
+  const routeStore = (typeof params?.store === "string" ? params.store : "") || "";
 
-  const openMerchant = () => {
-    window.open(merchantUrl, "_blank", "noopener,noreferrer");
+  const computedMarket = (market || routeCountry).toUpperCase();
+  const computedMerchantId =
+    merchantId ||
+    routeStore ||
+    storeName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+  // Tracked outbound URL routes through /api/outbound to associate gclid & assign network SubID
+  const outboundUrl = `/api/outbound?dealId=${encodeURIComponent(coupon.id)}&slug=${encodeURIComponent(computedMerchantId)}&market=${encodeURIComponent(computedMarket)}`;
+
+  const track = (eventName: GtmCouponEventName, buttonLocation: string) => {
+    trackCouponEvent(eventName, {
+      merchant_id: computedMerchantId,
+      merchant_name: storeName,
+      market: computedMarket,
+      coupon_id: coupon.id,
+      offer_type: coupon.type || (coupon.code ? "code" : "deal"),
+      button_location: buttonLocation,
+      coupon_code: coupon.code || undefined,
+    });
+  };
+
+  const openMerchant = (buttonLocation: string = "coupon_card") => {
+    track("affiliate_click", buttonLocation);
+    window.open(outboundUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const copyCode = (buttonLocation: string = "coupon_card") => {
+    if (!coupon.code) return;
+    navigator.clipboard
+      .writeText(coupon.code)
+      .then(() => {
+        setCopied(true);
+        track("coupon_copy", buttonLocation);
+        setTimeout(() => setCopied(false), 3000);
+      })
+      .catch(() => {});
   };
 
   const handleReveal = () => {
-    if (coupon.code) {
-      navigator.clipboard.writeText(coupon.code).catch(() => {});
-      setCopied(true);
-      setRevealed(true);
-      setShowModal(true);
-      setTimeout(() => setCopied(false), 3000);
-    }
-    openMerchant();
+    // 1. Fire show_coupon_click
+    track("show_coupon_click", "coupon_card");
+
+    // 2. Reveal code & show modal
+    setRevealed(true);
+    setShowModal(true);
+    track("coupon_reveal", "reveal_modal");
+
+    // 3. Attempt clipboard copy
+    copyCode("coupon_card");
+
+    // 4. Open outbound merchant in new tab
+    openMerchant("coupon_card");
   };
 
   return (
@@ -73,7 +124,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
           <p className="mt-1 text-sm text-gray-600 line-clamp-2">
             {coupon.description}
           </p>
-          
+
           <div className="mt-3 flex items-center gap-2">
             {coupon.verified && (
               <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
@@ -101,7 +152,9 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
               onClick={handleReveal}
               className="w-full relative inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600 shadow-sm overflow-hidden"
             >
-              <span className="relative z-10">{copied ? dict.cards.copied : revealed ? coupon.code : dict.cards.showCouponCode}</span>
+              <span className="relative z-10">
+                {copied ? dict.cards.copied : revealed ? coupon.code : dict.cards.showCouponCode}
+              </span>
               {!revealed && (
                 <div className="absolute right-0 top-0 h-full w-8 bg-emerald-700 clip-reveal flex items-center justify-center">
                   <span className="text-[10px]">*</span>
@@ -110,15 +163,16 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
             </button>
           ) : (
             <a
-              href={merchantUrl}
+              href={outboundUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => track("affiliate_click", "coupon_card")}
               className="w-full inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600 shadow-sm"
             >
               {dict.cards.getDeal}
             </a>
           )}
-          
+
           <div className="mt-2 text-[11px] text-gray-500 text-center">
             {coupon.expiryDate ? (
               <span>
@@ -146,7 +200,7 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
         </div>
       </div>
 
-      {/* Code Reveal Modal (same as original CouponCard) */}
+      {/* Code Reveal Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl text-center">
@@ -158,9 +212,16 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
             <h3 className="text-xl font-bold text-gray-900">{dict.cards.promoCodeCopied}</h3>
             <p className="mt-1 text-sm text-gray-500">{coupon.title}</p>
 
-            <div className="my-5 rounded-xl bg-amber-50 border-2 border-dashed border-amber-300 p-4">
+            <div
+              onClick={() => copyCode("reveal_modal")}
+              className="my-5 rounded-xl bg-amber-50 border-2 border-dashed border-amber-300 p-4 cursor-pointer hover:bg-amber-100/60 transition group"
+              title="Click to copy code"
+            >
               <span className="text-2xl font-mono font-extrabold tracking-widest text-amber-900">
                 {coupon.code}
+              </span>
+              <span className="block text-xs text-amber-700 mt-1 font-sans">
+                {copied ? dict.cards.copied : "Click to copy code"}
               </span>
             </div>
 
@@ -175,15 +236,15 @@ export default function HorizontalCouponCard({ coupon, storeName }: HorizontalCo
               >
                 {dict.cards.close}
               </button>
-              <a
-                href={merchantUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowModal(false)}
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  openMerchant("reveal_modal");
+                }}
                 className="flex-1 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 text-center"
               >
                 {dict.cards.goTo.replace("{store}", storeName)}
-              </a>
+              </button>
             </div>
           </div>
         </div>

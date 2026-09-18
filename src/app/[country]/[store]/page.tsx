@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { loadStoreData, loadStoreAiContent } from "@/lib/storeData";
 import { Suspense } from "react";
@@ -200,7 +200,13 @@ export default async function StoreMainPage({
                 <div className="flex flex-col gap-4">
                   {/* Coupon List */}
                   {store.coupons.map((coupon) => (
-                    <HorizontalCouponCard key={coupon.id} coupon={coupon} storeName={store.name} />
+                    <HorizontalCouponCard
+                      key={coupon.id}
+                      coupon={coupon}
+                      storeName={store.name}
+                      market={params.country}
+                      merchantId={store.slug}
+                    />
                   ))}
                 </div>
               </section>
@@ -214,7 +220,13 @@ export default async function StoreMainPage({
                 </h2>
                 <div className="flex flex-col gap-4">
                   {store.deals.map((deal) => (
-                    <HorizontalCouponCard key={deal.id} coupon={deal} storeName={store.name} />
+                    <HorizontalCouponCard
+                      key={deal.id}
+                      coupon={deal}
+                      storeName={store.name}
+                      market={params.country}
+                      merchantId={store.slug}
+                    />
                   ))}
                 </div>
               </section>

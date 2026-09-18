@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { getRegionConfig, getSiteUrl } from "@/lib/regions";
+import AttributionCapture from "@/components/tracking/AttributionCapture";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -74,6 +75,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
+        <AttributionCapture />
         {children}
       </body>
     </html>

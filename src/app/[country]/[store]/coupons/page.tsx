@@ -52,7 +52,13 @@ export default async function StoreCouponsPage({
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {items.map((coupon) => (
-            <CouponCard key={coupon.id} coupon={coupon} storeName={store.name} />
+            <CouponCard
+              key={coupon.id}
+              coupon={coupon}
+              storeName={store.name}
+              market={params.country}
+              merchantId={store.slug}
+            />
           ))}
         </div>
       </section>

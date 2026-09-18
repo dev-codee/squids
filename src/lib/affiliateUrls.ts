@@ -95,3 +95,43 @@ export function resolveAffiliateTrackingUrl(
 
   return rawUrl || "#";
 }
+
+/**
+ * Appends the network-specific SubID/ClickID tracking parameter to an outbound URL.
+ * - Commission Factory: UniqueId
+ * - Awin: clickref
+ * - Admitad / Generic: subid
+ */
+export function appendNetworkSubId(
+  url: string,
+  network?: string | null,
+  subId?: string | null,
+): string {
+  if (!url || !subId || url === "#") return url;
+
+  try {
+    const parsed = new URL(url, "https://foxzil.com");
+    const net = (network || "").toLowerCase();
+
+    if (net === "commission-factory" || url.includes("cfjump.com")) {
+      parsed.searchParams.set("UniqueId", subId);
+    } else if (net === "awin" || url.includes("awin1.com")) {
+      parsed.searchParams.set("clickref", subId);
+    } else if (net === "admitad" || url.includes("admitad.com") || url.includes("/g/")) {
+      parsed.searchParams.set("subid", subId);
+    } else {
+      parsed.searchParams.set("subid", subId);
+    }
+
+    return parsed.toString();
+  } catch {
+    const separator = url.includes("?") ? "&" : "?";
+    const param =
+      network?.includes("commission") || url.includes("cfjump")
+        ? "UniqueId"
+        : network?.includes("awin") || url.includes("awin1")
+        ? "clickref"
+        : "subid";
+    return `${url}${separator}${param}=${encodeURIComponent(subId)}`;
+  }
+}

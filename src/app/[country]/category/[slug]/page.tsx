@@ -143,6 +143,8 @@ export default async function CategoryDetailPage({
                   key={deal.id}
                   coupon={couponItem}
                   storeName={deal.advertiser?.name || category.name}
+                  market={params.country}
+                  merchantId={deal.advertiser?.id ? String(deal.advertiser.id) : undefined}
                 />
               );
             })}

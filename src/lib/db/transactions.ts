@@ -104,13 +104,17 @@ export async function upsertTransactions(
     col.createIndex({ advertiserId: 1 }),
     col.createIndex({ status: 1 }),
     col.createIndex({ network: 1 }),
+    col.createIndex({ subId: 1 }),
   ]);
 
   const now = new Date();
   const ops = transactions.map((tx) => ({
     updateOne: {
       filter: { network: tx.network ?? "awin", id: tx.id },
-      update: { $setOnInsert: { ...tx, network: tx.network ?? "awin", syncedAt: now } },
+      update: {
+        $set: { ...tx, network: tx.network ?? "awin" },
+        $setOnInsert: { syncedAt: now },
+      },
       upsert: true,
     },
   }));

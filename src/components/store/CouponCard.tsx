@@ -1,38 +1,87 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import type { CouponItem } from "@/lib/storeData";
 import { useDictionary } from "@/i18n/DictionaryProvider";
+import { trackCouponEvent, GtmCouponEventName } from "@/lib/gtm";
 
 interface CouponCardProps {
   coupon: CouponItem;
   storeName: string;
+  market?: string;
+  merchantId?: string;
 }
 
-export default function CouponCard({ coupon, storeName }: CouponCardProps) {
+export default function CouponCard({
+  coupon,
+  storeName,
+  market,
+  merchantId,
+}: CouponCardProps) {
   const dict = useDictionary();
+  const params = useParams();
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [revealed, setRevealed] = useState(false);
 
-  const merchantUrl =
-    coupon.affiliateUrl || `https://www.${storeName.toLowerCase()}.com`;
+  // Derive market & merchantId with fallbacks to route params or store name
+  const routeCountry =
+    (typeof params?.country === "string" ? params.country : "") || "AU";
+  const routeStore = (typeof params?.store === "string" ? params.store : "") || "";
 
-  const openMerchant = () => {
-    // Open the affiliate link in a new tab; the user stays on this page.
-    window.open(merchantUrl, "_blank", "noopener,noreferrer");
+  const computedMarket = (market || routeCountry).toUpperCase();
+  const computedMerchantId =
+    merchantId ||
+    routeStore ||
+    storeName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+  // Tracked outbound URL routes through /api/outbound to associate gclid & assign network SubID
+  const outboundUrl = `/api/outbound?dealId=${encodeURIComponent(coupon.id)}&slug=${encodeURIComponent(computedMerchantId)}&market=${encodeURIComponent(computedMarket)}`;
+
+  const track = (eventName: GtmCouponEventName, buttonLocation: string) => {
+    trackCouponEvent(eventName, {
+      merchant_id: computedMerchantId,
+      merchant_name: storeName,
+      market: computedMarket,
+      coupon_id: coupon.id,
+      offer_type: coupon.type || (coupon.code ? "code" : "deal"),
+      button_location: buttonLocation,
+      coupon_code: coupon.code || undefined,
+    });
+  };
+
+  const openMerchant = (buttonLocation: string = "coupon_card") => {
+    track("affiliate_click", buttonLocation);
+    window.open(outboundUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const copyCode = (buttonLocation: string = "coupon_card") => {
+    if (!coupon.code) return;
+    navigator.clipboard
+      .writeText(coupon.code)
+      .then(() => {
+        setCopied(true);
+        track("coupon_copy", buttonLocation);
+        setTimeout(() => setCopied(false), 3000);
+      })
+      .catch(() => {});
   };
 
   const handleReveal = () => {
-    if (coupon.code) {
-      navigator.clipboard.writeText(coupon.code).catch(() => {});
-      setCopied(true);
-      setRevealed(true);
-      setShowModal(true);
-      setTimeout(() => setCopied(false), 3000);
-    }
-    // Reveal the code here and send the shopper to the store in a new tab.
-    openMerchant();
+    // 1. Fire show_coupon_click
+    track("show_coupon_click", "coupon_card");
+
+    // 2. Reveal code & show modal
+    setRevealed(true);
+    setShowModal(true);
+    track("coupon_reveal", "reveal_modal");
+
+    // 3. Attempt clipboard copy
+    copyCode("coupon_card");
+
+    // 4. Open outbound merchant in new tab
+    openMerchant("coupon_card");
   };
 
   return (
@@ -154,9 +203,10 @@ export default function CouponCard({ coupon, storeName }: CouponCardProps) {
             </button>
           ) : (
             <a
-              href={merchantUrl}
+              href={outboundUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => track("affiliate_click", "coupon_card")}
               className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-amber-600"
             >
               {dict.cards.getDeal}
@@ -180,9 +230,16 @@ export default function CouponCard({ coupon, storeName }: CouponCardProps) {
             <h3 className="text-xl font-bold text-gray-900">{dict.cards.promoCodeCopied}</h3>
             <p className="mt-1 text-sm text-gray-500">{coupon.title}</p>
 
-            <div className="my-5 rounded-xl bg-amber-50 border-2 border-dashed border-amber-300 p-4">
+            <div
+              onClick={() => copyCode("reveal_modal")}
+              className="my-5 rounded-xl bg-amber-50 border-2 border-dashed border-amber-300 p-4 cursor-pointer hover:bg-amber-100/60 transition group"
+              title="Click to copy code"
+            >
               <span className="text-2xl font-mono font-extrabold tracking-widest text-amber-900">
                 {coupon.code}
+              </span>
+              <span className="block text-xs text-amber-700 mt-1 font-sans">
+                {copied ? dict.cards.copied : "Click to copy code"}
               </span>
             </div>
 
@@ -197,15 +254,15 @@ export default function CouponCard({ coupon, storeName }: CouponCardProps) {
               >
                 {dict.cards.close}
               </button>
-              <a
-                href={merchantUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowModal(false)}
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  openMerchant("reveal_modal");
+                }}
                 className="flex-1 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 text-center"
               >
                 {dict.cards.goTo.replace("{store}", storeName)}
-              </a>
+              </button>
             </div>
           </div>
         </div>

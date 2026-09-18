@@ -255,6 +255,8 @@ export interface CFTransaction {
   SaleValue?: number;
   Commission?: number;
   Status?: string; // "Approved", "Pending", "Void"
+  UniqueId?: string;
+  TrackingCode?: string;
 }
 
 function normaliseCfStatus(raw?: string): string {
@@ -279,6 +281,7 @@ export function normaliseCfTransaction(t: CFTransaction): Transaction {
     transactionDate: t.OrderDate ?? t.DateCreated ?? new Date().toISOString(),
     clickDate: null, // CF doesn't provide this in the base transaction payload
     customerCountry: "AU", // Default assumption for CF
+    subId: t.UniqueId || t.TrackingCode || null,
   };
 }
 

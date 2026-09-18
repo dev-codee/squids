@@ -517,6 +517,7 @@ export function normaliseAdmitadAction(a: AdmitadAction): Transaction {
     transactionDate: a.action_date ?? new Date().toISOString(),
     clickDate: a.click_date || null,
     customerCountry: a.country_code || null,
+    subId: a.subid || a.subid1 || null,
   };
 }
 

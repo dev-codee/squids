@@ -58,6 +58,8 @@ export interface Transaction {
   transactionDate: string;
   clickDate: string | null;
   customerCountry: string | null;
+  /** Network sub-ID / click reference (Foxzil clickId) used for attribution. */
+  subId?: string | null;
 }
 
 export interface TransactionSummary {
@@ -263,6 +265,11 @@ function normaliseTransaction(raw: AwinTransaction): Transaction {
     transactionDate: raw.transactionDate,
     clickDate: raw.clickDate || null,
     customerCountry: raw.customerCountry || null,
+    subId:
+      raw.clickRefs?.clickRef ||
+      raw.clickRefs?.clickref ||
+      (raw.clickRefs && Object.values(raw.clickRefs)[0]) ||
+      null,
   };
 }
 
