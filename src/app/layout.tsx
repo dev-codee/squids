@@ -38,10 +38,10 @@ export default function RootLayout({
   return (
     <html lang={region.locale} className={inter.variable}>
       <head>
-        {/* Google tag (gtag.js) */}
+        {/* Google tag (gtag.js) - GA4 & Google Ads */}
         <script
           async
-          src="https://www.googletagmanager.com/gtag/js?id=G-PDP7P7BTLT"
+          src="https://www.googletagmanager.com/gtag/js?id=AW-11419881899"
         />
         <script
           id="google-tag-init"
@@ -49,7 +49,8 @@ export default function RootLayout({
             __html: `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'G-PDP7P7BTLT');`,
+gtag('config', 'G-PDP7P7BTLT');
+gtag('config', 'AW-11419881899');`,
           }}
         />
 
