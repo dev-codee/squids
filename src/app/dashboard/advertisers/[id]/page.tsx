@@ -10,6 +10,8 @@ import Pagination from "@/components/Pagination";
 import AdvertiserModal from "@/components/admin/AdvertiserModal";
 import DealModal from "@/components/admin/DealModal";
 import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
+import { cleanAdvertiserName } from "@/lib/networks";
+import { normalizeCountryCode } from "@/lib/countries";
 
 const PAGE_SIZE = 24;
 
@@ -232,16 +234,48 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
               </div>
             </div>
 
-            <button
-              onClick={() => setIsAdvModalOpen(true)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-              Edit Advertiser
-            </button>
+            <div className="flex items-center gap-2">
+              {(() => {
+                const cc = normalizeCountryCode(
+                  advertiser.countryCode ||
+                  (Array.isArray(advertiser.countryCodes) && advertiser.countryCodes[0]) ||
+                  advertiser.region
+                );
+                const country = cc && cc !== "WW" && cc.length === 2 ? cc.toLowerCase() : "us";
+                const storeSlug = (cleanAdvertiserName(advertiser.name || "") || advertiser.name || "")
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")
+                  .replace(/(^-|-$)/g, "");
+                const publicStoreUrl = `/${country}/${storeSlug}`;
+
+                return (
+                  <a
+                    href={publicStoreUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-accent"
+                    title="View public store page"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    View
+                  </a>
+                );
+              })()}
+
+              <button
+                onClick={() => setIsAdvModalOpen(true)}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Edit Advertiser
+              </button>
+            </div>
           </div>
         </div>
       )}
