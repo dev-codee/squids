@@ -11,14 +11,13 @@ export class AiConfigError extends Error {}
 /** Default model — override with PERPLEXITY_MODEL or AI_MODEL. */
 const DEFAULT_MODEL = "sonar";
 
-/** Resolve the configured model, preferring PERPLEXITY_MODEL or AI_MODEL. */
+/** Resolve the configured model, preferring PERPLEXITY_MODEL or AI_MODEL (ignoring legacy claude-* names). */
 export function resolveModel(): string {
-  return (
-    process.env.PERPLEXITY_MODEL ||
-    process.env.AI_MODEL ||
-    process.env.ANTHROPIC_MODEL ||
-    DEFAULT_MODEL
-  );
+  if (process.env.PERPLEXITY_MODEL) return process.env.PERPLEXITY_MODEL;
+  if (process.env.AI_MODEL && !process.env.AI_MODEL.startsWith("claude")) {
+    return process.env.AI_MODEL;
+  }
+  return DEFAULT_MODEL;
 }
 
 /** Get configured API key (supports PERPLEXITY_API_KEY with fallbacks). */
@@ -46,6 +45,7 @@ export interface PerplexityCompletionOptions {
   maxTokens?: number;
   temperature?: number;
   jsonMode?: boolean;
+  jsonSchema?: Record<string, any>;
 }
 
 /**
@@ -69,8 +69,11 @@ export async function callPerplexity(
     temperature: options.temperature ?? 0.2,
   };
 
-  if (options.jsonMode) {
-    payload.response_format = { type: "json_object" };
+  if (options.jsonSchema) {
+    payload.response_format = {
+      type: "json_schema",
+      json_schema: { schema: options.jsonSchema },
+    };
   }
 
   const res = await fetch("https://api.perplexity.ai/chat/completions", {

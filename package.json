@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-deals": "node --env-file=.env.local scripts/generate-deals-ai.mjs"
   },
   "dependencies": {
     "jose": "^6.2.8",
