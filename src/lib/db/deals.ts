@@ -16,7 +16,7 @@ import { cleanAdvertiserName } from "@/lib/networks";
 import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 import type { Deal, DealQuery, PagedDeals } from "@/lib/deals";
 import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE } from "@/lib/deals";
-import { CACHE_TAGS, PUBLIC_REVALIDATE } from "@/lib/cache";
+import { CACHE_TAGS, PUBLIC_REVALIDATE, revalidatePublic } from "@/lib/cache";
 
 const COLLECTION = "deals";
 
@@ -901,10 +901,20 @@ export async function setDealAiContent(
     updateFields.aiGeneratedAt = nowIso;
   }
 
-  const result = await col.updateOne(
-    { network, id },
+  const idQuery = {
+    $in: [id, String(id), Number(id)].filter((v) => typeof v === "number" || (typeof v === "string" && v.length > 0)),
+  };
+  let result = await col.updateOne(
+    { network, id: idQuery as any },
     { $set: updateFields },
   );
+  if (result.matchedCount === 0) {
+    result = await col.updateOne(
+      { id: idQuery as any },
+      { $set: updateFields },
+    );
+  }
+  revalidatePublic(CACHE_TAGS.deals);
   return result.matchedCount > 0;
 }
 
@@ -924,17 +934,19 @@ export async function ensureDealAiContent(
   const locale = opts?.locale ? opts.locale.toLowerCase().split("-")[0] : "en";
 
   // Check if valid copy is already generated for this locale
+  const existingTitle = (deal.aiTitleByLang?.[locale] || (locale === "en" ? deal.aiTitle : ""))?.trim();
+  const existingDesc = (deal.aiDescriptionByLang?.[locale] || (locale === "en" ? deal.aiDescription : ""))?.trim();
   const alreadyGenerated =
     !opts?.force &&
     Boolean(
-      (deal.aiTitleByLang?.[locale] && deal.aiDescriptionByLang?.[locale]) ||
-        (locale === "en" && deal.aiTitle && deal.aiDescription),
+      existingTitle &&
+      existingDesc &&
+      existingTitle.toLowerCase() !== existingDesc.toLowerCase()
     );
 
   if (alreadyGenerated) return deal;
 
-  const { isAiConfigured, generateDealContent } = await import("@/lib/ai/dealContent");
-  if (!isAiConfigured()) return deal;
+  const { generateDealContent } = await import("@/lib/ai/dealContent");
 
   try {
     const copy = await generateDealContent(deal, {

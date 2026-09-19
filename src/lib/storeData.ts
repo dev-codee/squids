@@ -272,27 +272,7 @@ function dealFromDeal(
 // ---------------------------------------------------------------------------
 
 /**
- * Fire-and-forget warmer that generates missing locale copy for the deals that
- * didn't fit in a request's synchronous budget, with bounded concurrency so we
- * don't hammer the AI provider. Each result is cached in MongoDB by
- * ensureDealAiContent, so once warmed the store renders fully translated.
- */
-async function warmDealLocaleCopy(deals: Deal[], locale: string): Promise<void> {
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-  for (const d of deals) {
-    try {
-      await ensureDealAiContent(d, { locale });
-      await sleep(600);
-    } catch (err) {
-      console.warn(
-        `[ai] Background locale warm failed for ${d.network ?? "awin"}:${d.id} (${locale}):`,
-        err instanceof Error ? err.message : err,
-      );
-    }
-  }
-}
 
-/**
  * Load a store's public data from MongoDB. Returns `null` when the slug does
  * not resolve to a known advertiser (caller should render `notFound()`).
  */
@@ -357,26 +337,34 @@ async function loadStoreDataUncached(
   // First-view AI copy: generate shopper-facing title/description for deals that
   // lack it for this locale, then cache in the DB so tokens are only spent once.
   // A no-op when ANTHROPIC_API_KEY is unset (ensureDealAiContent returns as-is).
-  const hasLocaleCopy = (d: Deal) =>
-    d.aiTitleByLang?.[locale] && d.aiDescriptionByLang?.[locale]
-      ? true
-      : locale === "en" && Boolean(d.aiTitle && d.aiDescription);
+  const hasLocaleCopy = (d: Deal) => {
+    const t = (d.aiTitleByLang?.[locale] || (locale === "en" ? d.aiTitle : ""))?.trim();
+    const desc = (d.aiDescriptionByLang?.[locale] || (locale === "en" ? d.aiDescription : ""))?.trim();
+    if (!t || !desc) return false;
+    // If title and description are identical, refresh to proper distinct copy
+    if (t.toLowerCase() === desc.toLowerCase()) return false;
+    return true;
+  };
 
   const missingLocaleCopy = allDeals.filter((d) => !hasLocaleCopy(d));
 
-  // Generate a bounded batch synchronously so the current render improves right
-  // away without blocking on a large store's entire deal list.
-  const AI_GEN_PER_REQUEST = 4;
-  const syncBatch = missingLocaleCopy.slice(0, AI_GEN_PER_REQUEST);
-  if (syncBatch.length > 0) {
+  // On first visit generate title/description for every deal that lacks it,
+  // using bounded concurrency (5 at a time) so we don't hammer the DB or AI.
+  // generateDealContent never throws — it falls back to the deterministic
+  // copywriter — so ensureDealAiContent always saves a result to MongoDB.
+  // Next.js automatically shows loading.tsx (skeleton) while this block awaits;
+  // on subsequent visits missingLocaleCopy is empty and this is a no-op.
+  if (missingLocaleCopy.length > 0) {
+    const CHUNK = 5;
     const generated: Deal[] = [];
-    for (const d of syncBatch) {
-      try {
-        const updated = await ensureDealAiContent(d, { locale });
-        generated.push(updated);
-      } catch {
-        generated.push(d);
-      }
+    for (let i = 0; i < missingLocaleCopy.length; i += CHUNK) {
+      const chunk = missingLocaleCopy.slice(i, i + CHUNK);
+      const results = await Promise.all(
+        chunk.map((d) =>
+          ensureDealAiContent(d, { locale }).catch(() => d),
+        ),
+      );
+      generated.push(...results);
     }
     const byKey = new Map(
       generated.map((d) => [`${d.network ?? "awin"}:${d.id}`, d]),
@@ -384,15 +372,6 @@ async function loadStoreDataUncached(
     allDeals = allDeals.map(
       (d) => byKey.get(`${d.network ?? "awin"}:${d.id}`) ?? d,
     );
-  }
-
-  // Warm the remaining locale copy in the background (fire-and-forget) so the
-  // whole store is fully translated by the next visit instead of leaking English
-  // for the overflow deals across many page loads. Safe on the persistent
-  // standalone server; a no-op when AI is unconfigured.
-  const backgroundBatch = missingLocaleCopy.slice(AI_GEN_PER_REQUEST);
-  if (backgroundBatch.length > 0) {
-    void warmDealLocaleCopy(backgroundBatch, locale);
   }
 
   // Ordering within every section: exclusive offers pinned to the very top,

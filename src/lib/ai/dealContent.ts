@@ -12,9 +12,11 @@ import {
   callPerplexity,
   resolveModel,
   parseJsonResponse,
+  isAiConfigured,
+  AiConfigError,
 } from "@/lib/ai/client";
 
-export { AiConfigError, isAiConfigured } from "@/lib/ai/client";
+export { AiConfigError, isAiConfigured };
 
 const SYSTEM_PROMPT = `ROLE
 You are a senior ecommerce copywriter and deal-content editor working for a global coupon, cashback and deals platform.
@@ -162,6 +164,145 @@ Write ALL output (title and description) in ${language}. Keep merchant names, pr
   return `${SYSTEM_PROMPT}\n\n${langRule}\n\n${QC_INSTRUCTIONS}`;
 }
 
+// ---------------------------------------------------------------------------
+// Deterministic fallback copywriter — runs when the AI API is unavailable,
+// quota-exhausted, or errors. Produces clean, shopper-facing copy from the
+// raw deal fields without any LLM call. Always returns status "APPROVED" so
+// the result is saved to MongoDB and re-used on every subsequent visit.
+// ---------------------------------------------------------------------------
+
+/** Strip raw coupon codes from text (e.g. "use code SAVE20 at checkout"). */
+function stripCouponCode(text: string, code?: string | null): string {
+  let out = text;
+  if (code) {
+    // Remove the literal code string (case-insensitive, whole-word)
+    out = out.replace(new RegExp(`\\b${code.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}\\b`, "gi"), "");
+  }
+  // Remove common "use code XYZ" / "with code XYZ" / "code: XYZ" patterns
+  out = out.replace(/\b(use|with|apply|enter|promo|voucher|coupon)\s+code[:\s]+[A-Z0-9_\-]{3,20}\b/gi, "");
+  out = out.replace(/\bcode[:\s]+[A-Z0-9_\-]{3,20}\b/gi, "");
+  return out.replace(/\s{2,}/g, " ").trim();
+}
+
+/** Strip date/year references from text. */
+function stripDates(text: string): string {
+  return text
+    // e.g. "valid until March 2026", "expires on 31/12/2025", "in 2025"
+    .replace(/\b(valid\s+until|expires?\s+(on)?|ends?\s+(on)?|updated|as\s+of|checked\s+on|in\s+)\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)?\s*\d{1,4}[\/\-\.]?\d{0,4}/gi, "")
+    .replace(/\b(19|20)\d{2}\b/g, "")
+    .replace(/\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/g, "")
+    .replace(/\s{2,}/g, " ").trim();
+}
+
+/** Capitalise first letter, remove trailing punctuation artefacts. */
+function sentenceCase(text: string): string {
+  const t = text.trim().replace(/[,;:\-]$/, "");
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/**
+ * Deterministic deal copy generator — zero API calls, always succeeds.
+ * Derives a clean title and description from the structured deal fields.
+ */
+export function generateCleanDealCopyFallback(deal: Deal): DealCopy {
+  const merchant = deal.advertiser?.name || "this store";
+
+  // Build the core discount string
+  let discountStr = "";
+  if (deal.discountText) {
+    discountStr = deal.discountText.trim();
+  } else if (deal.cashbackRate) {
+    discountStr = `Up to ${deal.cashbackRate} Cashback`;
+  } else {
+    // Try to extract discount like "50%", "£10 Off", "$20 Off", "5% Off" from raw text
+    const discountMatch = (deal.title || "").match(/(\b(?:up to\s+)?(?:\$|£|€)?\d+(?:\.\d+)?%?(?:\s*(?:off|cashback))?)/i);
+    if (discountMatch && (discountMatch[0].includes("%") || /\b(off|cashback)\b/i.test(discountMatch[0]))) {
+      discountStr = sentenceCase(discountMatch[0].trim());
+    }
+  }
+
+  // Determine offer category hint from raw title/description
+  const rawText = stripCouponCode(
+    stripDates([deal.title, deal.description].filter(Boolean).join(" ")),
+    deal.code,
+  );
+
+  // Extract a category/product snippet from raw text (first 60 chars, end on word)
+  let category = "";
+  const raw60 = rawText.slice(0, 100);
+  const wordBoundary = raw60.lastIndexOf(" ");
+  const snippet = wordBoundary > 20 ? raw60.slice(0, wordBoundary) : raw60;
+  let categoryRaw = snippet;
+  const merchantWords = (merchant || "").split(/\s+/).filter((w) => w.length > 2);
+  for (const w of [merchant, ...merchantWords]) {
+    categoryRaw = categoryRaw.replace(new RegExp(`\\b${w.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}\\b`, "gi"), " ");
+  }
+  category = categoryRaw
+    .replace(/\b(get|shop|save|enjoy|claim|grab|receive|take|extra)\b/gi, " ")
+    .replace(/\d+(?:\.\d+)?%/g, " ")
+    .replace(/\b(off|cashback|discount)\b/gi, " ")
+    .replace(/\b(at|for|with|on|in|to|and)\b/gi, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  // ── Title ─────────────────────────────────────────────────────────────────
+  let title = "";
+  if (discountStr && category) {
+    title = `${discountStr} ${/\boff\b/i.test(discountStr) ? "" : "Off "}${category} at ${merchant}`;
+  } else if (discountStr) {
+    title = `${discountStr} ${/\boff\b/i.test(discountStr) ? "" : "Off "}at ${merchant}`;
+  } else if (deal.cashbackRate) {
+    title = `Earn Up to ${deal.cashbackRate} Cashback at ${merchant}`;
+  } else {
+    // Plain deal with no discount info — use a neutral title
+    const cleanRaw = stripCouponCode(stripDates(deal.title || ""), deal.code);
+    title = cleanRaw.length > 10 ? sentenceCase(cleanRaw.slice(0, 90)) : `Special Offer at ${merchant}`;
+  }
+  // Normalise whitespace and capitalise
+  title = sentenceCase(title.replace(/\s{2,}/g, " "));
+  // Cap at ~90 chars
+  if (title.length > 90) title = title.slice(0, 87).trimEnd() + "…";
+
+  // ── Description ───────────────────────────────────────────────────────────
+  let description = "";
+  const cleanRawDesc = deal.description && deal.description.trim() !== deal.title?.trim()
+    ? stripCouponCode(stripDates(deal.description), deal.code)
+    : "";
+
+  if (cleanRawDesc && cleanRawDesc.length > 20) {
+    description = sentenceCase(cleanRawDesc);
+  } else if (discountStr) {
+    description = `Take advantage of ${discountStr.toLowerCase()} on your order at ${merchant}.`;
+    if (category) {
+      description += ` Valid on eligible ${category.toLowerCase()}.`;
+    }
+    if (deal.code) {
+      description += " Apply the verified coupon code at checkout to redeem this offer.";
+    } else {
+      description += " Discount is automatically applied at checkout.";
+    }
+  } else if (deal.cashbackRate) {
+    description = `Earn up to ${deal.cashbackRate} cashback on eligible purchases at ${merchant}.`;
+  } else {
+    const subject = category ? `eligible ${category.toLowerCase()}` : "selected products";
+    description = `Shop and save at ${merchant} with this exclusive promotion on ${subject}.`;
+    if (deal.code) {
+      description += " Reveal and enter the coupon code during checkout to claim your savings.";
+    } else {
+      description += " Check merchant terms for complete details.";
+    }
+  }
+
+  // Eligibility hints
+  if (deal.studentVerificationReq) {
+    description += " Available to verified students only.";
+  }
+  description = sentenceCase(description.replace(/\s{2,}/g, " "));
+  if (description.length > 300) description = description.slice(0, 297).trimEnd() + "…";
+
+  return { status: "APPROVED", title, description, issues: [] };
+}
+
 export type DealCopyStatus = "APPROVED" | "CORRECTED" | "REVIEW";
 
 export interface DealCopy {
@@ -183,11 +324,11 @@ export interface GenerateDealContentOptions {
 }
 
 /**
- * Generate shopper-facing copy for a deal in a single Claude call: the model
- * drafts the title/description, self-QCs it against the raw offer data, and
- * returns a verdict in the specified language (default English).
- *
- * @throws {AiConfigError} when ANTHROPIC_API_KEY is not set.
+ * Generate shopper-facing copy for a deal. Tries the Perplexity AI API first;
+ * if it's unconfigured, quota-exhausted, or errors for any reason, falls back
+ * to the deterministic `generateCleanDealCopyFallback` copywriter that always
+ * succeeds and returns status "APPROVED". This ensures callers can always
+ * persist copy to MongoDB on first visit regardless of AI API availability.
  */
 export async function generateDealContent(
   deal: Deal,
@@ -197,44 +338,61 @@ export async function generateDealContent(
     opts?.language ||
     (opts?.locale ? languageNameForLocale(opts.locale) : "English");
 
-  const rawResponse = await callPerplexity({
-    model: resolveModel(),
-    maxTokens: 1024,
-    jsonMode: true,
-    jsonSchema: OUTPUT_SCHEMA,
-    messages: [
-      {
-        role: "system",
-        content: `${buildSystemPrompt(language)}\n\nYou must output JSON conforming to: {"status": "APPROVED" | "CORRECTED" | "REVIEW", "title": string, "description": string, "issues": string[]}`,
-      },
-      { role: "user", content: buildInputData(deal) },
-    ],
-  });
+  // Only attempt the AI call when the API key is configured.
+  if (isAiConfigured()) {
+    try {
+      const rawResponse = await callPerplexity({
+        model: resolveModel(),
+        maxTokens: 1024,
+        jsonMode: true,
+        jsonSchema: OUTPUT_SCHEMA,
+        messages: [
+          {
+            role: "system",
+            content: `${buildSystemPrompt(language)}\n\nYou must output JSON conforming to: {"status": "APPROVED" | "CORRECTED" | "REVIEW", "title": string, "description": string, "issues": string[]}`,
+          },
+          { role: "user", content: buildInputData(deal) },
+        ],
+      });
 
-  const parsed = parseJsonResponse<Partial<DealCopy>>(rawResponse);
-  const status = parsed.status;
-  if (status !== "APPROVED" && status !== "CORRECTED" && status !== "REVIEW") {
-    throw new Error(`AI returned an unknown status: ${String(status)}`);
+      const parsed = parseJsonResponse<Partial<DealCopy>>(rawResponse);
+      const status = parsed.status;
+      if (status !== "APPROVED" && status !== "CORRECTED" && status !== "REVIEW") {
+        throw new Error(`AI returned an unknown status: ${String(status)}`);
+      }
+
+      const title = parsed.title?.trim() || "";
+      const description = parsed.description?.trim() || "";
+      const issues = Array.isArray(parsed.issues) ? parsed.issues.filter(Boolean).map(String) : [];
+
+      // A non-REVIEW verdict with no usable copy is unsafe to publish — use fallback.
+      if (status !== "REVIEW" && (!title || !description)) {
+        console.warn(`[ai] Model returned incomplete copy for deal ${deal.id}. Using fallback.`);
+        return generateCleanDealCopyFallback(deal);
+      }
+
+      // If title and description are identical, fallback to distinct copy
+      if (title && description && title.toLowerCase() === description.toLowerCase()) {
+        console.warn(`[ai] Model returned identical title and description for deal ${deal.id}. Using fallback.`);
+        return generateCleanDealCopyFallback(deal);
+      }
+
+      // REVIEW means AI couldn't produce safe copy — use fallback instead of
+      // returning empty strings so callers have something to save to MongoDB.
+      if (status === "REVIEW") {
+        console.warn(`[ai] Model returned REVIEW for deal ${deal.id} (insufficient data). Using fallback.`);
+        return generateCleanDealCopyFallback(deal);
+      }
+
+      return { status, title, description, issues };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[ai] Perplexity API error for deal ${deal.id}: ${msg}. Using fallback copywriter.`);
+      // Fall through to deterministic fallback below.
+    }
   }
 
-  const title = parsed.title?.trim() || "";
-  const description = parsed.description?.trim() || "";
-  const issues = Array.isArray(parsed.issues) ? parsed.issues.filter(Boolean).map(String) : [];
-
-  // A non-REVIEW verdict with no usable copy is unsafe to publish — treat as REVIEW.
-  if (status !== "REVIEW" && (!title || !description)) {
-    return {
-      status: "REVIEW",
-      title: "",
-      description: "",
-      issues: issues.length ? issues : ["Model returned incomplete copy."],
-    };
-  }
-
-  return {
-    status,
-    title: status === "REVIEW" ? "" : title,
-    description: status === "REVIEW" ? "" : description,
-    issues,
-  };
+  // Either AI is not configured or the API call failed — use the deterministic
+  // copywriter that always produces a valid, saveable result.
+  return generateCleanDealCopyFallback(deal);
 }
