@@ -25,7 +25,8 @@ export default function DiscoveredDealsModal({
     code: string;
     discountText: string;
     description: string;
-  }>({ title: "", code: "", discountText: "", description: "" });
+    endDate: string;
+  }>({ title: "", code: "", discountText: "", description: "", endDate: "" });
 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
@@ -58,6 +59,7 @@ export default function DiscoveredDealsModal({
       code: deal.code || "",
       discountText: deal.discountText || "",
       description: deal.description || "",
+      endDate: deal.endDate ? deal.endDate.split("T")[0] : "",
     });
   }
 
@@ -74,6 +76,7 @@ export default function DiscoveredDealsModal({
             code: editForm.code || null,
             discountText: editForm.discountText || null,
             description: editForm.description || null,
+            endDate: editForm.endDate || null,
           }
         : undefined;
 
@@ -232,6 +235,15 @@ export default function DiscoveredDealsModal({
                             {deal.discountText}
                           </span>
                         )}
+                        {deal.endDate ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 border border-amber-200/60">
+                            📅 Exp: {new Date(deal.endDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-0.5 text-[11px] font-medium text-gray-500 border border-gray-200/60">
+                            📅 Ongoing / Verified
+                          </span>
+                        )}
                       </div>
 
                       {isEditing ? (
@@ -243,7 +255,7 @@ export default function DiscoveredDealsModal({
                             className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-medium focus:border-purple-500 focus:outline-none"
                             placeholder="Deal title"
                           />
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <input
                               type="text"
                               value={editForm.code}
@@ -258,6 +270,15 @@ export default function DiscoveredDealsModal({
                               className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:border-purple-500 focus:outline-none"
                               placeholder="Discount (e.g. 20% OFF)"
                             />
+                            <div>
+                              <input
+                                type="date"
+                                value={editForm.endDate}
+                                onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                                className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs focus:border-purple-500 focus:outline-none text-gray-700"
+                                title="Expiration Date"
+                              />
+                            </div>
                           </div>
                           <textarea
                             value={editForm.description}
