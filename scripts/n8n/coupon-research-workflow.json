@@ -1,4 +1,5 @@
 {
+  "id": "cpnResearch907",
   "name": "Coupon & Deal Research Pipeline",
   "nodes": [
     {
@@ -9,9 +10,10 @@
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "typeVersion": 1,
+      "webhookId": "48b3b782-b1d8-4f10-911b-75e53e7f4112",
       "position": [
-        220,
+        200,
         300
       ],
       "id": "webhook-trigger",
@@ -19,46 +21,16 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.perplexity.ai/chat/completions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer YOUR_PERPLEXITY_API_KEY"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"sonar\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert ecommerce deal and coupon researcher.\\nYour task is to search across major coupon sites (such as RetailMeNot, CouponCabin, Slickdeals, Dealspotr, Honey) and official merchant sites to find current, active, verified promo codes, coupon codes, and discount deals for the requested store.\\n\\nRULES:\\n1. Extract REAL coupon codes if available (e.g. SAVE20, WELCOME10, FREESHIP).\\n2. Distinguish between 'voucher' (has promo code) and 'deal' (no code needed, sale/clearance).\\n3. For discountText, use short punchy labels: e.g. '20% OFF', '$15 OFF', 'FREE SHIPPING', 'UP TO 50% OFF'.\\n4. Exclude expired, invalid, or fake deals.\\n5. Provide a clear shopper-friendly title and 1-2 sentence description explaining any exclusions.\\n\\nReturn ONLY a valid JSON object matching this schema:\\n{\\n  \\\"deals\\\": [\\n    {\\n      \\\"title\\\": \\\"20% Off Storewide\\\",\\n      \\\"code\\\": \\\"CODE20\\\",\\n      \\\"type\\\": \\\"voucher\\\",\\n      \\\"discountText\\\": \\\"20% OFF\\\",\\n      \\\"description\\\": \\\"Save 20% on all orders. Exclusions may apply.\\\",\\n      \\\"terms\\\": \\\"Valid online only.\\\",\\n      \\\"sourceName\\\": \\\"RetailMeNot\\\",\\n      \\\"endDate\\\": null\\n    }\\n  ]\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Find all active promo codes, coupon vouchers, and discounts for '\" + ($json.body.storeName || $json.body.advertiserName || \"Store\") + \"' \" + ($json.body.domain ? \"(website: \" + $json.body.domain + \")\" : \"\") + \" across popular coupon sites like RetailMeNot, CouponCabin, and the merchant site.\"\n    }\n  ],\n  \"max_tokens\": 1500,\n  \"temperature\": 0.1\n}"
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        460,
-        300
-      ],
-      "id": "perplexity-search",
-      "name": "Search Coupon Sites (AI)"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Extract data from webhook and Perplexity AI response\nconst inputData = $('Webhook Trigger').first().json.body || {};\nconst advertiserId = inputData.advertiserId ? Number(inputData.advertiserId) : undefined;\nconst storeName = inputData.storeName || inputData.advertiserName || \"Merchant\";\nconst network = inputData.network || \"awin\";\nconst domain = inputData.domain || \"\";\n\nconst rawContent = $json.choices?.[0]?.message?.content || \"{}\";\n\n// Extract JSON object safely\nlet parsed = { deals: [] };\ntry {\n  const fence = rawContent.match(/```(?:json)?\\s*([\\s\\S]*?)```/i);\n  const cleanText = fence ? fence[1].trim() : rawContent.trim();\n  const start = cleanText.indexOf('{');\n  const end = cleanText.lastIndexOf('}');\n  if (start !== -1 && end !== -1) {\n    parsed = JSON.parse(cleanText.slice(start, end + 1));\n  }\n} catch (e) {\n  parsed = { deals: [] };\n}\n\nconst rawDeals = Array.isArray(parsed.deals) ? parsed.deals : [];\nconst seenCodes = new Set();\nconst cleanedDeals = [];\n\nfor (const d of rawDeals) {\n  const code = d.code ? String(d.code).trim().toUpperCase() : null;\n  if (code) {\n    if (seenCodes.has(code)) continue;\n    seenCodes.add(code);\n  }\n\n  cleanedDeals.push({\n    advertiserId,\n    advertiserName: storeName,\n    network,\n    title: (d.title || `Offer at ${storeName}`).trim(),\n    description: d.description ? String(d.description).trim() : null,\n    code: code || undefined,\n    type: code ? \"voucher\" : (d.type || \"deal\"),\n    discountText: d.discountText ? String(d.discountText).trim() : null,\n    terms: d.terms ? String(d.terms).trim() : null,\n    sourceName: d.sourceName || \"Web Research\",\n    endDate: d.endDate || null,\n    confidenceScore: 0.95\n  });\n}\n\nreturn {\n  json: {\n    advertiserId,\n    storeName,\n    network,\n    domain,\n    foundCount: cleanedDeals.length,\n    deals: cleanedDeals\n  }\n};"
+        "jsCode": "const body = $input.first().json.body || {};\nconst storeName = body.storeName || body.advertiserName || \"Store\";\nconst domain = body.domain || \"\";\nconst advertiserId = body.advertiserId ? Number(body.advertiserId) : undefined;\nconst network = body.network || \"awin\";\n\nconst tavilyKey = \"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\";\n\n// 1. Search coupon sites via Tavily (RetailMeNot, CouponCabin, Slickdeals, merchant)\nconst query = `${storeName} active coupon codes promo code discounts deals site:retailmenot.com OR site:couponcabin.com OR site:slickdeals.net OR official`;\n\nlet searchData = {};\ntry {\n  searchData = await helpers.httpRequest({\n    method: 'POST',\n    url: 'https://api.tavily.com/search',\n    headers: { 'Content-Type': 'application/json' },\n    body: {\n      api_key: tavilyKey,\n      query: query,\n      include_answer: 'advanced',\n      search_depth: 'advanced',\n      max_results: 6\n    },\n    json: true\n  });\n} catch (e) {\n  searchData = { answer: \"\", results: [] };\n}\n\nconst answerText = searchData.answer || \"\";\nconst results = searchData.results || [];\n\nconst deals = [];\nconst seenCodes = new Set();\nconst seenTitles = new Set();\n\n// Helper to extract deals from a paragraph/sentence\nfunction extractOffersFromText(text, defaultSource) {\n  if (!text) return;\n  const chunks = text.split(/\\.\\s+|\\n+/);\n  for (const c of chunks) {\n    const str = c.trim();\n    if (str.length < 20) continue;\n\n    // Regex for discount percentage/dollar amount\n    const discMatch = str.match(/(\\b\\d{1,2}%\\s*(?:off|discount)\\b|\\bup to \\d{1,2}%\\s*off\\b|\\$\\d+\\s*(?:off|discount)\\b|\\bfree shipping\\b)/i);\n    const discountText = discMatch ? discMatch[0].toUpperCase() : null;\n\n    // Regex for coupon code\n    const codeMatch = str.match(/\\*\\*([A-Za-z0-9_-]{3,20})\\*\\*|code\\s+[\"']?([A-Za-z0-9_-]{4,20})[\"']?|promo code\\s+[\"']?([A-Za-z0-9_-]{4,20})[\"']?/i);\n    let code = null;\n    if (codeMatch) {\n      const found = (codeMatch[1] || codeMatch[2] || codeMatch[3] || \"\").toUpperCase();\n      if (found && ![\"FREE\", \"CODE\", \"DISCOUNT\", \"OFFER\", \"PROMO\", \"OFF\"].includes(found)) {\n        code = found;\n      }\n    }\n\n    if (!discountText && !code) continue;\n    if (code && seenCodes.has(code)) continue;\n    if (code) seenCodes.add(code);\n\n    let title = discountText ? `${discountText} at ${storeName}` : `Special Offer at ${storeName}`;\n    if (/2-year|annual|yearly/i.test(str)) {\n      title = discountText ? `${discountText} on Multi-Year Plans at ${storeName}` : `Plan Discount at ${storeName}`;\n    } else if (/student|teacher|military|worker/i.test(str)) {\n      title = `${discountText || 'Special Discount'} for Students & Verification`;\n    }\n\n    if (seenTitles.has(title)) continue;\n    seenTitles.add(title);\n\n    deals.push({\n      advertiserId,\n      advertiserName: storeName,\n      network,\n      title,\n      description: str,\n      type: code ? \"voucher\" : \"deal\",\n      code: code || undefined,\n      discountText: discountText || null,\n      sourceName: defaultSource || \"RetailMeNot / Web\",\n      confidenceScore: 0.95\n    });\n  }\n}\n\n// Extract from Tavily comprehensive answer\nextractOffersFromText(answerText, \"RetailMeNot / Web\");\n\n// Also extract from individual search result snippets\nfor (const r of results) {\n  const siteName = r.title?.split(/[-|]/)[0]?.trim() || \"Coupon Site\";\n  extractOffersFromText(r.content || \"\", siteName);\n}\n\nreturn [{\n  json: {\n    advertiserId,\n    storeName,\n    network,\n    domain,\n    foundCount: deals.length,\n    deals: deals,\n    requestPayload: {\n      advertiserId,\n      deals: deals\n    }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        700,
+        480,
         300
       ],
-      "id": "normalize-and-dedupe",
-      "name": "Clean & Deduplicate Deals"
+      "id": "tavily-research",
+      "name": "Research & Extract Deals (Tavily)"
     },
     {
       "parameters": {
@@ -69,7 +41,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_CRON_SECRET"
+              "value": "Bearer tZG4iay5F7PmSzH3HPLT"
             },
             {
               "name": "Content-Type",
@@ -79,12 +51,12 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"advertiserId\": $json.advertiserId,\n  \"deals\": $json.deals\n}"
+        "jsonBody": "={{ $json.requestPayload }}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        940,
+        780,
         300
       ],
       "id": "send-to-app",
@@ -93,13 +65,13 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={\n  \"ok\": true,\n  \"store\": $('Clean & Deduplicate Deals').first().json.storeName,\n  \"found\": $('Clean & Deduplicate Deals').first().json.foundCount,\n  \"inserted\": $json.inserted,\n  \"skippedExisting\": $json.skippedExisting,\n  \"message\": \"Successfully researched coupons and saved to staging queue!\"\n}",
+        "responseBody": "={\n  \"ok\": true,\n  \"store\": $('Research & Extract Deals (Tavily)').first().json.storeName,\n  \"found\": $('Research & Extract Deals (Tavily)').first().json.foundCount,\n  \"inserted\": $json.inserted,\n  \"skippedExisting\": $json.skippedExisting,\n  \"deals\": $('Research & Extract Deals (Tavily)').first().json.deals,\n  \"message\": \"Successfully researched coupons across web and saved to admin staging!\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1180,
+        1060,
         300
       ],
       "id": "respond-webhook",
@@ -111,25 +83,14 @@
       "main": [
         [
           {
-            "node": "Search Coupon Sites (AI)",
+            "node": "Research & Extract Deals (Tavily)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Search Coupon Sites (AI)": {
-      "main": [
-        [
-          {
-            "node": "Clean & Deduplicate Deals",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Clean & Deduplicate Deals": {
+    "Research & Extract Deals (Tavily)": {
       "main": [
         [
           {
@@ -152,7 +113,7 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   }
