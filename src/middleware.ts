@@ -17,6 +17,18 @@ function getSecret() {
 }
 
 async function isValidSession(request: NextRequest): Promise<boolean> {
+  // Support Bearer token authentication for automated webhooks / n8n / cron services
+  const authHeader = request.headers.get("authorization");
+  if (authHeader) {
+    const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (process.env.CRON_SECRET && bearerToken === process.env.CRON_SECRET) {
+      return true;
+    }
+    if (process.env.AUTH_SECRET && bearerToken === process.env.AUTH_SECRET) {
+      return true;
+    }
+  }
+
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return false;
   try {

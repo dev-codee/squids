@@ -1,0 +1,159 @@
+{
+  "name": "Coupon & Deal Research Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "research-coupons",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERPLEXITY_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an expert ecommerce deal and coupon researcher.\\nYour task is to search across major coupon sites (such as RetailMeNot, CouponCabin, Slickdeals, Dealspotr, Honey) and official merchant sites to find current, active, verified promo codes, coupon codes, and discount deals for the requested store.\\n\\nRULES:\\n1. Extract REAL coupon codes if available (e.g. SAVE20, WELCOME10, FREESHIP).\\n2. Distinguish between 'voucher' (has promo code) and 'deal' (no code needed, sale/clearance).\\n3. For discountText, use short punchy labels: e.g. '20% OFF', '$15 OFF', 'FREE SHIPPING', 'UP TO 50% OFF'.\\n4. Exclude expired, invalid, or fake deals.\\n5. Provide a clear shopper-friendly title and 1-2 sentence description explaining any exclusions.\\n\\nReturn ONLY a valid JSON object matching this schema:\\n{\\n  \\\"deals\\\": [\\n    {\\n      \\\"title\\\": \\\"20% Off Storewide\\\",\\n      \\\"code\\\": \\\"CODE20\\\",\\n      \\\"type\\\": \\\"voucher\\\",\\n      \\\"discountText\\\": \\\"20% OFF\\\",\\n      \\\"description\\\": \\\"Save 20% on all orders. Exclusions may apply.\\\",\\n      \\\"terms\\\": \\\"Valid online only.\\\",\\n      \\\"sourceName\\\": \\\"RetailMeNot\\\",\\n      \\\"endDate\\\": null\\n    }\\n  ]\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Find all active promo codes, coupon vouchers, and discounts for '\" + ($json.body.storeName || $json.body.advertiserName || \"Store\") + \"' \" + ($json.body.domain ? \"(website: \" + $json.body.domain + \")\" : \"\") + \" across popular coupon sites like RetailMeNot, CouponCabin, and the merchant site.\"\n    }\n  ],\n  \"max_tokens\": 1500,\n  \"temperature\": 0.1\n}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "id": "perplexity-search",
+      "name": "Search Coupon Sites (AI)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract data from webhook and Perplexity AI response\nconst inputData = $('Webhook Trigger').first().json.body || {};\nconst advertiserId = inputData.advertiserId ? Number(inputData.advertiserId) : undefined;\nconst storeName = inputData.storeName || inputData.advertiserName || \"Merchant\";\nconst network = inputData.network || \"awin\";\nconst domain = inputData.domain || \"\";\n\nconst rawContent = $json.choices?.[0]?.message?.content || \"{}\";\n\n// Extract JSON object safely\nlet parsed = { deals: [] };\ntry {\n  const fence = rawContent.match(/```(?:json)?\\s*([\\s\\S]*?)```/i);\n  const cleanText = fence ? fence[1].trim() : rawContent.trim();\n  const start = cleanText.indexOf('{');\n  const end = cleanText.lastIndexOf('}');\n  if (start !== -1 && end !== -1) {\n    parsed = JSON.parse(cleanText.slice(start, end + 1));\n  }\n} catch (e) {\n  parsed = { deals: [] };\n}\n\nconst rawDeals = Array.isArray(parsed.deals) ? parsed.deals : [];\nconst seenCodes = new Set();\nconst cleanedDeals = [];\n\nfor (const d of rawDeals) {\n  const code = d.code ? String(d.code).trim().toUpperCase() : null;\n  if (code) {\n    if (seenCodes.has(code)) continue;\n    seenCodes.add(code);\n  }\n\n  cleanedDeals.push({\n    advertiserId,\n    advertiserName: storeName,\n    network,\n    title: (d.title || `Offer at ${storeName}`).trim(),\n    description: d.description ? String(d.description).trim() : null,\n    code: code || undefined,\n    type: code ? \"voucher\" : (d.type || \"deal\"),\n    discountText: d.discountText ? String(d.discountText).trim() : null,\n    terms: d.terms ? String(d.terms).trim() : null,\n    sourceName: d.sourceName || \"Web Research\",\n    endDate: d.endDate || null,\n    confidenceScore: 0.95\n  });\n}\n\nreturn {\n  json: {\n    advertiserId,\n    storeName,\n    network,\n    domain,\n    foundCount: cleanedDeals.length,\n    deals: cleanedDeals\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ],
+      "id": "normalize-and-dedupe",
+      "name": "Clean & Deduplicate Deals"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://affiliate-app:3000/api/admin/deals/discovered",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_CRON_SECRET"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"advertiserId\": $json.advertiserId,\n  \"deals\": $json.deals\n}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        300
+      ],
+      "id": "send-to-app",
+      "name": "Save to App Discovered Queue"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"store\": $('Clean & Deduplicate Deals').first().json.storeName,\n  \"found\": $('Clean & Deduplicate Deals').first().json.foundCount,\n  \"inserted\": $json.inserted,\n  \"skippedExisting\": $json.skippedExisting,\n  \"message\": \"Successfully researched coupons and saved to staging queue!\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1180,
+        300
+      ],
+      "id": "respond-webhook",
+      "name": "Return Webhook Response"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search Coupon Sites (AI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Coupon Sites (AI)": {
+      "main": [
+        [
+          {
+            "node": "Clean & Deduplicate Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean & Deduplicate Deals": {
+      "main": [
+        [
+          {
+            "node": "Save to App Discovered Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to App Discovered Queue": {
+      "main": [
+        [
+          {
+            "node": "Return Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
