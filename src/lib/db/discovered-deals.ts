@@ -254,11 +254,15 @@ export async function getDiscoveredDeals(query?: {
 /**
  * Get count of pending deals needing admin review.
  */
-export async function getPendingDiscoveredCount(): Promise<number> {
+export async function getPendingDiscoveredCount(advertiserId?: number): Promise<number> {
   try {
     const db = await getDb();
     const col = db.collection(COLLECTION);
-    return await col.countDocuments({ status: "pending" });
+    const filter: Record<string, any> = { status: "pending" };
+    if (typeof advertiserId === "number") {
+      filter["advertiser.id"] = advertiserId;
+    }
+    return await col.countDocuments(filter);
   } catch {
     return 0;
   }

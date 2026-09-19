@@ -14,12 +14,19 @@ interface ResearchDealsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialStore?: {
+    id?: number;
+    name?: string;
+    url?: string;
+    displayUrl?: string;
+  };
 }
 
 export default function ResearchDealsModal({
   isOpen,
   onClose,
   onSuccess,
+  initialStore,
 }: ResearchDealsModalProps) {
   const [advertisers, setAdvertisers] = useState<AdvertiserOption[]>([]);
   const [loadingAdvertisers, setLoadingAdvertisers] = useState(false);
@@ -34,6 +41,24 @@ export default function ResearchDealsModal({
 
   useEffect(() => {
     if (!isOpen) return;
+
+    if (initialStore) {
+      setSelectedAdvertiserId(initialStore.id ? String(initialStore.id) : "");
+      setCustomStoreName(initialStore.name || "");
+      let domain = initialStore.displayUrl || "";
+      if (!domain && initialStore.url) {
+        try {
+          domain = new URL(initialStore.url).hostname.replace(/^www\./, "");
+        } catch {}
+      }
+      setCustomDomain(domain);
+    } else {
+      setSelectedAdvertiserId("");
+      setCustomStoreName("");
+      setCustomDomain("");
+    }
+    setResultMessage(null);
+    setErrorMessage(null);
 
     async function loadAdvertisers() {
       setLoadingAdvertisers(true);
@@ -51,7 +76,7 @@ export default function ResearchDealsModal({
     }
 
     loadAdvertisers();
-  }, [isOpen]);
+  }, [isOpen, initialStore]);
 
   // Sync selected advertiser info to fields
   function handleSelectAdvertiser(advIdStr: string) {
@@ -142,24 +167,40 @@ export default function ResearchDealsModal({
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Select Existing Store (Optional)
-            </label>
-            <select
-              value={selectedAdvertiserId}
-              onChange={(e) => handleSelectAdvertiser(e.target.value)}
-              disabled={loadingAdvertisers || isResearching}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-purple-500 focus:outline-none"
-            >
-              <option value="">-- Choose a joined advertiser or enter custom --</option>
-              {advertisers.map((adv) => (
-                <option key={adv.id} value={adv.id}>
-                  {adv.name} (#{adv.id})
-                </option>
-              ))}
-            </select>
-          </div>
+          {initialStore ? (
+            <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-3.5 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600">Store-Specific Research</span>
+                <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5 mt-0.5">
+                  🏬 {initialStore.name}
+                </h3>
+              </div>
+              {initialStore.id && (
+                <span className="rounded-md bg-purple-200/80 px-2 py-1 text-xs font-mono font-bold text-purple-800">
+                  ID: #{initialStore.id}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Select Existing Store (Optional)
+              </label>
+              <select
+                value={selectedAdvertiserId}
+                onChange={(e) => handleSelectAdvertiser(e.target.value)}
+                disabled={loadingAdvertisers || isResearching}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-purple-500 focus:outline-none"
+              >
+                <option value="">-- Choose a joined advertiser or enter custom --</option>
+                {advertisers.map((adv) => (
+                  <option key={adv.id} value={adv.id}>
+                    {adv.name} (#{adv.id})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>

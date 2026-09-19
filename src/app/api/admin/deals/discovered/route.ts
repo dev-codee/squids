@@ -18,14 +18,15 @@ export async function GET(request: NextRequest) {
   const countOnly = searchParams.get("countOnly") === "true";
 
   try {
+    const advertiserIdRaw = searchParams.get("advertiserId");
+    const advertiserId = advertiserIdRaw ? Number(advertiserIdRaw) : undefined;
+
     if (countOnly) {
-      const count = await getPendingDiscoveredCount();
+      const count = await getPendingDiscoveredCount(advertiserId);
       return NextResponse.json({ count });
     }
 
     const status = searchParams.get("status") || "pending";
-    const advertiserIdRaw = searchParams.get("advertiserId");
-    const advertiserId = advertiserIdRaw ? Number(advertiserIdRaw) : undefined;
     const page = Number(searchParams.get("page") || "1");
     const pageSize = Number(searchParams.get("pageSize") || "30");
 
