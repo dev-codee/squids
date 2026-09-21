@@ -172,6 +172,20 @@ export async function countAdvertisersByCategory(
 }
 
 /**
+ * Count all advertisers matching a category globally (no country filter).
+ * Used as a fallback when the per-country count is zero to avoid showing
+ * empty category cards on homepages where country-specific coverage is limited.
+ */
+export async function countAdvertisersGloballyByCategory(
+  categoryName: string,
+): Promise<number> {
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+  const filter = buildFilter({ category: categoryName } as AdvertiserQuery);
+  return col.countDocuments(filter);
+}
+
+/**
  * Fetch facets (distinct regions, relationships, countries, categories) from the full dataset.
  */
 export async function getAdvertiserFacets(): Promise<AdvertiserFacets> {

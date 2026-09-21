@@ -236,12 +236,18 @@ async function getCategoriesForCountryUncached(
   query?: { search?: string; featuredOnly?: boolean },
 ): Promise<Category[]> {
   const categories = await getCategoriesUncached(query);
-  const { countAdvertisersByCategory } = await import("@/lib/db/advertisers");
+  const { countAdvertisersByCategory, countAdvertisersGloballyByCategory } = await import("@/lib/db/advertisers");
 
   return Promise.all(
     categories.map(async (cat) => {
       try {
-        const storeCount = await countAdvertisersByCategory(country, cat.name);
+        const perCountry = await countAdvertisersByCategory(country, cat.name);
+        // When per-country is zero (most advertisers are tagged with a specific
+        // country like GB so US/FR visitors see 0), fall back to a live global
+        // count so the homepage category cards always show a meaningful number.
+        const storeCount = perCountry > 0
+          ? perCountry
+          : await countAdvertisersGloballyByCategory(cat.name);
         return { ...cat, storeCount };
       } catch (err) {
         console.error(

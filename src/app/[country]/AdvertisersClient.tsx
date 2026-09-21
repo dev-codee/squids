@@ -13,7 +13,6 @@ import type { PopularShopData } from "@/lib/db/deals";
 import HomeRecentDeals from "@/components/home/HomeRecentDeals";
 import HomePopularShops from "@/components/home/HomePopularShops";
 import HomeCategories from "@/components/home/HomeCategories";
-import HomeFaqs from "@/components/home/HomeFaqs";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 
 import { useSearchParams } from "next/navigation";
@@ -242,7 +241,6 @@ export default function AdvertisersClient({
           <HomeRecentDeals deals={recentDeals} country={country} />
           <HomePopularShops shops={popularShops} country={country} />
           <HomeCategories categories={homeSettings.categories} />
-          <HomeFaqs faqs={homeSettings.faqs} />
         </>
       )}
     </div>
