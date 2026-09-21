@@ -198,7 +198,7 @@ export default function HorizontalCouponCard({
               })}
             </div>
           )}
-          <CouponVotes couponId={coupon.id} storeSlug={storeName} />
+          <CouponVotes couponId={coupon.id} storeSlug={storeName} label={dict.cards.didThisWork} />
         </div>
       </div>
 

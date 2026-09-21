@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { loadStoreData, loadStoreAiContent } from "@/lib/storeData";
-import { Suspense } from "react";
 import StoreSidebar from "@/components/store/StoreSidebar";
 import HorizontalCouponCard from "@/components/store/HorizontalCouponCard";
 import LightningDealCard from "@/components/store/LightningDealCard";
-import StoreAiContent from "@/components/store/StoreAiContent";
-import StoreAiSkeleton from "@/components/store/StoreAiSkeleton";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
 import { localeForCountry } from "@/lib/ai/languageNames";
@@ -285,19 +282,6 @@ export default async function StoreMainPage({
 
           </div>
         </div>
-
-        {/* AI-generated store content — temporarily hidden from UI */}
-        {/*
-        <div className="mt-8">
-          <Suspense fallback={<StoreAiSkeleton />}>
-            <StoreAiContent
-              slug={store.slug}
-              country={params.country}
-              storeName={store.name}
-            />
-          </Suspense>
-        </div>
-        */}
 
         {/* Last Verified Coupons */}
         <LastVerifiedSection

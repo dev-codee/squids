@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import AdvertisersClient from "../AdvertisersClient";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
 import { countryName } from "@/lib/countries";
+import { getDictionary } from "@/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export async function generateMetadata({
   const country = params.country.toUpperCase();
   const siteUrl = getSiteUrl();
   const name = countryName(country);
+  const dict = await getDictionary(country);
 
   const hreflang: Record<string, string> = {};
   for (const code of REGION_CODES) {
@@ -27,8 +29,8 @@ export async function generateMetadata({
   hreflang["x-default"] = `${siteUrl}/us/stores`;
 
   return {
-    title: `Stores with ${name} Coupons & Deals · FoxZil`,
-    description: `Browse every store with active coupon codes and deals in ${name}.`,
+    title: dict.meta.storesTitle.replace("{country}", name),
+    description: dict.meta.storesDescription.replace("{country}", name),
     alternates: {
       canonical: `${siteUrl}/${params.country.toLowerCase()}/stores`,
       languages: hreflang,

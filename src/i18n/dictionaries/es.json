@@ -220,6 +220,7 @@
     "expires": "Caduca el",
     "updated": "Actualizado",
     "added": "Añadido",
+    "didThisWork": "¿Funcionó?",
     "copied": "¡Copiado!",
     "copyCode": "Copiar código",
     "showCode": "Mostrar código",
@@ -277,5 +278,19 @@
     "Food & Dining": "Alimentación & Restaurantes",
     "Toys & Gaming": "Juguetes & Videojuegos",
     "Automotive": "Automoción"
+  },
+  "meta": {
+    "homeTitle": "Códigos de cupón y ofertas en {country} · FoxZil",
+    "homeDescription": "Explora códigos de cupón verificados y ofertas para {country}. Ahorra en las mejores tiendas con FoxZil.",
+    "storesTitle": "Tiendas con cupones y ofertas en {country} · FoxZil",
+    "storesDescription": "Explora todas las tiendas con códigos de cupón y ofertas activas en {country}.",
+    "categoriesTitle": "Códigos de cupón por categoría en {country} · FoxZil",
+    "categoriesDescription": "Explora descuentos, códigos de cupón y ofertas organizadas por categoría en {country}.",
+    "categoryTitle": "Cupones y ofertas de {category} en {country} · FoxZil",
+    "categoryDescription": "Encuentra los mejores códigos de cupón y ofertas de {category} para {country}. Ahorra hoy.",
+    "couponsTitle": "Códigos de cupón de {store} · FoxZil",
+    "couponsDescription": "Todos los códigos de cupón verificados para {store}. Actualizados hoy.",
+    "dealsTitle": "Ofertas y ventas flash de {store} · FoxZil",
+    "dealsDescription": "Últimas ofertas, ventas flash y promociones por tiempo limitado de {store}."
   }
 }

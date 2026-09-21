@@ -220,6 +220,7 @@
     "expires": "Läuft ab am",
     "updated": "Aktualisiert",
     "added": "Hinzugefügt",
+    "didThisWork": "Hat es funktioniert?",
     "copied": "Kopiert!",
     "copyCode": "Code kopieren",
     "showCode": "Code anzeigen",
@@ -277,5 +278,19 @@
     "Food & Dining": "Essen & Gastronomie",
     "Toys & Gaming": "Spielzeug & Gaming",
     "Automotive": "Automobil"
+  },
+  "meta": {
+    "homeTitle": "{country} Gutscheincodes & Angebote · FoxZil",
+    "homeDescription": "Verifizierte Gutscheincodes, Rabattcodes und Angebote für {country}. Mit FoxZil in Top-Shops sparen.",
+    "storesTitle": "Shops mit {country} Gutscheinen & Angeboten · FoxZil",
+    "storesDescription": "Alle Shops mit aktiven Gutscheincodes und Angeboten in {country} durchsuchen.",
+    "categoriesTitle": "Gutscheincodes nach Kategorie in {country} · FoxZil",
+    "categoriesDescription": "Rabatte, Gutscheincodes und Angebote nach Einkaufskategorie in {country} entdecken.",
+    "categoryTitle": "{category} Gutscheine & Angebote in {country} · FoxZil",
+    "categoryDescription": "Die besten {category} Gutscheincodes und Angebote für {country} finden. Jetzt sparen.",
+    "couponsTitle": "{store} Gutscheincodes & Rabattcodes · FoxZil",
+    "couponsDescription": "Alle verifizierten Gutscheincodes für {store}. Heute aktualisiert.",
+    "dealsTitle": "{store} Angebote & Blitzangebote · FoxZil",
+    "dealsDescription": "Neueste Angebote, Blitzverkäufe und zeitlich begrenzte Aktionen von {store}."
   }
 }

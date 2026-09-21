@@ -27,132 +27,53 @@ export interface RatingBlock {
   checked_date?: string;
   source?: string;
 }
-export interface BestTimeToShop {
-  season?: string;
-  months?: string[];
-  events?: string[];
-  reason?: string;
-  confidence?: string;
-}
-export interface CalendarMonth {
-  month: string;
-  activity: string; // "High" | "Medium" | "Low"
-}
-export interface ShippingInfo {
-  free_shipping?: string;
-  threshold?: string;
-  standard_cost?: string;
-  delivery_time?: string;
-  international_shipping?: string;
-}
-export interface ReturnsInfo {
-  return_window?: string;
-  refund?: string;
-  exchange?: string;
-  return_shipping?: string;
-  conditions?: string;
-}
 export interface CashbackInfo {
   available?: string;
   rate?: string;
   conditions?: string;
 }
-export interface WarrantyInfo {
-  available?: string;
-  period?: string;
-  conditions?: string;
-}
-export interface StoreFaq {
-  question: string;
-  answer: string;
-}
 
 export interface StorePageContent {
-  hero_heading?: string;
   hero_intro?: string;
-  meta_title?: string;
-  meta_description?: string;
   trustpilot?: RatingBlock;
   google_rating?: RatingBlock;
-  best_time_to_shop?: BestTimeToShop;
   typical_discount?: string;
   cashback?: CashbackInfo;
-  shipping?: ShippingInfo;
-  returns?: ReturnsInfo;
-  warranty?: WarrantyInfo;
-  payment_methods?: string[];
-  best_saving_strategy?: string;
-  shopping_calendar?: CalendarMonth[];
-  merchant_overview?: string;
-  categories?: string[];
-  how_to_use_coupon?: string[];
-  buying_advice?: string;
-  editorial_tips?: string[];
-  faq?: StoreFaq[];
-  trust_information?: string;
-  affiliate_disclosure?: string;
   information_confidence?: number;
-  review_required?: boolean;
-  review_reasons?: string[];
+  // Extra fields stored in DB from previous generations — kept for backwards compatibility
+  [key: string]: unknown;
 }
 
 const SYSTEM_PROMPT = `ROLE
-You are a Senior Ecommerce Copywriter, Shopping Researcher and Editorial Fact-Checker for a coupon, deals and cashback platform.
-Create a highly useful merchant/store page that helps shoppers understand what the store sells, current coupons/deals, cashback, typical savings, best times to shop, seasonal promotions, shipping, returns/refunds, payment methods, customer ratings, trust signals and practical ways to save money.
-Write for SHOPPERS FIRST; SEO is secondary. Never add information merely to increase word count or keyword density.
+You are a Shopping Researcher and Fact-Checker for a coupon and deals platform.
+Your job is to look up verified facts about a merchant from public sources and return a concise JSON summary.
 
 GOLDEN RULE
-NEVER INVENT FACTS. If a fact cannot be verified from the supplied INPUT DATA, use "Not available" or omit the field. Never estimate ratings, review counts, return periods, shipping prices, free-shipping thresholds, delivery times, discount percentages, best months/seasons, payment methods, cashback rates or warranty periods unless the input supports them. Preserve "Up to X%" exactly — never rewrite it as "X% off".
+NEVER INVENT FACTS. Only fill fields where you can verify them from the merchant's own website, Trustpilot, Google, or well-known public sources. If unknown, output "Not available" or omit the field.
 
-WHAT YOU MAY WRITE FREELY (grounded in the offers/categories provided)
-- hero_heading and hero_intro (60-100 words): what the merchant sells, what current savings are available, whether cashback exists, why to check the page. No phrases like "Unlock amazing savings", "Don't miss out", "Shop smarter". Use concrete facts from the input.
-- merchant_overview (100-180 words), categories, how_to_use_coupon steps, buying_advice, editorial_tips, best_saving_strategy, and faq (6-10 Q&As) — but only answer FAQs for which the input has reliable information.
-- typical_discount: a range only if supported by the current offers (e.g. "Up to 70%"); otherwise "Not available".
-
-RATINGS / SHIPPING / RETURNS / PAYMENT / WARRANTY / CASHBACK
-Only fill these from the input. Do NOT combine Trustpilot and Google into one score. Never output a checked_date (leave it ""), and never attach a date or year to a rating. If unknown, set fields to "Not available". For best_time_to_shop, only claim a season/event when historical or promotional evidence is provided; otherwise set confidence "Low" and reason "Not enough historical data".
-
-AI WRITING RULES
-Avoid: "Unlock incredible savings", "Don't miss out", "Shop smarter", "Perfect for everyone", "Treat yourself", "Unbeatable prices", "Ultimate shopping destination". Prefer specific facts over promotional adjectives.
-
-COUPON CODE RULE (STRICT)
-NEVER print specific promo/voucher/coupon code strings (e.g. "BV110", "B100", "SAVE20") anywhere in the output — not in best_saving_strategy, buying_advice, how_to_use_coupon, faq, hero_intro, merchant_overview or any other field. The codes are revealed separately by a "Show Code" button, so naming them is redundant and quickly goes stale. Describe savings by their BENEFIT and CONDITIONS instead (discount amount/percentage, order minimum, product/category, customer type) — e.g. "apply the highest-value code at checkout; fixed-amount discounts apply above set order minimums, and a percentage-off code covers sitewide orders — use whichever saves more". Never write "use code X", "with code X", or list code names.
+FIELDS
+- hero_intro (60-100 words): describe what the merchant sells and the best current savings available. Use only facts from the input. No phrases like "Unlock amazing savings", "Don't miss out", "Shop smarter". Do NOT name specific coupon code strings.
+- trustpilot: look up the real Trustpilot rating and review count for the merchant. Leave checked_date empty.
+- google_rating: look up the real Google rating and review count. Leave checked_date empty.
+- typical_discount: a realistic range from the current offers (e.g. "Up to 30%"). "Not available" if none.
+- cashback: fill only from input data.
+- information_confidence: 0-100, how confident you are in the data you found.
 
 DATE RULE (STRICT)
-NEVER mention specific dates, calendar years, or time-stamped phrases anywhere in the output. Do NOT write expiry / "valid until" / "ends on" dates, "as of", "last updated", "checked on <date>", or any year (e.g. 2024, 2025, 2026). Always leave every checked_date field empty (""). You MAY use evergreen month names and seasons in best_time_to_shop and shopping_calendar (e.g. "November", "post-holiday sales", "summer") because these never go stale — but NEVER attach a year to them and never present them as a fixed deadline.
+NEVER mention specific dates, calendar years, or time references. Do NOT write expiry dates, "as of", "last updated", or any year. Leave checked_date as "".
 
-CALENDAR RULE
-For each shopping_calendar entry, "activity" MUST be exactly ONE word: "High", "Medium", or "Low". Never add explanations, dates, years, or extra text to the activity value. The "month" value must be a bare month name (e.g. "January") with no year.
-
-CONFIDENCE & REVIEW
-Set information_confidence 0-100 based on how complete/recent the verified data is. Set review_required true (with review_reasons) if important fields could not be verified. Always include an affiliate_disclosure noting the site may earn commission from links.
+COUPON CODE RULE (STRICT)
+NEVER include any promo/voucher code strings in hero_intro or any field.
 
 OUTPUT
-Return ONLY valid JSON matching exactly this shape (use "Not available" or omit unknown fields; arrays may be empty):
+Return ONLY valid JSON matching exactly this shape:
 {
-  "hero_heading": "", "hero_intro": "", "meta_title": "", "meta_description": "",
+  "hero_intro": "",
   "trustpilot": { "rating": "", "review_count": "", "checked_date": "", "source": "" },
   "google_rating": { "rating": "", "review_count": "", "checked_date": "", "source": "" },
-  "best_time_to_shop": { "season": "", "months": [], "events": [], "reason": "", "confidence": "" },
   "typical_discount": "",
   "cashback": { "available": "", "rate": "", "conditions": "" },
-  "shipping": { "free_shipping": "", "threshold": "", "standard_cost": "", "delivery_time": "", "international_shipping": "" },
-  "returns": { "return_window": "", "refund": "", "exchange": "", "return_shipping": "", "conditions": "" },
-  "warranty": { "available": "", "period": "", "conditions": "" },
-  "payment_methods": [],
-  "best_saving_strategy": "",
-  "shopping_calendar": [ { "month": "January", "activity": "Low" } ],
-  "merchant_overview": "",
-  "categories": [],
-  "how_to_use_coupon": [],
-  "buying_advice": "",
-  "editorial_tips": [],
-  "faq": [ { "question": "", "answer": "" } ],
-  "trust_information": "",
-  "affiliate_disclosure": "",
-  "information_confidence": 0,
-  "review_required": false,
-  "review_reasons": []
+  "information_confidence": 0
 }
 No markdown, no explanation outside the JSON.`;
 
@@ -160,10 +81,9 @@ import { languageNameForLocale } from "@/lib/ai/languageNames";
 
 function buildStoreSystemPrompt(language: string = "English"): string {
   const langRule = `LANGUAGE INSTRUCTION (STRICT)
-Write ALL shopper-facing text (hero_heading, hero_intro, meta_title, meta_description, best_saving_strategy, merchant_overview, categories, how_to_use_coupon, buying_advice, editorial_tips, faq questions and answers, trust_information, affiliate_disclosure, etc.) in ${language}.
-When a field is unknown or not supported by input data, localize "Not available" naturally into ${language} (e.g., German: "Nicht verfügbar", French: "Non disponible", Spanish: "No disponible", Italian: "Non disponibile") or omit the field.
-Keep merchant names, brand names, product names, URLs and proper nouns verbatim. Preserve numbers, prices, currency symbols, and discounts exactly.
-Calendar activity values MUST still remain strictly one of "High", "Medium", or "Low".`;
+Write the hero_intro in ${language}.
+When a field is unknown, localize "Not available" naturally into ${language} (e.g., German: "Nicht verfügbar", French: "Non disponible", Spanish: "No disponible", Italian: "Non disponibile") or omit the field.
+Keep merchant names, brand names, product names, URLs and proper nouns verbatim. Preserve numbers, prices, currency symbols, and discounts exactly.`;
 
   return `${SYSTEM_PROMPT}\n\n${langRule}`;
 }
@@ -244,7 +164,7 @@ export async function generateStorePageContent(
 
   const rawResponse = await callPerplexity({
     model: resolveModel(),
-    maxTokens: 4096,
+    maxTokens: 512,
     jsonMode: true,
     messages: [
       {

@@ -7,9 +7,10 @@ type VoteType = "up" | "down";
 interface Props {
   couponId: string;
   storeSlug: string;
+  label?: string;
 }
 
-export default function CouponVotes({ couponId, storeSlug }: Props) {
+export default function CouponVotes({ couponId, storeSlug, label = "Did this work?" }: Props) {
   const [counts, setCounts] = useState<{ up: number; down: number } | null>(null);
   const [userVote, setUserVote] = useState<VoteType | null>(null);
   const [voting, setVoting] = useState(false);
@@ -67,7 +68,7 @@ export default function CouponVotes({ couponId, storeSlug }: Props) {
     <div className="mt-3 pt-3 border-t border-gray-100">
       <div className="flex items-center gap-2 min-w-0">
         <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap shrink-0">
-          Did this work?
+          {label}
         </span>
 
         <div className="flex items-center gap-1.5 shrink-0">

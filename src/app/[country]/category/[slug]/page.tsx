@@ -25,8 +25,13 @@ export async function generateMetadata({
   const siteUrl = getSiteUrl();
   const name = countryName(country);
 
-  const category = await getCategoryBySlug(slug);
+  const [category, dict] = await Promise.all([
+    getCategoryBySlug(slug),
+    getDictionary(country),
+  ]);
   if (!category) return {};
+
+  const translatedCategoryName = (dict.categoryNames as Record<string, string>)[category.name] ?? category.name;
 
   const [advertisersResult, dealsResult] = await Promise.all([
     getAdvertisersFromDb({ country, category: category.name, pageSize: 1 }),
@@ -44,8 +49,8 @@ export async function generateMetadata({
   hreflang["x-default"] = `${siteUrl}/us/category/${slug}`;
 
   return {
-    title: `${category.name} Coupons & Deals in ${name} · FoxZil`,
-    description: `Find the best ${category.name} coupon codes and deals for ${name}. Save on top ${category.name} stores today.`,
+    title: dict.meta.categoryTitle.replace("{category}", translatedCategoryName).replace("{country}", name),
+    description: dict.meta.categoryDescription.replace("{category}", translatedCategoryName).replace("{country}", name),
     alternates: {
       canonical: `${siteUrl}/${params.country.toLowerCase()}/category/${slug}`,
       languages: hreflang,
@@ -88,13 +93,14 @@ export default async function CategoryDetailPage({
   const deals = dealsResult?.deals || [];
 
   const siteUrl = getSiteUrl();
+  const translatedCategoryName = (dict.categoryNames as Record<string, string>)[category.name] ?? category.name;
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/${country.toLowerCase()}` },
-      { "@type": "ListItem", position: 2, name: "Categories", item: `${siteUrl}/${country.toLowerCase()}/categories` },
-      { "@type": "ListItem", position: 3, name: category.name, item: `${siteUrl}/${country.toLowerCase()}/category/${category.slug}` },
+      { "@type": "ListItem", position: 1, name: dict.header.home, item: `${siteUrl}/${country.toLowerCase()}` },
+      { "@type": "ListItem", position: 2, name: dict.categories.allCategories, item: `${siteUrl}/${country.toLowerCase()}/categories` },
+      { "@type": "ListItem", position: 3, name: translatedCategoryName, item: `${siteUrl}/${country.toLowerCase()}/category/${category.slug}` },
     ],
   };
 
@@ -113,7 +119,7 @@ export default async function CategoryDetailPage({
                 <span className="text-xs text-gray-400 font-mono">/{category.slug}</span>
               </div>
               <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-gray-900">
-                {dict.categories.promoCodesDeals.replace("{category}", category.name)}
+                {dict.categories.promoCodesDeals.replace("{category}", translatedCategoryName)}
               </h1>
             </div>
           </div>
@@ -137,7 +143,7 @@ export default async function CategoryDetailPage({
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900">
             {dict.categories.storesInCountry
-              .replace("{category}", category.name)
+              .replace("{category}", translatedCategoryName)
               .replace("{country}", countryName(country))}
           </h2>
           <span className="text-xs font-medium text-gray-500">
@@ -148,7 +154,7 @@ export default async function CategoryDetailPage({
         {advertisers.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
             {dict.categories.noStores
-              .replace("{category}", category.name)
+              .replace("{category}", translatedCategoryName)
               .replace("{country}", countryName(country))}
           </div>
         ) : (
@@ -169,7 +175,7 @@ export default async function CategoryDetailPage({
         <section>
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">
-              {dict.categories.latestDeals.replace("{category}", category.name)}
+              {dict.categories.latestDeals.replace("{category}", translatedCategoryName)}
             </h2>
             <span className="text-xs font-medium text-gray-500">
               {dict.categories.activePromotions.replace("{count}", String(deals.length))}

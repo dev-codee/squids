@@ -14,7 +14,10 @@ export async function generateMetadata({
 }: {
   params: { country: string; store: string };
 }): Promise<Metadata> {
-  const store = await loadStoreData(params.store, params.country);
+  const [store, dict] = await Promise.all([
+    loadStoreData(params.store, params.country),
+    getDictionary(params.country),
+  ]);
   if (!store) return {};
 
   const siteUrl = getSiteUrl();
@@ -28,8 +31,8 @@ export async function generateMetadata({
   hreflangLanguages["x-default"] = `${siteUrl}/us/${store.slug}/coupons`;
 
   return {
-    title: `${store.name} Coupon Codes & Promo Codes`,
-    description: `All verified coupon codes and promo codes for ${store.name}. Updated today.`,
+    title: dict.meta.couponsTitle.replace("{store}", store.name),
+    description: dict.meta.couponsDescription.replace("{store}", store.name),
     alternates: {
       canonical: canonicalUrl,
       languages: hreflangLanguages,

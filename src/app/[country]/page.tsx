@@ -21,6 +21,7 @@ export async function generateMetadata({
   const country = params.country.toUpperCase();
   const siteUrl = getSiteUrl();
   const name = countryName(country);
+  const dict = await getDictionary(country);
 
   const hreflang: Record<string, string> = {};
   for (const code of REGION_CODES) {
@@ -29,15 +30,18 @@ export async function generateMetadata({
   }
   hreflang["x-default"] = `${siteUrl}/us`;
 
+  const title = dict.meta.homeTitle.replace("{country}", name);
+  const description = dict.meta.homeDescription.replace("{country}", name);
+
   return {
-    title: `${name} Coupon Codes & Deals · FoxZil`,
-    description: `Browse verified coupon codes, promo codes and deals for ${name}. Save on top stores with FoxZil.`,
+    title,
+    description,
     alternates: {
       canonical: `${siteUrl}/${params.country.toLowerCase()}`,
       languages: hreflang,
     },
     openGraph: {
-      title: `${name} Coupon Codes & Deals · FoxZil`,
+      title,
       url: `${siteUrl}/${params.country.toLowerCase()}`,
     },
   };

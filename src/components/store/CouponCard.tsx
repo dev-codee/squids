@@ -216,7 +216,7 @@ export default function CouponCard({
               </svg>
             </a>
           )}
-          <CouponVotes couponId={coupon.id} storeSlug={storeName} />
+          <CouponVotes couponId={coupon.id} storeSlug={storeName} label={dict.cards.didThisWork} />
         </div>
       </div>
 

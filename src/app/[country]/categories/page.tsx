@@ -18,6 +18,7 @@ export async function generateMetadata({
   const country = params.country.toUpperCase();
   const siteUrl = getSiteUrl();
   const name = countryName(country);
+  const dict = await getDictionary(country);
 
   const hreflang: Record<string, string> = {};
   for (const code of REGION_CODES) {
@@ -27,8 +28,8 @@ export async function generateMetadata({
   hreflang["x-default"] = `${siteUrl}/us/categories`;
 
   return {
-    title: `Coupon Codes by Category in ${name} · FoxZil`,
-    description: `Explore discounts, coupon codes and deals organised by shopping category in ${name}.`,
+    title: dict.meta.categoriesTitle.replace("{country}", name),
+    description: dict.meta.categoriesDescription.replace("{country}", name),
     alternates: {
       canonical: `${siteUrl}/${params.country.toLowerCase()}/categories`,
       languages: hreflang,
