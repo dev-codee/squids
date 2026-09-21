@@ -219,6 +219,7 @@
     "active": "Active",
     "expires": "Expires",
     "updated": "Updated",
+    "added": "Added",
     "copied": "Copied!",
     "copyCode": "Copy Code",
     "showCode": "Show Code",
@@ -264,5 +265,17 @@
     "trending": "Trending",
     "noneTitle": "No deals published for {store} yet",
     "noneSub": "New promotions and flash sales will show up here."
+  },
+  "categoryNames": {
+    "Electronics & Tech": "Electronics & Tech",
+    "Fashion & Apparel": "Fashion & Apparel",
+    "Travel & Hotels": "Travel & Hotels",
+    "Beauty & Health": "Beauty & Health",
+    "Home & Garden": "Home & Garden",
+    "Sports & Outdoor": "Sports & Outdoor",
+    "Software & Services": "Software & Services",
+    "Food & Dining": "Food & Dining",
+    "Toys & Gaming": "Toys & Gaming",
+    "Automotive": "Automotive"
   }
 }

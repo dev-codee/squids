@@ -189,7 +189,7 @@ export default function HorizontalCouponCard({
           </div>
           {coupon.updatedAt && (
             <div className="mt-0.5 text-[10px] text-gray-400 text-center">
-              {dict.cards.updated}:{" "}
+              {dict.cards.added}:{" "}
               {new Date(coupon.updatedAt).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "numeric",

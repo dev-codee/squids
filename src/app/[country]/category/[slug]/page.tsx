@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getCategoryBySlug } from "@/lib/db/categories";
 import { getAdvertisersFromDb } from "@/lib/db/advertisers";
 import { getDealsFromDb } from "@/lib/db/deals";
@@ -7,8 +8,51 @@ import { countryName, countryFlag } from "@/lib/countries";
 import AdvertiserCard from "@/components/AdvertiserCard";
 import CouponCard from "@/components/store/CouponCard";
 import { getDictionary } from "@/i18n";
+import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
 
 export const dynamic = "force-dynamic";
+
+const COUNTRY_CODE_RE = /^[A-Za-z]{2}$/;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { country: string; slug: string };
+}): Promise<Metadata> {
+  if (!COUNTRY_CODE_RE.test(params.country)) return {};
+  const country = params.country.toUpperCase();
+  const slug = params.slug;
+  const siteUrl = getSiteUrl();
+  const name = countryName(country);
+
+  const category = await getCategoryBySlug(slug);
+  if (!category) return {};
+
+  const [advertisersResult, dealsResult] = await Promise.all([
+    getAdvertisersFromDb({ country, category: category.name, pageSize: 1 }),
+    getDealsFromDb({ country, search: category.name, pageSize: 1 }),
+  ]);
+  const isEmpty =
+    (advertisersResult?.advertisers?.length ?? 0) === 0 &&
+    (dealsResult?.deals?.length ?? 0) === 0;
+
+  const hreflang: Record<string, string> = {};
+  for (const code of REGION_CODES) {
+    const r = getRegionConfig(code);
+    hreflang[r.locale] = `${siteUrl}/${code.toLowerCase()}/category/${slug}`;
+  }
+  hreflang["x-default"] = `${siteUrl}/us/category/${slug}`;
+
+  return {
+    title: `${category.name} Coupons & Deals in ${name} · FoxZil`,
+    description: `Find the best ${category.name} coupon codes and deals for ${name}. Save on top ${category.name} stores today.`,
+    alternates: {
+      canonical: `${siteUrl}/${params.country.toLowerCase()}/category/${slug}`,
+      languages: hreflang,
+    },
+    robots: isEmpty ? { index: false, follow: true } : { index: true, follow: true },
+  };
+}
 
 export default async function CategoryDetailPage({
   params,
@@ -43,8 +87,20 @@ export default async function CategoryDetailPage({
   const advertisers = advertisersResult?.advertisers || [];
   const deals = dealsResult?.deals || [];
 
+  const siteUrl = getSiteUrl();
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/${country.toLowerCase()}` },
+      { "@type": "ListItem", position: 2, name: "Categories", item: `${siteUrl}/${country.toLowerCase()}/categories` },
+      { "@type": "ListItem", position: 3, name: category.name, item: `${siteUrl}/${country.toLowerCase()}/category/${category.slug}` },
+    ],
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       {/* Category Header Hero */}
       <div className="mb-10 rounded-3xl border border-gray-200 bg-gradient-to-br from-white to-accent-soft/30 p-8 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -129,7 +185,7 @@ export default async function CategoryDetailPage({
                 discount: deal.discountText || "",
                 type: deal.subtype || "code",
                 description: deal.description || "",
-                verified: deal.status === "active",
+                verified: false,
                 expiryDate: deal.endDate,
                 updatedAt: deal.syncedAt ? new Date(deal.syncedAt).toISOString() : null,
                 isExclusive: deal.isExclusive,

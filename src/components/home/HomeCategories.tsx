@@ -74,7 +74,7 @@ export default function HomeCategories({ categories: initialCategories }: { cate
               >
                 <div>
                   <span className="block truncate text-xs font-bold text-gray-800 group-hover:text-accent transition">
-                    {cat.name}
+                    {(dict.categoryNames as Record<string, string>)[cat.name] ?? cat.name}
                   </span>
                 </div>
                 {typeof cat.storeCount === "number" && (

@@ -180,7 +180,7 @@ export default function CouponCard({
               <>
                 {(coupon.verified || coupon.expiryDate) && <span className="mx-1.5">•</span>}
                 <span>
-                  {dict.cards.updated}{" "}
+                  {dict.cards.added}{" "}
                   {new Date(coupon.updatedAt).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",

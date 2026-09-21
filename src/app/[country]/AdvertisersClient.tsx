@@ -54,7 +54,8 @@ export default function AdvertisersClient({
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [page, setPage] = useState(1);
+  const initialPage = parseInt(searchParams.get("page") || "1", 10);
+  const [page, setPage] = useState(isNaN(initialPage) || initialPage < 1 ? 1 : initialPage);
 
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -227,6 +228,16 @@ export default function AdvertisersClient({
                     total={data.total}
                     pageSize={data.pageSize}
                     onPageChange={goToPage}
+                    buildHref={(p) => {
+                      const base = variant === "stores"
+                        ? `/${country.toLowerCase()}/stores`
+                        : `/${country.toLowerCase()}`;
+                      const ps = new URLSearchParams();
+                      if (search) ps.set("search", search);
+                      if (p > 1) ps.set("page", String(p));
+                      const qs = ps.toString();
+                      return qs ? `${base}?${qs}` : base;
+                    }}
                   />
                 )}
               </>

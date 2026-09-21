@@ -1,9 +1,40 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getCategoriesForCountry } from "@/lib/db/categories";
 import { countryName, countryFlag } from "@/lib/countries";
 import { getDictionary } from "@/i18n";
+import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
 
 export const dynamic = "force-dynamic";
+
+const COUNTRY_CODE_RE = /^[A-Za-z]{2}$/;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { country: string };
+}): Promise<Metadata> {
+  if (!COUNTRY_CODE_RE.test(params.country)) return {};
+  const country = params.country.toUpperCase();
+  const siteUrl = getSiteUrl();
+  const name = countryName(country);
+
+  const hreflang: Record<string, string> = {};
+  for (const code of REGION_CODES) {
+    const r = getRegionConfig(code);
+    hreflang[r.locale] = `${siteUrl}/${code.toLowerCase()}/categories`;
+  }
+  hreflang["x-default"] = `${siteUrl}/us/categories`;
+
+  return {
+    title: `Coupon Codes by Category in ${name} · FoxZil`,
+    description: `Explore discounts, coupon codes and deals organised by shopping category in ${name}.`,
+    alternates: {
+      canonical: `${siteUrl}/${params.country.toLowerCase()}/categories`,
+      languages: hreflang,
+    },
+  };
+}
 
 export default async function PublicCategoriesPage({
   params,

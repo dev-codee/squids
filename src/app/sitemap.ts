@@ -35,7 +35,42 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   });
 
-  // 3. Active Stores across DB
+  // 3. Regional utility pages (stores, deals, categories)
+  REGION_CODES.forEach((code: string) => {
+    const c = code.toLowerCase();
+    entries.push(
+      { url: `${siteUrl}/${c}/stores`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+      { url: `${siteUrl}/${c}/deals`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
+      { url: `${siteUrl}/${c}/categories`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+    );
+  });
+
+  // 4. Category detail pages (region × category slug)
+  try {
+    const db = await getDb();
+    const categories = await db
+      .collection("categories")
+      .find({})
+      .project({ _id: 0, slug: 1 })
+      .toArray();
+
+    REGION_CODES.forEach((code: string) => {
+      categories.forEach((cat) => {
+        if (cat.slug) {
+          entries.push({
+            url: `${siteUrl}/${code.toLowerCase()}/category/${cat.slug}`,
+            lastModified: now,
+            changeFrequency: "weekly",
+            priority: 0.6,
+          });
+        }
+      });
+    });
+  } catch (err) {
+    console.error("[sitemap] Failed to load categories for sitemap:", err);
+  }
+
+  // 5. Active Stores across DB
   try {
     const db = await getDb();
     const stores = await db
@@ -45,6 +80,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .limit(5000)
       .toArray();
 
+    const wwCodes = new Set(["ww", "global", "int", "00"]);
+
     stores.forEach((store) => {
       const cleanName = cleanAdvertiserName(store.name || "");
       const slug = cleanName
@@ -52,8 +89,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "") || String(store.id);
 
-      // Default country or store country
-      const country = (store.countryCode || store.region || "us").toLowerCase();
+      const rawCountry = (store.countryCode || store.region || "us").toLowerCase();
+      // WW/GLOBAL stores serve all markets — default their sitemap entry to /us
+      const country = wwCodes.has(rawCountry) ? "us" : rawCountry;
       const validCountry = REGION_CODES.some((c: string) => c.toLowerCase() === country)
         ? country
         : "us";

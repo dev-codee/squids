@@ -219,6 +219,7 @@
     "active": "Actif",
     "expires": "Expire le",
     "updated": "Mis à jour",
+    "added": "Ajouté",
     "copied": "Copié !",
     "copyCode": "Copier le code",
     "showCode": "Afficher le code",
@@ -264,5 +265,17 @@
     "trending": "Tendance",
     "noneTitle": "Aucune offre publiée pour {store} pour le moment",
     "noneSub": "De nouvelles promotions et ventes flash apparaîtront ici."
+  },
+  "categoryNames": {
+    "Electronics & Tech": "Électronique & Technologie",
+    "Fashion & Apparel": "Mode & Vêtements",
+    "Travel & Hotels": "Voyage & Hôtels",
+    "Beauty & Health": "Beauté & Santé",
+    "Home & Garden": "Maison & Jardin",
+    "Sports & Outdoor": "Sports & Plein air",
+    "Software & Services": "Logiciels & Services",
+    "Food & Dining": "Alimentation & Restaurants",
+    "Toys & Gaming": "Jouets & Jeux vidéo",
+    "Automotive": "Automobile"
   }
 }

@@ -165,14 +165,26 @@ export default async function StoreMainPage({
       .trim();
   }
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: store.name,
-    url: `${getSiteUrl()}/${params.country.toLowerCase()}/${store.slug}`,
-    logo: store.logoUrl || undefined,
-    description: pageDesc,
-  };
+  const siteUrl = getSiteUrl();
+  const storePageUrl = `${siteUrl}/${params.country.toLowerCase()}/${store.slug}`;
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: store.name,
+      url: store.websiteUrl || storePageUrl,
+      logo: store.logoUrl || undefined,
+      description: pageDesc || undefined,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/${params.country.toLowerCase()}` },
+        { "@type": "ListItem", position: 2, name: store.name, item: storePageUrl },
+      ],
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F5F5F5] pb-16">

@@ -41,8 +41,7 @@ export default function StoreSidebar({ store, aiContent }: StoreSidebarProps) {
       hasVal(google?.rating) ||
       hasVal(aiContent.typical_discount) ||
       hasVal(aiContent.cashback?.rate) ||
-      hasVal(aiContent.cashback?.available) ||
-      typeof aiContent.information_confidence === "number");
+      hasVal(aiContent.cashback?.available));
 
   return (
     <aside className="w-full space-y-6">
@@ -94,9 +93,6 @@ export default function StoreSidebar({ store, aiContent }: StoreSidebarProps) {
             <InfoRow label={dict.sidebar.typicalDiscount} value={aiContent.typical_discount} />
             <InfoRow label={dict.sidebar.cashbackRate} value={aiContent.cashback?.rate} />
             {!hasVal(aiContent.cashback?.rate) && <InfoRow label={dict.sidebar.cashback} value={aiContent.cashback?.available} />}
-            {typeof aiContent.information_confidence === "number" && aiContent.information_confidence > 0 && (
-              <InfoRow label={dict.sidebar.infoConfidence} value={`${aiContent.information_confidence}/100`} />
-            )}
           </div>
         </div>
       )}

@@ -231,7 +231,7 @@ function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): Coupo
     discount: deal.discountText || "",
     type: deal.subtype || "code",
     description: dealDisplayDescription(deal, locale),
-    verified: deal.status === "active",
+    verified: false,
     expiryDate: sanitizeEndDate(deal.endDate),
     updatedAt: toIsoDate(deal.syncedAt),
     isExclusive: deal.isExclusive,

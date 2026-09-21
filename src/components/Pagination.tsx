@@ -6,6 +6,8 @@ interface PaginationProps {
   total: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  /** When provided, page numbers render as crawlable <a href> links. */
+  buildHref?: (page: number) => string;
 }
 
 /** Build a compact page list with ellipses, e.g. 1 … 4 5 [6] 7 8 … 20 */
@@ -34,6 +36,7 @@ export default function Pagination({
   total,
   pageSize,
   onPageChange,
+  buildHref,
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
@@ -42,16 +45,31 @@ export default function Pagination({
 
   return (
     <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-
       <nav className="flex items-center gap-1" aria-label="Pagination">
-        <button
-          className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:bg-gray-50`}
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1}
-          aria-label="Previous page"
-        >
-          ‹
-        </button>
+        {buildHref ? (
+          <a
+            href={page > 1 ? buildHref(page - 1) : undefined}
+            onClick={(e) => {
+              if (page <= 1) { e.preventDefault(); return; }
+              e.preventDefault();
+              onPageChange(page - 1);
+            }}
+            aria-label="Previous page"
+            aria-disabled={page <= 1}
+            className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:bg-gray-50 ${page <= 1 ? "pointer-events-none opacity-40" : ""}`}
+          >
+            ‹
+          </a>
+        ) : (
+          <button
+            className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:bg-gray-50`}
+            onClick={() => onPageChange(page - 1)}
+            disabled={page <= 1}
+            aria-label="Previous page"
+          >
+            ‹
+          </button>
+        )}
 
         {pageItems(page, totalPages).map((item, i) =>
           item === "…" ? (
@@ -61,6 +79,20 @@ export default function Pagination({
             >
               …
             </span>
+          ) : buildHref ? (
+            <a
+              key={item}
+              href={buildHref(item)}
+              onClick={(e) => { e.preventDefault(); onPageChange(item); }}
+              aria-current={item === page ? "page" : undefined}
+              className={`${btnBase} ${
+                item === page
+                  ? "border-accent bg-accent text-white"
+                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {item}
+            </a>
           ) : (
             <button
               key={item}
@@ -77,14 +109,30 @@ export default function Pagination({
           ),
         )}
 
-        <button
-          className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:bg-gray-50`}
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= totalPages}
-          aria-label="Next page"
-        >
-          ›
-        </button>
+        {buildHref ? (
+          <a
+            href={page < totalPages ? buildHref(page + 1) : undefined}
+            onClick={(e) => {
+              if (page >= totalPages) { e.preventDefault(); return; }
+              e.preventDefault();
+              onPageChange(page + 1);
+            }}
+            aria-label="Next page"
+            aria-disabled={page >= totalPages}
+            className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:bg-gray-50 ${page >= totalPages ? "pointer-events-none opacity-40" : ""}`}
+          >
+            ›
+          </a>
+        ) : (
+          <button
+            className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:bg-gray-50`}
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages}
+            aria-label="Next page"
+          >
+            ›
+          </button>
+        )}
       </nav>
     </div>
   );

@@ -1,10 +1,40 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import AdvertisersClient from "../AdvertisersClient";
+import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
+import { countryName } from "@/lib/countries";
 
 export const dynamic = "force-dynamic";
 
 // 2-letter country code check
 const COUNTRY_CODE_RE = /^[A-Za-z]{2}$/;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { country: string };
+}): Promise<Metadata> {
+  if (!COUNTRY_CODE_RE.test(params.country)) return {};
+  const country = params.country.toUpperCase();
+  const siteUrl = getSiteUrl();
+  const name = countryName(country);
+
+  const hreflang: Record<string, string> = {};
+  for (const code of REGION_CODES) {
+    const r = getRegionConfig(code);
+    hreflang[r.locale] = `${siteUrl}/${code.toLowerCase()}/stores`;
+  }
+  hreflang["x-default"] = `${siteUrl}/us/stores`;
+
+  return {
+    title: `Stores with ${name} Coupons & Deals · FoxZil`,
+    description: `Browse every store with active coupon codes and deals in ${name}.`,
+    alternates: {
+      canonical: `${siteUrl}/${params.country.toLowerCase()}/stores`,
+      languages: hreflang,
+    },
+  };
+}
 
 export default function StoresPage({
   params,
