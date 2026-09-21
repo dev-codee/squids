@@ -165,7 +165,7 @@ export default function HorizontalCouponCard({
             <a
               href={outboundUrl}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="nofollow noopener noreferrer sponsored"
               onClick={() => track("affiliate_click", "coupon_card")}
               className="w-full inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600 shadow-sm"
             >

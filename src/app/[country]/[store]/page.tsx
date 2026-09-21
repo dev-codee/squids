@@ -8,10 +8,12 @@ import LightningDealCard from "@/components/store/LightningDealCard";
 import StoreAiContent from "@/components/store/StoreAiContent";
 import StoreAiSkeleton from "@/components/store/StoreAiSkeleton";
 import { getDictionary } from "@/i18n";
-import { getSiteUrl } from "@/lib/regions";
+import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
 import { localeForCountry } from "@/lib/ai/languageNames";
 
 import { generateStoreSeoContent, refreshStoreTitleDate } from "@/lib/ai/storeSeo";
+import { getLatestVerificationsForStore } from "@/lib/db/coupon-verifications";
+import LastVerifiedSection from "@/components/store/LastVerifiedSection";
 
 export const dynamic = "force-dynamic";
 
@@ -64,11 +66,19 @@ export async function generateMetadata({
       .trim();
   }
 
+  const hreflangLanguages: Record<string, string> = {};
+  for (const code of REGION_CODES) {
+    const r = getRegionConfig(code);
+    hreflangLanguages[r.locale] = `${siteUrl}/${code.toLowerCase()}/${store.slug}`;
+  }
+  hreflangLanguages["x-default"] = `${siteUrl}/us/${store.slug}`;
+
   return {
     title,
     description,
     alternates: {
       canonical: canonicalUrl,
+      languages: hreflangLanguages,
     },
     openGraph: {
       title,
@@ -109,7 +119,10 @@ export default async function StoreMainPage({
     redirect(`/${params.country}/${store.slug}`);
   }
 
-  const aiContent = await loadStoreAiContent(store.slug, params.country);
+  const [aiContent, verifications] = await Promise.all([
+    loadStoreAiContent(store.slug, params.country),
+    getLatestVerificationsForStore(store.slug, 6),
+  ]);
 
   const locale = localeForCountry(params.country);
   const currentMonth = new Date().toLocaleDateString(locale, { month: "long" });
@@ -273,6 +286,12 @@ export default async function StoreMainPage({
           </Suspense>
         </div>
         */}
+
+        {/* Last Verified Coupons */}
+        <LastVerifiedSection
+          verifications={verifications}
+          storeName={store.name}
+        />
       </main>
     </div>
   );

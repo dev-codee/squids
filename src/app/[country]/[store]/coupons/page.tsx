@@ -1,9 +1,41 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { loadStoreData } from "@/lib/storeData";
 import StoreHeader from "@/components/store/StoreHeader";
 import CouponCard from "@/components/store/CouponCard";
 import type { CouponItem } from "@/lib/storeData";
 import { getDictionary } from "@/i18n";
+import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
+import { getLatestVerificationsForStore } from "@/lib/db/coupon-verifications";
+import LastVerifiedSection from "@/components/store/LastVerifiedSection";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { country: string; store: string };
+}): Promise<Metadata> {
+  const store = await loadStoreData(params.store, params.country);
+  if (!store) return {};
+
+  const siteUrl = getSiteUrl();
+  const canonicalUrl = `${siteUrl}/${params.country.toLowerCase()}/${store.slug}/coupons`;
+
+  const hreflangLanguages: Record<string, string> = {};
+  for (const code of REGION_CODES) {
+    const r = getRegionConfig(code);
+    hreflangLanguages[r.locale] = `${siteUrl}/${code.toLowerCase()}/${store.slug}/coupons`;
+  }
+  hreflangLanguages["x-default"] = `${siteUrl}/us/${store.slug}/coupons`;
+
+  return {
+    title: `${store.name} Coupon Codes & Promo Codes`,
+    description: `All verified coupon codes and promo codes for ${store.name}. Updated today.`,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: hreflangLanguages,
+    },
+  };
+}
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +51,7 @@ export default async function StoreCouponsPage({
     getDictionary(params.country),
   ]);
   if (!store) notFound();
+  const verifications = await getLatestVerificationsForStore(store.slug, 6);
 
   if (rawSlug !== store.slug) {
     redirect(`/${params.country}/${store.slug}/coupons`);
@@ -123,6 +156,8 @@ export default async function StoreCouponsPage({
             </p>
           </div>
         )}
+
+        <LastVerifiedSection verifications={verifications} storeName={store.name} />
       </main>
     </div>
   );

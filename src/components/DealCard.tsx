@@ -211,7 +211,7 @@ export default function DealCard({ deal }: { deal: Deal }) {
           <a
             href={deal.trackingUrl}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="nofollow noopener noreferrer sponsored"
             onClick={() => setIsRevealed(true)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-accent-hover"
           >

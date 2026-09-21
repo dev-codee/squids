@@ -1,9 +1,39 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { loadStoreData } from "@/lib/storeData";
 import StoreHeader from "@/components/store/StoreHeader";
 import LightningDealCard from "@/components/store/LightningDealCard";
 import type { DealItem } from "@/lib/storeData";
 import { getDictionary } from "@/i18n";
+import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { country: string; store: string };
+}): Promise<Metadata> {
+  const store = await loadStoreData(params.store, params.country);
+  if (!store) return {};
+
+  const siteUrl = getSiteUrl();
+  const canonicalUrl = `${siteUrl}/${params.country.toLowerCase()}/${store.slug}/deals`;
+
+  const hreflangLanguages: Record<string, string> = {};
+  for (const code of REGION_CODES) {
+    const r = getRegionConfig(code);
+    hreflangLanguages[r.locale] = `${siteUrl}/${code.toLowerCase()}/${store.slug}/deals`;
+  }
+  hreflangLanguages["x-default"] = `${siteUrl}/us/${store.slug}/deals`;
+
+  return {
+    title: `${store.name} Deals & Flash Sales`,
+    description: `Latest deals, flash sales and limited-time offers from ${store.name}.`,
+    alternates: {
+      canonical: canonicalUrl,
+      languages: hreflangLanguages,
+    },
+  };
+}
 
 export const dynamic = "force-dynamic";
 

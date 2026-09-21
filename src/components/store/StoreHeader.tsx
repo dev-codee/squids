@@ -89,7 +89,7 @@ export default function StoreHeader({ store }: StoreHeaderProps) {
             <a
               href={store.websiteUrl}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="nofollow noopener noreferrer sponsored"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
             >
               {dict.store.shopDirect.replace("{store}", store.name)}

@@ -141,7 +141,7 @@ export default function AdvertiserCard({
         <a
           href={resolveAffiliateTrackingUrl(advertiser.network, advertiser.id, advertiser.url)}
           target="_blank"
-          rel="noopener noreferrer"
+          rel="nofollow noopener noreferrer sponsored"
           className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-accent hover:text-accent-hover"
           onClick={(e) => e.stopPropagation()}
         >

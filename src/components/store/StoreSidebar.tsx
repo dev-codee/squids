@@ -161,7 +161,7 @@ export default function StoreSidebar({ store, aiContent }: StoreSidebarProps) {
         <a
           href={store.websiteUrl}
           target="_blank"
-          rel="noopener noreferrer"
+          rel="nofollow noopener noreferrer sponsored"
           className="flex items-center gap-2 text-sm text-blue-600 hover:underline break-all"
         >
           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

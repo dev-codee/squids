@@ -53,7 +53,7 @@ export default function ProductFeedCard({ product }: ProductFeedCardProps) {
       <a
         href={product.affiliateUrl}
         target="_blank"
-        rel="noopener noreferrer"
+        rel="nofollow noopener noreferrer sponsored"
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 py-2 px-4 text-xs font-bold text-white transition hover:bg-amber-500"
       >
         View Product

@@ -136,7 +136,7 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
       <a
         href={deal.affiliateUrl}
         target="_blank"
-        rel="noopener noreferrer"
+        rel="nofollow noopener noreferrer sponsored"
         className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-amber-600 active:scale-95"
       >
         {dict.cards.grabThisDeal}
