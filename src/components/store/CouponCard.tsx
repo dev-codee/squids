@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import type { CouponItem } from "@/lib/storeData";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 import { trackCouponEvent, GtmCouponEventName } from "@/lib/gtm";
+import CouponVotes from "@/components/store/CouponVotes";
 
 interface CouponCardProps {
   coupon: CouponItem;
@@ -215,6 +216,7 @@ export default function CouponCard({
               </svg>
             </a>
           )}
+          <CouponVotes couponId={coupon.id} storeSlug={storeName} />
         </div>
       </div>
 
