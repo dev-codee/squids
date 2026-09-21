@@ -52,43 +52,43 @@ const DEFAULT_CATEGORIES: Omit<Category, "id">[] = [
 const CATEGORY_KEYWORDS: { categoryName: string; keywords: string[] }[] = [
   {
     categoryName: "Electronics & Tech",
-    keywords: ["electronic", "tech", "computer", "mobile", "phone", "software", "antivirus", "gadget", "pc", "digital", "hardware", "vpn", "hosting", "security", "cloud", "camera", "app", "tech", "adguard", "aomei"],
+    keywords: ["electronic", "tech", "computer", "mobile", "phone", "software", "antivirus", "gadget", "pc", "digital", "hardware", "vpn", "hosting", "security", "cloud", "camera", "app", "adguard", "aomei", "printer", "laptop", "tablet", "monitor", "keyboard", "mouse", "router", "smart home"],
   },
   {
     categoryName: "Fashion & Apparel",
-    keywords: ["fashion", "apparel", "clothing", "cloth", "shoe", "wear", "jewelry", "jewel", "accessory", "accessories", "dress", "shirt", "pant", "footwear", "watch", "bag", "style", "brand"],
+    keywords: ["fashion", "apparel", "clothing", "cloth", "shoe", "wear", "jewelry", "jewel", "accessory", "accessories", "dress", "shirt", "pant", "footwear", "watch", "bag", "style", "brand", "boohoo", "shein", "zara", "asos", "h&m", "prettylittlething", "missguided", "topshop", "forever21", "urban outfitters", "uniqlo", "gap", "primark", "marks & spencer", "lingerie", "swimwear", "denim", "jeans", "skirt", "coat", "jacket", "trainer", "sneaker", "boot", "handbag", "purse"],
   },
   {
     categoryName: "Travel & Hotels",
-    keywords: ["travel", "hotel", "flight", "booking", "vacation", "car rental", "airline", "resort", "tour", "ticket", "trip", "stay", "cruise", "centara"],
+    keywords: ["travel", "hotel", "flight", "booking", "vacation", "car rental", "airline", "resort", "tour", "ticket", "trip", "stay", "cruise", "centara", "trivago", "expedia", "booking.com", "airbnb", "kayak", "skyscanner", "agoda", "hostel", "accommodation", "airport", "transfer", "holiday", "passport", "visa", "lounge", "train", "rail", "bus"],
   },
   {
     categoryName: "Beauty & Health",
-    keywords: ["beauty", "health", "skincare", "skin", "cosmetics", "wellness", "pharmacy", "makeup", "perfume", "fragrance", "care", "hair", "body", "medical", "fitness", "vitamin"],
+    keywords: ["beauty", "health", "skincare", "skin", "cosmetics", "wellness", "pharmacy", "makeup", "perfume", "fragrance", "care", "hair", "body", "medical", "fitness", "vitamin", "supplement", "spa", "nail", "shampoo", "conditioner", "moisturiser", "serum", "lipstick", "mascara", "foundation", "eyeshadow", "blush", "toner", "sunscreen", "spf"],
   },
   {
     categoryName: "Home & Garden",
-    keywords: ["home", "garden", "furniture", "kitchen", "decor", "appliance", "bedding", "bath", "living", "patio", "tool", "house"],
+    keywords: ["home", "garden", "furniture", "kitchen", "decor", "appliance", "bedding", "bath", "living", "patio", "tool", "house", "ikea", "wayfair", "dunelm", "habitat", "next home", "carpet", "curtain", "lamp", "sofa", "mattress", "pillow", "vacuum", "cookware", "barbecue", "grill", "plant", "seed", "mower"],
   },
   {
     categoryName: "Sports & Outdoor",
-    keywords: ["sport", "outdoor", "fitness", "gym", "activewear", "cycling", "camping", "hiking", "golf", "football", "ball", "cs2", "case"],
+    keywords: ["sport", "outdoor", "fitness", "gym", "activewear", "cycling", "camping", "hiking", "golf", "football", "ball", "cs2", "case", "nike", "adidas", "under armour", "puma", "reebok", "new balance", "yoga", "pilates", "running", "swimming", "tennis", "cricket", "rugby", "basketball", "skateboard", "surf", "ski", "snowboard", "climbing", "trekking", "bicycle", "bike"],
   },
   {
     categoryName: "Software & Services",
-    keywords: ["software", "service", "saas", "hosting", "vpn", "domain", "cloud", "security", "web", "subscription", "marketing", "online", "education", "course", "chegg", "adguard", "aomei"],
+    keywords: ["software", "saas", "hosting", "domain", "web", "subscription", "marketing", "education", "course", "chegg", "adguard", "aomei", "adobe", "microsoft", "norton", "mcafee", "kaspersky", "bitdefender", "cpanel", "wordpress", "shopify", "squarespace", "wix", "hubspot", "mailchimp", "canva", "figma", "slack", "zoom", "dropbox", "cloud storage", "backup", "password manager", "antivirus"],
   },
   {
     categoryName: "Food & Dining",
-    keywords: ["food", "dining", "restaurant", "grocery", "wine", "pizza", "delivery", "gourmet", "drink", "coffee", "tea", "chocolate", "snack"],
+    keywords: ["food", "dining", "restaurant", "grocery", "wine", "pizza", "delivery", "gourmet", "drink", "coffee", "tea", "chocolate", "snack", "uber eats", "deliveroo", "justeat", "just eat", "grubhub", "doordash", "meal kit", "hello fresh", "hellofresh", "gousto", "supermarket", "beer", "spirits", "whisky", "vodka", "gin", "bakery", "cake", "candy", "sweet"],
   },
   {
     categoryName: "Toys & Gaming",
-    keywords: ["toy", "game", "gaming", "console", "playstation", "xbox", "nintendo", "kid", "child", "puzzle", "hobby", "cs2", "cs2case"],
+    keywords: ["toy", "game", "gaming", "console", "playstation", "xbox", "nintendo", "kid", "child", "puzzle", "hobby", "cs2", "cs2case", "lego", "funko", "board game", "card game", "action figure", "doll", "plush", "baby", "toddler", "steam", "epic games", "g2a", "cdkeys"],
   },
   {
     categoryName: "Automotive",
-    keywords: ["auto", "car", "motor", "vehicle", "tire", "automotive", "part", "accessory"],
+    keywords: ["auto", "car", "motor", "vehicle", "tire", "tyre", "automotive", "part", "accessory", "garage", "mechanic", "oil change", "wash", "detail", "battery", "exhaust", "brake", "seat cover", "dashboard", "charging", "ev", "electric vehicle", "motorbike", "motorcycle"],
   },
 ];
 
@@ -158,11 +158,8 @@ export async function autoCategorizeStoresAndDeals(): Promise<{ categorizedCount
         }
       }
 
-      // Default fallback if no category matched
-      if (assignedCategories.size === 0) {
-        assignedCategories.add("Electronics & Tech");
-        assignedCategories.add("Software & Services");
-      }
+      // No fallback category — if we can't determine the category from name/description,
+      // leave it uncategorized rather than incorrectly assigning Electronics & Tech.
 
       const categoryArray = Array.from(assignedCategories);
       await advertisersCol.updateOne(

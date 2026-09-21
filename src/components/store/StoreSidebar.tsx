@@ -141,19 +141,23 @@ export default function StoreSidebar({ store, aiContent }: StoreSidebarProps) {
         </p>
       </div>
 
-      {/* Discount codes rating */}
-      <div className="bg-white border border-gray-200 p-5 rounded">
-        <h3 className="font-bold text-gray-900 mb-3">
-          {dict.sidebar.discountCodesRating.replace("{store}", store.name)}
-        </h3>
-        <div className="flex items-center gap-1 text-amber-400 text-lg mb-2">
-          {"★".repeat(Math.floor(store.rating || 5))}
-          {"☆".repeat(5 - Math.floor(store.rating || 5))}
+      {/* Discount codes rating — only shown when real votes exist */}
+      {store.totalReviews > 0 && store.rating > 0 && (
+        <div className="bg-white border border-gray-200 p-5 rounded">
+          <h3 className="font-bold text-gray-900 mb-3">
+            {dict.sidebar.discountCodesRating.replace("{store}", store.name)}
+          </h3>
+          <div className="flex items-center gap-1 text-amber-400 text-lg mb-2">
+            {"★".repeat(Math.floor(store.rating))}
+            {"☆".repeat(5 - Math.floor(store.rating))}
+          </div>
+          <p className="text-xs text-gray-500">
+            {dict.sidebar.averageRating
+              .replace("{rating}", String(store.rating))
+              .replace("{votes}", String(store.totalReviews))}
+          </p>
         </div>
-        <p className="text-xs text-gray-500">
-          {dict.sidebar.averageRating.replace("{rating}", String(store.rating || "5.0")).replace("{votes}", String(store.totalReviews || 120))}
-        </p>
-      </div>
+      )}
 
       {/* Contact */}
       <div className="bg-white border border-gray-200 p-5 rounded">

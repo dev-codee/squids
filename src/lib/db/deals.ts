@@ -84,7 +84,20 @@ export async function upsertDeals(
   const ops = deals.map((d) => ({
     updateOne: {
       filter: { network: d.network ?? "awin", id: d.id },
-      update: { $setOnInsert: { ...d, network: d.network ?? "awin", syncedAt: now } },
+      update: {
+        // Always refresh volatile network fields so expired/changed deals stay current.
+        $set: {
+          status: d.status,
+          endDate: d.endDate ?? null,
+          startDate: d.startDate ?? null,
+          discountText: d.discountText ?? null,
+          regionCodes: d.regionCodes ?? [],
+          syncedAt: now,
+        },
+        // Preserve admin-edited fields (title, code, description, trackingUrl) on
+        // subsequent syncs — only written on the very first insertion.
+        $setOnInsert: { ...d, network: d.network ?? "awin", syncedAt: now },
+      },
       upsert: true,
     },
   }));
@@ -145,10 +158,16 @@ function buildFilter(query: DealQuery & { network?: string }): Record<string, un
 
   if (query.country?.trim()) {
     const cc = query.country.trim().toUpperCase();
+    // Show a deal on a country page only when:
+    //   (a) it explicitly targets this country, OR
+    //   (b) it carries an explicit worldwide / cross-border code, OR
+    //   (c) regionCodes is absent/empty (legacy fallback — future syncs will
+    //       correct this via the volatile-field $set in upsertDeals).
     conditions.push({
       $or: [
-        { regionCodes: { $size: 0 } },
         { regionCodes: cc },
+        { regionCodes: { $in: ["WW", "GLOBAL", "INT", "00"] } },
+        { regionCodes: { $size: 0 } },
         { regionCodes: { $exists: false } },
       ],
     });
@@ -169,9 +188,13 @@ async function getDealsFromDbUncached(
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
 
-  // If the collection is empty, return null so the caller falls back to Awin
+  // Return an empty result instead of null when the collection is empty.
+  // Returning null caused callers to silently render empty store pages instead of
+  // showing the empty-state UI or triggering a fallback.
   const count = await col.estimatedDocumentCount();
-  if (count === 0) return null;
+  if (count === 0) {
+    return { deals: [], page: 1, pageSize: DEFAULT_DEALS_PAGE_SIZE, total: 0, totalPages: 1 };
+  }
 
   const filter = buildFilter(query);
 

@@ -188,6 +188,21 @@ function toIsoDate(value: string | Date | null | undefined): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+/**
+ * Sanitize an expiry date from the network feed.
+ * Returns null for absent, unparseable, past, or suspiciously far-future dates
+ * (> 2 years from now) — the latter are placeholder values from some networks.
+ */
+function sanitizeEndDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const twoYearsOut = new Date();
+  twoYearsOut.setFullYear(twoYearsOut.getFullYear() + 2);
+  if (d > twoYearsOut) return null;
+  return value;
+}
+
 /** Seconds remaining until an ISO end date, or undefined if past/absent. */
 function secondsUntil(endDate: string | null | undefined): number | undefined {
   if (!endDate) return undefined;
@@ -217,7 +232,7 @@ function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): Coupo
     type: deal.subtype || "code",
     description: dealDisplayDescription(deal, locale),
     verified: deal.status === "active",
-    expiryDate: deal.endDate,
+    expiryDate: sanitizeEndDate(deal.endDate),
     updatedAt: toIsoDate(deal.syncedAt),
     isExclusive: deal.isExclusive,
     cashbackRate: deal.cashbackRate || undefined,
@@ -257,7 +272,7 @@ function dealFromDeal(
         : undefined,
     type: placement,
     imageUrl: deal.imageUrl || undefined,
-    expiryDate: deal.endDate,
+    expiryDate: sanitizeEndDate(deal.endDate),
     updatedAt: toIsoDate(deal.syncedAt),
     badge,
     isExclusive: Boolean(deal.isExclusive),
@@ -388,20 +403,32 @@ async function loadStoreDataUncached(
     return editedTime(b) - editedTime(a);
   };
 
-  // Coupons: vouchers (have a code).
-  const coupons = allDeals
-    .filter((d) => d.type === "voucher")
+  // Deduplicate across network feeds: drop deals with same (title, discount) from
+  // the same advertiser — keeps the first occurrence (already sorted exclusive-first).
+  const deduped = (() => {
+    const seen = new Set<string>();
+    return allDeals.filter((d) => {
+      const key = `${d.type}:${(d.title || "").toLowerCase().trim()}:${(d.discountText || "").toLowerCase().trim()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  })();
+
+  // Coupons: vouchers that have an actual non-empty code.
+  const coupons = deduped
+    .filter((d) => d.type === "voucher" && d.code != null && d.code.trim() !== "")
     .sort(byExclusiveThenRecent)
     .map((d) => couponFromDeal(d, websiteUrl, locale));
 
-  // Deals: coupon-style offers without a code — same card, no "show code" button.
-  const deals = allDeals
-    .filter((d) => d.type === "deal")
+  // Deals: coupon-style offers without a code (type "deal" OR vouchers with null code).
+  const deals = deduped
+    .filter((d) => d.type === "deal" || (d.type === "voucher" && (!d.code || d.code.trim() === "")))
     .sort(byExclusiveThenRecent)
     .map((d) => couponFromDeal(d, websiteUrl, locale));
 
   // Promotions: product promotions with image/price (rendered as deal boxes).
-  const promotions = allDeals
+  const promotions = deduped
     .filter((d) => d.type === "promotion")
     .sort(byExclusiveThenRecent)
     .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode, region, rates, locale));
