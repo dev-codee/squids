@@ -273,7 +273,7 @@ async function getPopularShopsUncached(opts?: {
 
   const rows = await col
     .aggregate([
-      { $match: buildFilter({ country } as DealQuery) },
+      { $match: buildFilter({ country, status: "active" } as DealQuery) },
       {
         $group: {
           _id: { id: "$advertiser.id", network: "$network" },
