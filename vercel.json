@@ -12,6 +12,18 @@
     {
       "path": "/api/cron/sync-transactions",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/notify-subscribers?tier=instant",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/notify-subscribers?tier=daily",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/notify-subscribers?tier=weekly",
+      "schedule": "0 9 * * 1"
     }
   ]
 }

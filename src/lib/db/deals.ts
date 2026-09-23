@@ -15,8 +15,9 @@ import { getDb } from "@/lib/mongodb";
 import { cleanAdvertiserName } from "@/lib/networks";
 import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 import type { Deal, DealQuery, PagedDeals } from "@/lib/deals";
-import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE } from "@/lib/deals";
+import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE, dealDisplayTitle } from "@/lib/deals";
 import { CACHE_TAGS, PUBLIC_REVALIDATE, revalidatePublic } from "@/lib/cache";
+import { slugifyAdvertiserName } from "@/lib/db/advertisers";
 
 const COLLECTION = "deals";
 
@@ -95,8 +96,11 @@ export async function upsertDeals(
           syncedAt: now,
         },
         // Preserve admin-edited fields (title, code, description, trackingUrl) on
-        // subsequent syncs — only written on the very first insertion.
-        $setOnInsert: { ...d, network: d.network ?? "awin", syncedAt: now },
+        // subsequent syncs — only written on the very first insertion. `firstSeenAt`
+        // is what drives follow-store alerts (see src/lib/db/subscribers.ts) — unlike
+        // `syncedAt` above, it must NOT be touched on updates, or every deal would
+        // look "new" forever.
+        $setOnInsert: { ...d, network: d.network ?? "awin", syncedAt: now, firstSeenAt: now },
       },
       upsert: true,
     },
@@ -1044,4 +1048,57 @@ export async function deleteDeal(
 
   const result = await col.deleteOne({ id });
   return result.deletedCount > 0;
+}
+
+// ---------------------------------------------------------------------------
+// Follow-store alerts — see src/lib/db/subscribers.ts
+// ---------------------------------------------------------------------------
+
+export interface NewDealForAlert {
+  id: string;
+  network: string;
+  advertiserSlug: string;
+  advertiserName: string;
+  title: string;
+  discountText: string | null;
+  trackingUrl: string | null;
+  firstSeenAt: Date;
+}
+
+/**
+ * Deals first seen after `since`, across all advertisers — the source of
+ * "meaningful new offer" for follow-store alerts. Skips expired deals and
+ * auto-generated welcome/brand deals so subscribers only hear about real,
+ * newly-added offers.
+ */
+export async function getNewDealsSince(since: Date): Promise<NewDealForAlert[]> {
+  const db = await getDb();
+  const col = db.collection<DealDoc & { firstSeenAt?: Date }>(COLLECTION);
+
+  const docs = await col
+    .find({
+      firstSeenAt: { $gt: since },
+      status: { $ne: "expired" },
+      isAutoWelcome: { $ne: true },
+      isBrandDeal: { $ne: true },
+    })
+    .sort({ firstSeenAt: 1 })
+    .limit(2000)
+    .toArray();
+
+  return docs
+    .filter((d) => d.advertiser?.name)
+    .map((d) => {
+      const advertiserName = cleanAdvertiserName(d.advertiser.name);
+      return {
+        id: String(d.id),
+        network: d.network ?? "awin",
+        advertiserSlug: slugifyAdvertiserName(advertiserName),
+        advertiserName,
+        title: dealDisplayTitle(d as unknown as Deal),
+        discountText: d.discountText ?? null,
+        trackingUrl: resolveAffiliateTrackingUrl(d.network, d.advertiser?.id, d.trackingUrl),
+        firstSeenAt: d.firstSeenAt as Date,
+      };
+    });
 }

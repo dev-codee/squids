@@ -3,6 +3,7 @@
 import React from "react";
 import type { StoreData } from "@/lib/storeData";
 import type { StorePageContent } from "@/lib/ai/storeContent";
+import FollowStoreButton from "./FollowStoreButton";
 import ProductFeedCard from "./ProductFeedCard";
 import PriceComparisonWidget from "./PriceComparisonWidget";
 import FaqAccordion from "./FaqAccordion";
@@ -28,9 +29,11 @@ function InfoRow({ label, value }: { label: string; value?: string }) {
 interface StoreSidebarProps {
   store: StoreData;
   aiContent?: StorePageContent | null;
+  /** 2-letter region code from the current URL (for the follow-store form). */
+  country?: string;
 }
 
-export default function StoreSidebar({ store, aiContent }: StoreSidebarProps) {
+export default function StoreSidebar({ store, aiContent, country }: StoreSidebarProps) {
   const dict = useDictionary();
 
   const trust = aiContent?.trustpilot;
@@ -63,6 +66,17 @@ export default function StoreSidebar({ store, aiContent }: StoreSidebarProps) {
         )}
         <h1 className="text-xl font-bold text-gray-800 text-center">{store.name}</h1>
       </div>
+
+      {/* Follow store — offer alert opt-in */}
+      <FollowStoreButton
+        store={{
+          slug: store.slug,
+          network: store.network,
+          advertiserId: store.advertiserId,
+          name: store.name,
+        }}
+        country={country || "us"}
+      />
 
       {/* Store About Box */}
       {hasVal(aiContent?.hero_intro) && (

@@ -194,7 +194,7 @@ export default async function StoreMainPage({
           
           {/* Sidebar - Left Column */}
           <div className="lg:col-span-3 space-y-6">
-            <StoreSidebar store={store} aiContent={aiContent} />
+            <StoreSidebar store={store} aiContent={aiContent} country={params.country} />
           </div>
 
           {/* Main Content - Right Column */}

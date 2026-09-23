@@ -124,6 +124,9 @@ export interface StoreReviewItem {
 export interface StoreData {
   slug: string;
   name: string;
+  /** Backing advertiser record — used to key follow-store alert subscriptions. */
+  network: string;
+  advertiserId: string;
   logoUrl: string | null;
   bannerUrl: string | null;
   rating: number;
@@ -500,6 +503,8 @@ async function loadStoreDataUncached(
   return {
     slug: finalSlug,
     name: advertiser.name,
+    network: advertiser.network ?? "awin",
+    advertiserId: String(advertiser.id),
     logoUrl: advertiser.logoUrl,
     bannerUrl: storeMeta.bannerUrl,
     rating: finalRating,
