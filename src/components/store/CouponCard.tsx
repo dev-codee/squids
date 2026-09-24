@@ -6,6 +6,7 @@ import type { CouponItem } from "@/lib/storeData";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 import { trackCouponEvent, GtmCouponEventName } from "@/lib/gtm";
 import CouponVotes from "@/components/store/CouponVotes";
+import { getExpiryBadge, EXPIRY_BADGE_CLASSES } from "@/lib/expiry";
 
 interface CouponCardProps {
   coupon: CouponItem;
@@ -69,6 +70,8 @@ export default function CouponCard({
       .catch(() => {});
   };
 
+  const expiryBadge = getExpiryBadge(coupon.expiryDate);
+
   const handleReveal = () => {
     // 1. Fire show_coupon_click
     track("show_coupon_click", "coupon_card");
@@ -119,6 +122,13 @@ export default function CouponCard({
               {coupon.type === "cashback" && (
                 <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
                   {dict.cards.cashbackOffer}
+                </span>
+              )}
+              {expiryBadge && (
+                <span
+                  className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-bold ${EXPIRY_BADGE_CLASSES[expiryBadge.tone]}`}
+                >
+                  {expiryBadge.label}
                 </span>
               )}
             </div>

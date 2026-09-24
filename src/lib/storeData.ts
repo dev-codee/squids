@@ -11,7 +11,7 @@
  */
 
 import { cache } from "react";
-import { getAdvertiserBySlug, slugifyAdvertiserName, ensureAdvertiserStorePage } from "@/lib/db/advertisers";
+import { getAdvertiserBySlug, slugifyAdvertiserName, ensureAdvertiserStorePage, getRelatedAdvertisers } from "@/lib/db/advertisers";
 import { ensureAdvertiserSeo } from "@/lib/ai/storeSeo";
 import type { StorePageContent } from "@/lib/ai/storeContent";
 import { getDealsFromDb, ensureDealAiContent } from "@/lib/db/deals";
@@ -111,6 +111,12 @@ export interface BuyingGuideItem {
   date: string;
 }
 
+export interface RelatedStoreItem {
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+}
+
 export interface StoreReviewItem {
   id: string;
   author: string;
@@ -148,6 +154,7 @@ export interface StoreData {
   faqs: FAQItem[];
   buyingGuides: BuyingGuideItem[];
   reviews: StoreReviewItem[];
+  relatedStores: RelatedStoreItem[];
   latestDiscounts: {
     id: string;
     title: string;
@@ -498,6 +505,22 @@ async function loadStoreDataUncached(
     date: g.date || "",
   }));
 
+  const relatedAdvertisers = await safeQuery(
+    () =>
+      getRelatedAdvertisers(
+        storeMeta.categories,
+        { id: advertiser!.id, network: advertiser!.network ?? "awin" },
+        country,
+        6,
+      ),
+    [] as Advertiser[],
+  );
+  const relatedStores: RelatedStoreItem[] = relatedAdvertisers.map((a) => ({
+    slug: slugifyAdvertiserName(a.name),
+    name: a.name,
+    logoUrl: a.logoUrl,
+  }));
+
   const seoContent = await ensureAdvertiserSeo(advertiser, allDeals);
 
   return {
@@ -525,6 +548,7 @@ async function loadStoreDataUncached(
     faqs,
     buyingGuides,
     reviews,
+    relatedStores,
     latestDiscounts: [],
     // AI store-page content is loaded separately (streamed) via loadStoreAiContent.
     aiStorePage: null,

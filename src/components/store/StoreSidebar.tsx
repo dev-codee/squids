@@ -8,6 +8,8 @@ import ProductFeedCard from "./ProductFeedCard";
 import PriceComparisonWidget from "./PriceComparisonWidget";
 import FaqAccordion from "./FaqAccordion";
 import ReviewsWidget from "./ReviewsWidget";
+import RelatedStores from "./RelatedStores";
+import StarRating from "./StarRating";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 
 function hasVal(v: unknown): v is string {
@@ -22,6 +24,27 @@ function InfoRow({ label, value }: { label: string; value?: string }) {
     <div className="flex justify-between gap-4 py-1.5 text-sm border-b border-gray-100 last:border-0">
       <span className="text-gray-500">{label}</span>
       <span className="font-medium text-gray-800 text-right">{value}</span>
+    </div>
+  );
+}
+
+/**
+ * Rating row for the AI-researched Trustpilot/Google numbers. These are a best-effort
+ * lookup (see src/lib/ai/storeContent.ts), not a live API pull — shown with stars for
+ * scannability, but always labeled "AI-researched" so it isn't mistaken for a live score.
+ */
+function RatingSourceRow({ label, rating, reviewCount }: { label: string; rating?: string; reviewCount?: string }) {
+  if (!hasVal(rating)) return null;
+  const numeric = parseFloat(rating!);
+  return (
+    <div className="flex items-center justify-between gap-4 py-1.5 text-sm border-b border-gray-100 last:border-0">
+      <span className="text-gray-500">{label}</span>
+      <span className="flex items-center gap-1.5">
+        {Number.isFinite(numeric) && <StarRating value={numeric} size="xs" />}
+        <span className="font-medium text-gray-800">
+          {rating}/5{hasVal(reviewCount) ? ` (${reviewCount})` : ""}
+        </span>
+      </span>
     </div>
   );
 }
@@ -92,22 +115,17 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
         <div className="bg-white p-5 rounded border border-gray-200">
           <h3 className="font-bold text-gray-900 mb-3">{dict.sidebar.storeTrustInfo}</h3>
           <div>
-            {hasVal(trust?.rating) && (
-              <InfoRow
-                label="Trustpilot"
-                value={`${trust!.rating}/5${hasVal(trust?.review_count) ? ` (${trust!.review_count})` : ""}`}
-              />
-            )}
-            {hasVal(google?.rating) && (
-              <InfoRow
-                label="Google"
-                value={`${google!.rating}/5${hasVal(google?.review_count) ? ` (${google!.review_count})` : ""}`}
-              />
-            )}
+            <RatingSourceRow label="Trustpilot" rating={trust?.rating} reviewCount={trust?.review_count} />
+            <RatingSourceRow label="Google" rating={google?.rating} reviewCount={google?.review_count} />
             <InfoRow label={dict.sidebar.typicalDiscount} value={aiContent.typical_discount} />
             <InfoRow label={dict.sidebar.cashbackRate} value={aiContent.cashback?.rate} />
             {!hasVal(aiContent.cashback?.rate) && <InfoRow label={dict.sidebar.cashback} value={aiContent.cashback?.available} />}
           </div>
+          {(hasVal(trust?.rating) || hasVal(google?.rating)) && (
+            <p className="mt-3 text-[10px] text-gray-400 leading-tight">
+              Trustpilot/Google scores are AI-researched from public listings, not a live feed — check the source directly for the current number.
+            </p>
+          )}
         </div>
       )}
 
@@ -157,9 +175,8 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
           <h3 className="font-bold text-gray-900 mb-3">
             {dict.sidebar.discountCodesRating.replace("{store}", store.name)}
           </h3>
-          <div className="flex items-center gap-1 text-amber-400 text-lg mb-2">
-            {"★".repeat(Math.floor(store.rating))}
-            {"☆".repeat(5 - Math.floor(store.rating))}
+          <div className="mb-2">
+            <StarRating value={store.rating} size="md" />
           </div>
           <p className="text-xs text-gray-500">
             {dict.sidebar.averageRating
@@ -201,6 +218,9 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
           </div>
         </div>
       )}
+
+      {/* Similar Stores — cross-links by shared category */}
+      <RelatedStores stores={store.relatedStores} country={country || "us"} />
 
       {/* Products Feed — only when a product source exists */}
       {store.products && store.products.length > 0 && (

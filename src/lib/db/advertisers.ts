@@ -767,6 +767,41 @@ async function getAdvertiserBySlugUncached(
   return normalizeAdvertiserDoc(scored[0].a);
 }
 
+/**
+ * Find other advertisers sharing at least one category with the given store,
+ * for a "Similar Stores" module. Region-filtered like the public listing so
+ * a `/de/...` page doesn't cross-link to a US-only store.
+ */
+async function getRelatedAdvertisersUncached(
+  categories: string[],
+  exclude: { id: number; network: string },
+  country?: string,
+  limit = 6,
+): Promise<Advertiser[]> {
+  const cats = categories.filter((c) => c && c.trim());
+  if (cats.length === 0) return [];
+
+  const db = await getDb();
+  const col = db.collection<AdvertiserDoc>(COLLECTION);
+
+  const countryFilter = buildFilter({ country } as AdvertiserQuery);
+  const catRegexes = cats.map((c) => new RegExp(`^${escapeRegExp(c.trim())}$`, "i"));
+
+  const filter: Record<string, unknown> = {
+    ...countryFilter,
+    categories: { $elemMatch: { $in: catRegexes } },
+    $nor: [{ id: exclude.id, network: exclude.network }],
+  };
+
+  const docs = await col
+    .find(filter, { projection: { _id: 0, syncedAt: 0 } })
+    .sort({ isFlagship: -1, name: 1 })
+    .limit(limit)
+    .toArray();
+
+  return docs.map((d) => normalizeAdvertiserDoc(d));
+}
+
 // ---------------------------------------------------------------------------
 // Public cached readers — served from Next's Data Cache (revalidated on a short
 // window and busted by admin mutations via the "advertisers" tag).
@@ -797,6 +832,13 @@ export const getAdvertiserByIdFromDb = unstable_cache(
 export const getAdvertiserBySlug = unstable_cache(
   getAdvertiserBySlugUncached,
   ["public:advertiser-by-slug"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers] },
+);
+
+/** Cached "similar stores" lookup by shared category. */
+export const getRelatedAdvertisers = unstable_cache(
+  getRelatedAdvertisersUncached,
+  ["public:related-advertisers"],
   { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers] },
 );
 

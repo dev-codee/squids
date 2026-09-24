@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { StoreData } from "@/lib/storeData";
 import { useDictionary } from "@/i18n/DictionaryProvider";
+import StarRating from "./StarRating";
 
 interface StoreHeaderProps {
   store: StoreData;
@@ -47,9 +48,10 @@ export default function StoreHeader({ store }: StoreHeaderProps) {
 
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+                {/* h2: the page body supplies its own h1 (SEO title/H1 per route) */}
+                <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
                   {dict.store.verifiedOffersTitle.replace("{store}", store.name)}
-                </h1>
+                </h2>
                 <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
                   {dict.store.verifiedStore}
                 </span>
@@ -59,10 +61,7 @@ export default function StoreHeader({ store }: StoreHeaderProps) {
               <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-600">
                 {store.totalReviews > 0 && (
                   <div className="flex items-center gap-1.5">
-                    <div className="flex text-amber-400">
-                      {"★".repeat(Math.floor(store.rating))}
-                      {"☆".repeat(5 - Math.floor(store.rating))}
-                    </div>
+                    <StarRating value={store.rating} size="sm" />
                     <span className="font-semibold text-gray-900">{store.rating}</span>
                     <span className="text-gray-500">
                       ({store.totalReviews.toLocaleString()} {dict.store.reviews})
@@ -100,8 +99,8 @@ export default function StoreHeader({ store }: StoreHeaderProps) {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="mt-6 flex overflow-x-auto border-b border-gray-200 scrollbar-none">
+        {/* Navigation Tabs — sticky so it stays reachable while scrolling long offer lists */}
+        <div className="sticky top-0 z-30 -mx-4 mt-6 flex overflow-x-auto border-b border-gray-200 bg-white px-4 scrollbar-none sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <nav className="-mb-px flex space-x-8">
             {tabs.map((tab) => {
               const isActive = currentPath === tab.href;

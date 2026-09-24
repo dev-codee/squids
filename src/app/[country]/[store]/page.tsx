@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { loadStoreData, loadStoreAiContent } from "@/lib/storeData";
 import StoreSidebar from "@/components/store/StoreSidebar";
-import HorizontalCouponCard from "@/components/store/HorizontalCouponCard";
+import StoreHeader from "@/components/store/StoreHeader";
+import Breadcrumbs from "@/components/store/Breadcrumbs";
+import HowItWorks from "@/components/store/HowItWorks";
+import OfferList from "@/components/store/OfferList";
 import LightningDealCard from "@/components/store/LightningDealCard";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
@@ -189,9 +192,18 @@ export default async function StoreMainPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <StoreHeader store={store} />
+
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <Breadcrumbs
+          items={[
+            { label: "Home", href: `/${params.country}` },
+            { label: "Stores", href: `/${params.country}/stores` },
+            { label: store.name },
+          ]}
+        />
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
+
           {/* Sidebar - Left Column */}
           <div className="lg:col-span-3 space-y-6">
             <StoreSidebar store={store} aiContent={aiContent} country={params.country} />
@@ -199,7 +211,7 @@ export default async function StoreMainPage({
 
           {/* Main Content - Right Column */}
           <div className="lg:col-span-9 space-y-8">
-            
+
             {/* Top Header */}
             <div className="bg-white p-6 rounded border border-gray-200 shadow-sm">
               <h1 className="text-2xl font-bold tracking-tight text-gray-900">
@@ -212,6 +224,8 @@ export default async function StoreMainPage({
               )}
             </div>
 
+            <HowItWorks />
+
             {/* Coupons Section — vouchers with a code */}
             {store.coupons.length > 0 && (
               <section>
@@ -219,18 +233,13 @@ export default async function StoreMainPage({
                   {dict.store.verifiedOffersTitle.replace("{store}", store.name)}
                 </h2>
 
-                <div className="flex flex-col gap-4">
-                  {/* Coupon List */}
-                  {store.coupons.map((coupon) => (
-                    <HorizontalCouponCard
-                      key={coupon.id}
-                      coupon={coupon}
-                      storeName={store.name}
-                      market={params.country}
-                      merchantId={store.slug}
-                    />
-                  ))}
-                </div>
+                <OfferList
+                  items={store.coupons}
+                  storeName={store.name}
+                  market={params.country}
+                  merchantId={store.slug}
+                  itemLabel="coupons"
+                />
               </section>
             )}
 
@@ -240,17 +249,13 @@ export default async function StoreMainPage({
                 <h2 className="text-lg font-medium text-gray-700 mb-4">
                   {dict.store.dealsTitle.replace("{store}", store.name)}
                 </h2>
-                <div className="flex flex-col gap-4">
-                  {store.deals.map((deal) => (
-                    <HorizontalCouponCard
-                      key={deal.id}
-                      coupon={deal}
-                      storeName={store.name}
-                      market={params.country}
-                      merchantId={store.slug}
-                    />
-                  ))}
-                </div>
+                <OfferList
+                  items={store.deals}
+                  storeName={store.name}
+                  market={params.country}
+                  merchantId={store.slug}
+                  itemLabel="deals"
+                />
               </section>
             )}
 
