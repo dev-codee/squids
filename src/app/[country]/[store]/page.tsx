@@ -6,6 +6,7 @@ import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
 import HowItWorks from "@/components/store/HowItWorks";
 import OfferList from "@/components/store/OfferList";
+import RecentlyViewedStores from "@/components/store/RecentlyViewedStores";
 import LightningDealCard from "@/components/store/LightningDealCard";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
@@ -201,6 +202,10 @@ export default async function StoreMainPage({
             { label: "Stores", href: `/${params.country}/stores` },
             { label: store.name },
           ]}
+        />
+        <RecentlyViewedStores
+          current={{ slug: store.slug, name: store.name, logoUrl: store.logoUrl, country: params.country }}
+          className="mb-6"
         />
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 

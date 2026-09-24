@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { loadStoreData } from "@/lib/storeData";
 import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
+import RecentlyViewedStores from "@/components/store/RecentlyViewedStores";
 import CouponCard from "@/components/store/CouponCard";
 import type { CouponItem } from "@/lib/storeData";
 import { getDictionary } from "@/i18n";
@@ -115,6 +116,9 @@ export default async function StoreCouponsPage({
             { label: store.name, href: `/${params.country}/${store.slug}` },
             { label: "Coupons" },
           ]}
+        />
+        <RecentlyViewedStores
+          current={{ slug: store.slug, name: store.name, logoUrl: store.logoUrl, country: params.country }}
         />
         {/* Intro */}
         <div className="rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 p-8 text-white shadow-lg">
