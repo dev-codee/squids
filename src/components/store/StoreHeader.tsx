@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useParams } from "next/navigation";
 import type { StoreData } from "@/lib/storeData";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 import StarRating from "./StarRating";
@@ -13,12 +13,17 @@ interface StoreHeaderProps {
 export default function StoreHeader({ store }: StoreHeaderProps) {
   const dict = useDictionary();
   const pathname = usePathname();
-  const currentPath = pathname || `/${store.slug}`;
+  const params = useParams();
+  // Routes are /[country]/[store](/coupons|/deals) — the country segment is
+  // required, or every tab link 404s / never matches as "active".
+  const country = (typeof params?.country === "string" ? params.country : "") || "us";
+  const base = `/${country}/${store.slug}`;
+  const currentPath = pathname || base;
 
   const tabs = [
-    { label: dict.store.tabOverview, href: `/${store.slug}` },
-    { label: dict.store.tabCoupons, href: `/${store.slug}/coupons`, count: store.activeCouponsCount },
-    { label: dict.store.tabDeals, href: `/${store.slug}/deals`, count: store.activeDealsCount },
+    { label: dict.store.tabOverview, href: base },
+    { label: dict.store.tabCoupons, href: `${base}/coupons`, count: store.activeCouponsCount },
+    { label: dict.store.tabDeals, href: `${base}/deals`, count: store.activeDealsCount },
   ];
 
   return (
