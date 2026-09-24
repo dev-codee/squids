@@ -533,8 +533,9 @@ async function loadStoreDataUncached(
     rating: finalRating,
     totalReviews: reviews.length,
     activeCouponsCount: coupons.length,
-    // The "Deals & Promotions" header tab links to /deals, which lists promotions.
-    activeDealsCount: promotions.length,
+    // The /deals tab renders both no-code `deals` and `promotions` (see that
+    // page), so the count/badge must match — promotions alone under-reports it.
+    activeDealsCount: deals.length + promotions.length,
     avgSavings: storeMeta.avgSavings,
     description: storeMeta.description,
     websiteUrl,

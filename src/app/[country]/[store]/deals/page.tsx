@@ -5,6 +5,7 @@ import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
 import RecentlyViewedStores from "@/components/store/RecentlyViewedStores";
 import LightningDealCard from "@/components/store/LightningDealCard";
+import OfferList from "@/components/store/OfferList";
 import type { DealItem } from "@/lib/storeData";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
@@ -93,7 +94,7 @@ export default async function StoreDealsPage({
       </section>
     );
 
-  const hasAny = store.promotions.length > 0;
+  const hasAny = store.promotions.length > 0 || store.deals.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50/60 pb-16">
@@ -125,6 +126,34 @@ export default async function StoreDealsPage({
             </p>
           </div>
         </div>
+
+        {/* No-code deals (`type: "deal"`, or vouchers without a code) — these were
+            previously only rendered on the overview page's "Deals" section and
+            never appeared here, so they'd show up on the store home page but
+            look like they'd vanished on this tab. */}
+        {store.deals.length > 0 && (
+          <section>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🏷️</span>
+                  <h2 className="text-2xl font-extrabold text-gray-900">More Deals & Offers</h2>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Store-wide deals that don&apos;t need a code</p>
+              </div>
+              <span className="rounded-lg px-3 py-1 text-xs font-bold bg-gray-100 text-gray-700">
+                {store.deals.length} deals
+              </span>
+            </div>
+            <OfferList
+              items={store.deals}
+              storeName={store.name}
+              market={params.country}
+              merchantId={store.slug}
+              itemLabel="deals"
+            />
+          </section>
+        )}
 
         {section(
           dict.dealsPage.todaysDeals,
