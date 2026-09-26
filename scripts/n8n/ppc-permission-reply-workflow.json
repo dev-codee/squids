@@ -1,0 +1,99 @@
+{
+  "name": "PPC Permission Reply Watcher",
+  "nodes": [
+    {
+      "parameters": {
+        "mailbox": "INBOX",
+        "postProcessAction": "nothing",
+        "format": "resolved",
+        "options": {
+          "customEmailConfig": "[\"UNSEEN\"]",
+          "forceReconnect": 60
+        }
+      },
+      "id": "imap-trigger",
+      "name": "Outreach Mailbox (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        0
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Normalise one inbound message into the shape /api/n8n/ppc-reply expects.\n//\n// The app does the matching (thread Message-ID first, then sender address) and\n// decides whether the message belongs to a permission thread at all. This node\n// only reshapes headers, so an unrelated email is a cheap no-op POST rather\n// than logic duplicated in two places.\n\nconst out = [];\n\nfor (const item of $input.all()) {\n  const json = item.json || {};\n  const headers = json.headers || {};\n\n  // Header casing varies by IMAP server; look both ways.\n  const header = (name) =>\n    headers[name] ??\n    headers[name.toLowerCase()] ??\n    headers[name.replace(/(^|-)([a-z])/g, (m) => m.toUpperCase())] ??\n    null;\n\n  const asString = (v) => (Array.isArray(v) ? v.join(' ') : v == null ? '' : String(v));\n\n  const from = asString(json.from ?? header('From'));\n  const references = asString(header('References'));\n  const inReplyTo = asString(header('In-Reply-To'));\n  const messageId = asString(json.messageId ?? header('Message-ID'));\n\n  // Skip anything that is clearly not a reply to a thread we started. Cheap\n  // guard so the app isn't POSTed every newsletter that lands in the mailbox.\n  if (!references && !inReplyTo) continue;\n\n  out.push({\n    json: {\n      from,\n      subject: asString(json.subject ?? header('Subject')),\n      body: asString(json.textPlain ?? json.text ?? json.textHtml ?? ''),\n      messageId,\n      inReplyTo,\n      references,\n      receivedAt: asString(json.date ?? header('Date')) || new Date().toISOString(),\n    },\n  });\n}\n\nreturn out;\n"
+      },
+      "id": "normalise",
+      "name": "Normalise Reply Headers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        60,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://affiliate-app:3000/api/n8n/ppc-reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_N8N_WEBHOOK_SECRET"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "post-to-app",
+      "name": "Post Reply to Foxzil",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        280,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Outreach Mailbox (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "Normalise Reply Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalise Reply Headers": {
+      "main": [
+        [
+          {
+            "node": "Post Reply to Foxzil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

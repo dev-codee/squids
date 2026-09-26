@@ -24,6 +24,18 @@
     {
       "path": "/api/cron/notify-subscribers?tier=weekly",
       "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cron/ppc-outreach?task=send",
+      "schedule": "0 8 * * 1-5"
+    },
+    {
+      "path": "/api/cron/ppc-outreach?task=followup",
+      "schedule": "0 9-17 * * 1-5"
+    },
+    {
+      "path": "/api/cron/ppc-outreach?task=sweep",
+      "schedule": "30 7 * * *"
     }
   ]
 }

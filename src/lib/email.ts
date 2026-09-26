@@ -162,3 +162,66 @@ export function newOffersDigestEmail(opts: {
     ),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Threaded send (PPC permission outreach)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build an RFC 5322 Message-ID we control.
+ *
+ * We generate it rather than reading it back from the SMTP response so the
+ * value is known *before* the send and can be persisted atomically with the
+ * status transition. The domain comes from SMTP_FROM so the ID matches the
+ * sending domain and survives Gmail's own rewriting.
+ */
+export function buildMessageId(prefix: string): string {
+  const from = process.env.SMTP_FROM || "alerts@foxzil.com";
+  const domain = (from.match(/@([^>\s]+)/)?.[1] || "foxzil.com").replace(/[>\s]/g, "");
+  const unique = `${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 10)}`;
+  return `<${prefix}.${unique}@${domain}>`;
+}
+
+export interface SendThreadedMailOptions extends SendMailOptions {
+  /** Pre-built Message-ID for this message (see {@link buildMessageId}). */
+  messageId: string;
+  /** Message-ID this is a direct reply/follow-up to. Keeps Gmail threading. */
+  inReplyTo?: string | null;
+  /** Full ancestor chain, oldest first. */
+  references?: string[];
+  /** Reply-To override, when replies should land somewhere other than SMTP_FROM. */
+  replyTo?: string | null;
+}
+
+/**
+ * Send a message that participates in a mail thread.
+ *
+ * Unlike {@link sendMail} this *throws* on failure. The PPC outreach jobs claim
+ * a row before sending, so the caller needs the error in order to record it on
+ * the record rather than silently treating a failed send as delivered.
+ */
+export async function sendThreadedMail(opts: SendThreadedMailOptions): Promise<{ messageId: string; delivered: boolean }> {
+  const { to, subject, html, text, messageId, inReplyTo, references, replyTo } = opts;
+  const transporter = getTransporter();
+  const from = process.env.SMTP_FROM || "Foxzil <alerts@foxzil.com>";
+
+  if (!transporter) {
+    // Unconfigured SMTP is a configuration error for outreach, not a soft
+    // no-op: pretending we emailed a merchant would corrupt the audit trail.
+    throw new Error("SMTP is not configured (SMTP_HOST/SMTP_USER/SMTP_PASS).");
+  }
+
+  await transporter.sendMail({
+    from,
+    to,
+    subject,
+    html,
+    text: text || html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
+    messageId,
+    ...(inReplyTo ? { inReplyTo } : {}),
+    ...(references && references.length > 0 ? { references } : {}),
+    ...(replyTo ? { replyTo } : {}),
+  });
+
+  return { messageId, delivered: true };
+}

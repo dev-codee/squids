@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NETWORKS } from "@/lib/networks";
 
 /** A single leaf link in the sidebar. */
@@ -10,6 +10,8 @@ interface NavLeaf {
   label: string;
   href: string;
   icon?: React.ReactNode;
+  /** When set, the leaf renders a count badge fed by {@link useReviewReplyCount}. */
+  badge?: "ppcReviewReplies";
 }
 
 /** A titled group of links (e.g. "Affiliate Store"). */
@@ -167,6 +169,32 @@ const groups: NavGroup[] = [
     ],
   },
   {
+    title: "Paid Search",
+    items: [
+      {
+        label: "PPC Permissions",
+        href: "/dashboard/ppc",
+        badge: "ppcReviewReplies",
+        icon: icon(
+          <>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <polyline points="9 12 11 14 15 10" />
+          </>,
+        ),
+      },
+      {
+        label: "Outreach Queue",
+        href: "/dashboard/ppc/queue",
+        icon: icon(
+          <>
+            <path d="M4 4h16v16H4z" />
+            <polyline points="4 7 12 13 20 7" />
+          </>,
+        ),
+      },
+    ],
+  },
+  {
     title: "Settings",
     items: [
       {
@@ -190,6 +218,41 @@ const groups: NavGroup[] = [
   },
 ];
 
+/**
+ * Count of PPC replies waiting on a human decision.
+ *
+ * This is the whole notification mechanism: a reply that needs reading shows up
+ * as a badge here and at the top of the Outreach Queue. Failures are swallowed —
+ * a badge is never worth breaking the sidebar over.
+ */
+function useReviewReplyCount(): number {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function poll() {
+      try {
+        const res = await fetch("/api/admin/ppc-permissions?view=needs_review&pageSize=1");
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled) setCount(Number(json?.total) || 0);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    poll();
+    const timer = setInterval(poll, 120_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  return count;
+}
+
 /** Active when the path equals the href, or is a nested route beneath it. */
 function useIsActive() {
   const pathname = usePathname();
@@ -202,6 +265,7 @@ function useIsActive() {
 export default function AdminSidebar() {
   const router = useRouter();
   const isActive = useIsActive();
+  const reviewReplies = useReviewReplyCount();
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -217,6 +281,15 @@ export default function AdminSidebar() {
       setLoggingOut(false);
     }
   }
+
+  const badgeFor = (leaf: NavLeaf) => {
+    if (leaf.badge !== "ppcReviewReplies" || reviewReplies === 0) return null;
+    return (
+      <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+        {reviewReplies}
+      </span>
+    );
+  };
 
   const leafClass = (href: string) =>
     `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
@@ -255,6 +328,7 @@ export default function AdminSidebar() {
             >
               {leaf.icon}
               {leaf.label}
+              {badgeFor(leaf)}
             </Link>
           ))}
         </div>
@@ -274,6 +348,7 @@ export default function AdminSidebar() {
                 >
                   {leaf.icon}
                   {leaf.label}
+                  {badgeFor(leaf)}
                 </Link>
               ))}
             </div>
