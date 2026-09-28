@@ -4,7 +4,6 @@ import { loadStoreData, loadStoreAiContent } from "@/lib/storeData";
 import StoreSidebar from "@/components/store/StoreSidebar";
 import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
-import HowItWorks from "@/components/store/HowItWorks";
 import OfferList from "@/components/store/OfferList";
 import RecentlyViewedStores from "@/components/store/RecentlyViewedStores";
 import LightningDealCard from "@/components/store/LightningDealCard";
@@ -209,8 +208,8 @@ export default async function StoreMainPage({
         />
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-          {/* Sidebar - Left Column */}
-          <div className="lg:col-span-3 space-y-6">
+          {/* Sidebar - Left Column (hidden on mobile) */}
+          <div className="hidden lg:block lg:col-span-3 space-y-6">
             <StoreSidebar store={store} aiContent={aiContent} country={params.country} />
           </div>
 
@@ -228,8 +227,6 @@ export default async function StoreMainPage({
                 </p>
               )}
             </div>
-
-            <HowItWorks />
 
             {/* Coupons Section — vouchers with a code */}
             {store.coupons.length > 0 && (
