@@ -76,13 +76,13 @@ export default function RecentlyViewedStores({ current, className = "" }: Recent
       <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">
         Recently Viewed
       </h3>
-      <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-none">
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-2">
         {others.map((entry) => (
           <Link
             key={entry.slug}
             href={`/${entry.country}/${entry.slug}`}
             title={entry.name}
-            className="flex w-16 flex-shrink-0 flex-col items-center gap-1.5 text-center group"
+            className="flex flex-col items-center gap-1.5 text-center group"
           >
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white p-1.5 transition group-hover:border-amber-300">
               {entry.logoUrl ? (

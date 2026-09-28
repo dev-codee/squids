@@ -202,15 +202,14 @@ export default async function StoreMainPage({
             { label: store.name },
           ]}
         />
-        <RecentlyViewedStores
-          current={{ slug: store.slug, name: store.name, logoUrl: store.logoUrl, country: params.country }}
-          className="mb-6"
-        />
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* Sidebar - Left Column (hidden on mobile) */}
           <div className="hidden lg:block lg:col-span-3 space-y-6">
             <StoreSidebar store={store} aiContent={aiContent} country={params.country} />
+            <RecentlyViewedStores
+              current={{ slug: store.slug, name: store.name, logoUrl: store.logoUrl, country: params.country }}
+            />
           </div>
 
           {/* Main Content - Right Column */}
