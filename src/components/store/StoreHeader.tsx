@@ -5,18 +5,20 @@ import { usePathname, useParams } from "next/navigation";
 import type { StoreData } from "@/lib/storeData";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 import StarRating from "./StarRating";
+import FollowStoreButton from "./FollowStoreButton";
 
 interface StoreHeaderProps {
   store: StoreData;
+  country?: string;
 }
 
-export default function StoreHeader({ store }: StoreHeaderProps) {
+export default function StoreHeader({ store, country: countryProp }: StoreHeaderProps) {
   const dict = useDictionary();
   const pathname = usePathname();
   const params = useParams();
   // Routes are /[country]/[store](/coupons|/deals) — the country segment is
   // required, or every tab link 404s / never matches as "active".
-  const country = (typeof params?.country === "string" ? params.country : "") || "us";
+  const country = countryProp || (typeof params?.country === "string" ? params.country : "") || "us";
   const base = `/${country}/${store.slug}`;
   const currentPath = pathname || base;
 
@@ -88,8 +90,8 @@ export default function StoreHeader({ store }: StoreHeaderProps) {
             </div>
           </div>
 
-          {/* Action Stats / Visit Store Button */}
-          <div className="flex items-center gap-3">
+          {/* Action Buttons */}
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
             <a
               href={store.websiteUrl}
               target="_blank"
@@ -101,6 +103,16 @@ export default function StoreHeader({ store }: StoreHeaderProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             </a>
+            <FollowStoreButton
+              store={{
+                slug: store.slug,
+                network: store.network,
+                advertiserId: store.advertiserId,
+                name: store.name,
+              }}
+              country={country}
+              compact
+            />
           </div>
         </div>
 

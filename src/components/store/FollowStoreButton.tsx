@@ -11,6 +11,8 @@ interface FollowStoreButtonProps {
   };
   /** 2-letter region code from the current URL, used to build email links. */
   country: string;
+  /** Smaller inline style for the header placement. */
+  compact?: boolean;
 }
 
 type Frequency = "instant" | "daily" | "weekly";
@@ -26,7 +28,7 @@ const FREQUENCY_OPTIONS: { value: Frequency; label: string; hint: string }[] = [
  * offers from this store. Opens a small form (email + frequency + consent),
  * posts to /api/subscriptions, and shows a confirmation-pending state.
  */
-export default function FollowStoreButton({ store, country }: FollowStoreButtonProps) {
+export default function FollowStoreButton({ store, country, compact }: FollowStoreButtonProps) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("instant");
@@ -63,9 +65,13 @@ export default function FollowStoreButton({ store, country }: FollowStoreButtonP
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-100 transition"
+        className={
+          compact
+            ? "flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+            : "w-full flex items-center justify-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-100 transition"
+        }
       >
-        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -73,7 +79,7 @@ export default function FollowStoreButton({ store, country }: FollowStoreButtonP
             d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
           />
         </svg>
-        Follow {store.name} for offer alerts
+        {compact ? "Follow for alerts" : `Follow ${store.name} for offer alerts`}
       </button>
 
       {open && (

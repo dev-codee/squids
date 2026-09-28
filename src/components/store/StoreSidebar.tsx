@@ -3,7 +3,6 @@
 import React from "react";
 import type { StoreData } from "@/lib/storeData";
 import type { StorePageContent } from "@/lib/ai/storeContent";
-import FollowStoreButton from "./FollowStoreButton";
 import ProductFeedCard from "./ProductFeedCard";
 import PriceComparisonWidget from "./PriceComparisonWidget";
 import FaqAccordion from "./FaqAccordion";
@@ -92,17 +91,6 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
           ))}
         </div>
       </div>
-
-      {/* Follow store — offer alert opt-in */}
-      <FollowStoreButton
-        store={{
-          slug: store.slug,
-          network: store.network,
-          advertiserId: store.advertiserId,
-          name: store.name,
-        }}
-        country={country || "us"}
-      />
 
       {/* Store About Box */}
       {hasVal(aiContent?.hero_intro) && (

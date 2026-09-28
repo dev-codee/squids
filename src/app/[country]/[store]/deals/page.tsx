@@ -98,7 +98,7 @@ export default async function StoreDealsPage({
 
   return (
     <div className="min-h-screen bg-gray-50/60 pb-16">
-      <StoreHeader store={store} />
+      <StoreHeader store={store} country={params.country} />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-12">
         <Breadcrumbs
