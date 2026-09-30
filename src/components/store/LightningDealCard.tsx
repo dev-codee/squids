@@ -32,12 +32,12 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
       className={`relative flex flex-col justify-between rounded-2xl border p-5 shadow-sm transition hover:shadow-md ${
         deal.isExclusive
           ? "border-purple-300 bg-gradient-to-br from-purple-50/70 to-white ring-2 ring-purple-300/60 hover:border-purple-400"
-          : "border-gray-200 bg-white hover:border-amber-300"
+          : "border-line bg-white hover:border-brand-border"
       }`}
     >
       <div>
         {/* Deal Image & Badge Header */}
-        <div className="relative mb-4 h-48 w-full overflow-hidden rounded-xl bg-gray-100">
+        <div className="relative mb-4 h-48 w-full overflow-hidden rounded-xl bg-canvas-sunk">
           {deal.imageUrl ? (
             <img
               src={deal.imageUrl}
@@ -45,7 +45,7 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
               className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-gray-400">
+            <div className="flex h-full w-full items-center justify-center text-ink-muted">
               No Image
             </div>
           )}
@@ -65,7 +65,7 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
               </span>
             ) : (
               deal.badge && (
-                <span className="inline-flex rounded-lg bg-gray-900/90 px-2 py-0.5 text-[10px] font-semibold text-amber-300 backdrop-blur-sm">
+                <span className="inline-flex rounded-lg bg-ink/90 px-2 py-0.5 text-[10px] font-semibold text-brand-border backdrop-blur-sm">
                   {deal.badge}
                 </span>
               )
@@ -74,31 +74,31 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
         </div>
 
         {/* Title */}
-        <h4 className="text-base font-bold text-gray-900 line-clamp-2">
+        <h4 className="text-base font-bold text-ink line-clamp-2">
           {deal.title}
         </h4>
-        <p className="mt-1 text-xs text-gray-500 line-clamp-2">{deal.description}</p>
+        <p className="mt-1 text-xs text-ink-soft line-clamp-2">{deal.description}</p>
 
         {/* Price & Savings */}
         <div className="mt-3 flex items-baseline gap-2">
           {deal.salePrice && (
-            <span className="text-xl font-extrabold text-gray-900">{deal.salePrice}</span>
+            <span className="text-xl font-extrabold text-ink">{deal.salePrice}</span>
           )}
           {deal.originalPrice && (
-            <span className="text-xs text-gray-400 line-through">{deal.originalPrice}</span>
+            <span className="text-xs text-ink-muted line-through">{deal.originalPrice}</span>
           )}
         </div>
 
         {/* Lightning Claim Progress Bar */}
         {deal.stockPercentage !== undefined && (
           <div className="mt-4">
-            <div className="flex justify-between text-xs font-medium text-gray-600 mb-1">
+            <div className="flex justify-between text-xs font-medium text-ink-soft mb-1">
               <span>{dict.cards.claimed}</span>
-              <span className="font-bold text-amber-600">{deal.stockPercentage}%</span>
+              <span className="font-bold text-brand-hover">{deal.stockPercentage}%</span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-canvas-sunk">
               <div
-                className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                className="h-full rounded-full bg-brand transition-all duration-500"
                 style={{ width: `${deal.stockPercentage}%` }}
               />
             </div>
@@ -122,7 +122,7 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
       </div>
 
       {deal.updatedAt && (
-        <p className="mt-3 text-[10px] text-gray-400">
+        <p className="mt-3 text-[10px] text-ink-muted">
           {dict.cards.updated}:{" "}
           {new Date(deal.updatedAt).toLocaleDateString("en-GB", {
             day: "numeric",
@@ -137,7 +137,7 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
         href={deal.affiliateUrl}
         target="_blank"
         rel="nofollow noopener noreferrer sponsored"
-        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-amber-600 active:scale-95"
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-2.5 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-brand-hover active:scale-95"
       >
         {dict.cards.grabThisDeal}
         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

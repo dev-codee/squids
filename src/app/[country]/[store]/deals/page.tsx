@@ -78,9 +78,9 @@ export default async function StoreDealsPage({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xl">{icon}</span>
-              <h2 className="text-2xl font-extrabold text-gray-900">{title}</h2>
+              <h2 className="text-2xl font-extrabold text-ink">{title}</h2>
             </div>
-            <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+            <p className="text-xs text-ink-soft mt-1">{subtitle}</p>
           </div>
           <span className={`rounded-lg px-3 py-1 text-xs font-bold ${badge.className}`}>
             {items.length} {badge.text}
@@ -97,10 +97,10 @@ export default async function StoreDealsPage({
   const hasAny = store.promotions.length > 0 || store.deals.length > 0;
 
   return (
-    <div className="min-h-screen bg-gray-50/60 pb-16">
+    <div className="min-h-screen bg-canvas/60 pb-16">
       <StoreHeader store={store} country={params.country} />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-12">
+      <main className="mx-auto max-w-shell px-4 py-8 sm:px-6 lg:px-8 space-y-12">
         <Breadcrumbs
           items={[
             { label: "Home", href: `/${params.country}` },
@@ -113,7 +113,7 @@ export default async function StoreDealsPage({
           current={{ slug: store.slug, name: store.name, logoUrl: store.logoUrl, country: params.country }}
         />
         {/* Banner */}
-        <div className="rounded-2xl bg-gradient-to-r from-red-600 via-amber-600 to-amber-500 p-8 text-white shadow-lg">
+        <div className="rounded-2xl bg-gradient-to-r from-red-600 via-brand-hover to-brand p-8 text-white shadow-lg">
           <div className="max-w-3xl">
             <span className="inline-flex items-center rounded-lg bg-white/20 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm mb-3">
               ⚡ {dict.dealsPage.flashHub}
@@ -137,11 +137,11 @@ export default async function StoreDealsPage({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xl">🏷️</span>
-                  <h2 className="text-2xl font-extrabold text-gray-900">More Deals & Offers</h2>
+                  <h2 className="text-2xl font-extrabold text-ink">More Deals & Offers</h2>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Store-wide deals that don&apos;t need a code</p>
+                <p className="text-xs text-ink-soft mt-1">Store-wide deals that don&apos;t need a code</p>
               </div>
-              <span className="rounded-lg px-3 py-1 text-xs font-bold bg-gray-100 text-gray-700">
+              <span className="rounded-lg px-3 py-1 text-xs font-bold bg-canvas-sunk text-ink-soft">
                 {store.deals.length} deals
               </span>
             </div>
@@ -159,7 +159,7 @@ export default async function StoreDealsPage({
           dict.dealsPage.todaysDeals,
           dict.dealsPage.todaysDealsSub,
           todaysDeals,
-          { text: dict.dealsPage.featured, className: "bg-amber-50 text-amber-700" },
+          { text: dict.dealsPage.featured, className: "bg-brand-soft text-brand-hover" },
           "🌟",
         )}
         {section(
@@ -185,11 +185,11 @@ export default async function StoreDealsPage({
         )}
 
         {!hasAny && (
-          <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
-            <p className="text-sm font-semibold text-gray-700">
+          <div className="rounded-2xl border border-dashed border-line-strong bg-white p-12 text-center">
+            <p className="text-sm font-semibold text-ink-soft">
               {dict.dealsPage.noneTitle.replace("{store}", store.name)}
             </p>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-ink-soft">
               {dict.dealsPage.noneSub}
             </p>
           </div>

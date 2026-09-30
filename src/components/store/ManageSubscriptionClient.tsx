@@ -65,7 +65,7 @@ export default function ManageSubscriptionClient({
 
   return (
     <div className="mx-auto max-w-lg px-4 py-12">
-      <h1 className="text-2xl font-bold text-gray-900">Manage your store alerts</h1>
+      <h1 className="text-2xl font-bold text-ink">Manage your store alerts</h1>
 
       {banner && (
         <div
@@ -82,30 +82,30 @@ export default function ManageSubscriptionClient({
       )}
 
       {!token && (
-        <p className="mt-6 text-sm text-gray-500">
+        <p className="mt-6 text-sm text-ink-soft">
           Use the "Manage your alerts" link from one of your alert emails to view or change your
           preferences here.
         </p>
       )}
 
-      {token && loading && <p className="mt-6 text-sm text-gray-500">Loading…</p>}
+      {token && loading && <p className="mt-6 text-sm text-ink-soft">Loading…</p>}
       {token && error && <p className="mt-6 text-sm text-red-600">{error}</p>}
 
       {data && (
         <div className="mt-8 space-y-8">
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
-            <p className="text-sm text-gray-500">Signed up as</p>
-            <p className="font-medium text-gray-900">{data.email}</p>
+          <div className="rounded-xl border border-line bg-white p-5">
+            <p className="text-sm text-ink-soft">Signed up as</p>
+            <p className="font-medium text-ink">{data.email}</p>
           </div>
 
           {data.status === "unsubscribed" ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-ink-soft">
               You're fully unsubscribed. Follow a store again from its page any time.
             </p>
           ) : (
             <>
-              <div className="rounded-xl border border-gray-200 bg-white p-5">
-                <h2 className="font-semibold text-gray-900 mb-3">How often?</h2>
+              <div className="rounded-xl border border-line bg-white p-5">
+                <h2 className="font-semibold text-ink mb-3">How often?</h2>
                 <div className="space-y-2">
                   {(Object.keys(FREQUENCY_LABELS) as Frequency[]).map((f) => (
                     <label key={f} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -115,7 +115,7 @@ export default function ManageSubscriptionClient({
                         checked={data.frequency === f}
                         disabled={busy}
                         onChange={() => post({ action: "frequency", frequency: f })}
-                        className="accent-amber-500"
+                        className="accent-brand"
                       />
                       {FREQUENCY_LABELS[f]}
                     </label>
@@ -123,15 +123,15 @@ export default function ManageSubscriptionClient({
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-5">
-                <h2 className="font-semibold text-gray-900 mb-3">Stores you follow</h2>
+              <div className="rounded-xl border border-line bg-white p-5">
+                <h2 className="font-semibold text-ink mb-3">Stores you follow</h2>
                 {data.stores.length === 0 ? (
-                  <p className="text-sm text-gray-500">You're not following any stores.</p>
+                  <p className="text-sm text-ink-soft">You're not following any stores.</p>
                 ) : (
-                  <ul className="divide-y divide-gray-100">
+                  <ul className="divide-y divide-line">
                     {data.stores.map((s) => (
                       <li key={s.slug} className="flex items-center justify-between py-2">
-                        <span className="text-sm text-gray-800">{s.name}</span>
+                        <span className="text-sm text-ink">{s.name}</span>
                         <button
                           disabled={busy}
                           onClick={() => post({ action: "removeStore", storeSlug: s.slug })}
@@ -148,7 +148,7 @@ export default function ManageSubscriptionClient({
               <button
                 disabled={busy}
                 onClick={() => post({ action: "unsubscribeAll" })}
-                className="text-sm font-medium text-gray-500 hover:text-red-600 disabled:opacity-50"
+                className="text-sm font-medium text-ink-soft hover:text-red-600 disabled:opacity-50"
               >
                 Unsubscribe from all alerts
               </button>

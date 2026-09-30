@@ -17,9 +17,9 @@ export default function StarRating({ value, size = "sm" }: StarRatingProps) {
 
   return (
     <span className={`relative inline-block leading-none tracking-tight ${sizeClass}`} aria-hidden="true">
-      <span className="text-gray-300">★★★★★</span>
+      <span className="text-ink-muted">★★★★★</span>
       <span
-        className="absolute inset-0 overflow-hidden whitespace-nowrap text-amber-400"
+        className="absolute inset-0 overflow-hidden whitespace-nowrap text-brand"
         style={{ width: `${pct}%` }}
       >
         ★★★★★

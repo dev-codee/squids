@@ -94,7 +94,7 @@ export default function CouponCard({
         className={`group relative flex flex-col justify-between rounded-2xl border p-6 shadow-sm transition hover:shadow-md ${
           coupon.isExclusive
             ? "border-purple-300 bg-gradient-to-br from-purple-50/70 to-white ring-2 ring-purple-300/60 hover:border-purple-400"
-            : "border-gray-200 bg-white hover:border-amber-300"
+            : "border-line bg-white hover:border-brand-border"
         }`}
       >
         {coupon.isExclusive && (
@@ -110,7 +110,7 @@ export default function CouponCard({
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
               {coupon.discount && (
-                <span className="inline-flex items-center rounded-lg bg-amber-50 px-3 py-1 text-sm font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                <span className="inline-flex items-center rounded-lg bg-brand-soft px-3 py-1 text-sm font-bold text-brand-hover ring-1 ring-inset ring-brand-hover/20">
                   {coupon.discount}
                 </span>
               )}
@@ -144,10 +144,10 @@ export default function CouponCard({
           </div>
 
           {/* Title & Description */}
-          <h3 className="text-lg font-bold text-gray-900 group-hover:text-amber-600 transition-colors">
+          <h3 className="text-lg font-bold text-ink group-hover:text-brand-hover transition-colors">
             {coupon.title}
           </h3>
-          <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+          <p className="mt-2 text-sm text-ink-soft leading-relaxed">
             {coupon.description}
           </p>
 
@@ -173,8 +173,8 @@ export default function CouponCard({
         </div>
 
         {/* Footer info & Copy Code Button */}
-        <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-4">
-          <div className="text-xs text-gray-500">
+        <div className="mt-6 pt-4 border-t border-line flex flex-wrap items-center justify-between gap-4">
+          <div className="text-xs text-ink-soft">
             {coupon.verified && <span className="font-medium text-emerald-600">{dict.cards.active}</span>}
             {coupon.verified && coupon.expiryDate && <span className="mx-1.5">•</span>}
             {coupon.expiryDate && (
@@ -205,9 +205,9 @@ export default function CouponCard({
           {coupon.code ? (
             <button
               onClick={handleReveal}
-              className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-amber-500 active:scale-95 shadow-sm"
+              className="inline-flex items-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-xs font-bold text-white transition hover:bg-brand active:scale-95 shadow-sm"
             >
-              <span className="tracking-widest font-mono uppercase bg-gray-800 px-2 py-0.5 rounded text-amber-400">
+              <span className="tracking-widest font-mono uppercase bg-ink px-2 py-0.5 rounded text-brand">
                 {revealed ? coupon.code : (coupon.code.length > 3 ? coupon.code.slice(0, 3) + "***" : "***")}
               </span>
               <span>{copied ? dict.cards.copied : revealed ? dict.cards.copyCode : dict.cards.showCode}</span>
@@ -218,7 +218,7 @@ export default function CouponCard({
               target="_blank"
               rel="nofollow noopener noreferrer sponsored"
               onClick={() => track("affiliate_click", "coupon_card")}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-amber-600"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2.5 text-xs font-bold text-white transition hover:bg-brand-hover"
             >
               {dict.cards.getDeal}
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,30 +239,30 @@ export default function CouponCard({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-gray-900">{dict.cards.promoCodeCopied}</h3>
-            <p className="mt-1 text-sm text-gray-500">{coupon.title}</p>
+            <h3 className="text-xl font-bold text-ink">{dict.cards.promoCodeCopied}</h3>
+            <p className="mt-1 text-sm text-ink-soft">{coupon.title}</p>
 
             <div
               onClick={() => copyCode("reveal_modal")}
-              className="my-5 rounded-xl bg-amber-50 border-2 border-dashed border-amber-300 p-4 cursor-pointer hover:bg-amber-100/60 transition group"
+              className="my-5 rounded-xl bg-brand-soft border-2 border-dashed border-brand-border p-4 cursor-pointer hover:bg-brand-soft/60 transition group"
               title="Click to copy code"
             >
-              <span className="text-2xl font-mono font-extrabold tracking-widest text-amber-900">
+              <span className="text-2xl font-mono font-extrabold tracking-widest text-brand-hover">
                 {coupon.code}
               </span>
-              <span className="block text-xs text-amber-700 mt-1 font-sans">
+              <span className="block text-xs text-brand-hover mt-1 font-sans">
                 {copied ? dict.cards.copied : "Click to copy code"}
               </span>
             </div>
 
-            <p className="text-xs text-gray-500 mb-6">
+            <p className="text-xs text-ink-soft mb-6">
               {dict.cards.pasteCode.replace("{store}", storeName)}
             </p>
 
             <div className="flex gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-xl border border-line-strong px-4 py-2.5 text-sm font-semibold text-ink-soft hover:bg-canvas"
               >
                 {dict.cards.close}
               </button>
@@ -271,7 +271,7 @@ export default function CouponCard({
                   setShowModal(false);
                   openMerchant("reveal_modal");
                 }}
-                className="flex-1 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 text-center"
+                className="flex-1 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover text-center"
               >
                 {dict.cards.goTo.replace("{store}", storeName)}
               </button>

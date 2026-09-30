@@ -80,9 +80,9 @@ export default async function StoreCouponsPage({
           <div>
             <div className="flex items-center gap-2">
               {icon && <span className="text-xl">{icon}</span>}
-              <h2 className="text-2xl font-extrabold text-gray-900">{title}</h2>
+              <h2 className="text-2xl font-extrabold text-ink">{title}</h2>
             </div>
-            <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+            <p className="text-xs text-ink-soft mt-1">{subtitle}</p>
           </div>
           <span className={`rounded-lg px-3 py-1 text-xs font-bold ${badge.className}`}>
             {items.length} {badge.text}
@@ -105,10 +105,10 @@ export default async function StoreCouponsPage({
   const hasAny = store.coupons.length > 0;
 
   return (
-    <div className="min-h-screen bg-gray-50/60 pb-16">
+    <div className="min-h-screen bg-canvas/60 pb-16">
       <StoreHeader store={store} country={params.country} />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-12">
+      <main className="mx-auto max-w-shell px-4 py-8 sm:px-6 lg:px-8 space-y-12">
         <Breadcrumbs
           items={[
             { label: "Home", href: `/${params.country}` },
@@ -121,7 +121,7 @@ export default async function StoreCouponsPage({
           current={{ slug: store.slug, name: store.name, logoUrl: store.logoUrl, country: params.country }}
         />
         {/* Intro */}
-        <div className="rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 p-8 text-white shadow-lg">
+        <div className="rounded-2xl bg-gradient-to-r from-brand to-brand-hover p-8 text-white shadow-lg">
           <div className="max-w-3xl">
             <span className="inline-flex items-center rounded-lg bg-white/20 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm mb-3">
               {dict.couponsPage.officialDirectory.replace("{store}", store.name)}
@@ -129,7 +129,7 @@ export default async function StoreCouponsPage({
             <h1 className="text-3xl font-extrabold sm:text-4xl">
               {dict.couponsPage.heading.replace("{store}", store.name)}
             </h1>
-            <p className="mt-2 text-sm text-amber-50 leading-relaxed">
+            <p className="mt-2 text-sm text-brand-soft leading-relaxed">
               {dict.couponsPage.intro.replace("{store}", store.name)}
             </p>
           </div>
@@ -163,11 +163,11 @@ export default async function StoreCouponsPage({
         )}
 
         {!hasAny && (
-          <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center">
-            <p className="text-sm font-semibold text-gray-700">
+          <div className="rounded-2xl border border-dashed border-line-strong bg-white p-12 text-center">
+            <p className="text-sm font-semibold text-ink-soft">
               {dict.couponsPage.noneTitle.replace("{store}", store.name)}
             </p>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-ink-soft">
               {dict.couponsPage.noneSub}
             </p>
           </div>

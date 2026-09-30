@@ -72,8 +72,8 @@ export default function RecentlyViewedStores({ current, className = "" }: Recent
   if (!others || others.length === 0) return null;
 
   return (
-    <div className={`bg-white p-4 rounded border border-gray-200 ${className}`}>
-      <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-3">
+    <div className={`bg-white p-4 rounded border border-line ${className}`}>
+      <h3 className="text-xs font-bold uppercase tracking-wide text-ink-soft mb-3">
         Recently Viewed
       </h3>
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-2">
@@ -84,7 +84,7 @@ export default function RecentlyViewedStores({ current, className = "" }: Recent
             title={entry.name}
             className="flex flex-col items-center gap-1.5 text-center group"
           >
-            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white p-1.5 transition group-hover:border-amber-300">
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-line bg-white p-1.5 transition group-hover:border-brand-border">
               {entry.logoUrl ? (
                 <img
                   src={entry.logoUrl}
@@ -95,12 +95,12 @@ export default function RecentlyViewedStores({ current, className = "" }: Recent
                   }}
                 />
               ) : (
-                <span className="text-sm font-bold text-gray-400">
+                <span className="text-sm font-bold text-ink-muted">
                   {entry.name.charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
-            <span className="line-clamp-1 text-[11px] text-gray-600 group-hover:text-amber-600">
+            <span className="line-clamp-1 text-[11px] text-ink-soft group-hover:text-brand-hover">
               {entry.name}
             </span>
           </Link>

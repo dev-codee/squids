@@ -3,11 +3,8 @@
 import React from "react";
 import type { StoreData } from "@/lib/storeData";
 import type { StorePageContent } from "@/lib/ai/storeContent";
-import ProductFeedCard from "./ProductFeedCard";
 import PriceComparisonWidget from "./PriceComparisonWidget";
-import FaqAccordion from "./FaqAccordion";
 import ReviewsWidget from "./ReviewsWidget";
-import RelatedStores from "./RelatedStores";
 import StarRating from "./StarRating";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 
@@ -20,9 +17,9 @@ function hasVal(v: unknown): v is string {
 function InfoRow({ label, value }: { label: string; value?: string }) {
   if (!hasVal(value)) return null;
   return (
-    <div className="flex justify-between gap-4 py-1.5 text-sm border-b border-gray-100 last:border-0">
-      <span className="text-gray-500">{label}</span>
-      <span className="font-medium text-gray-800 text-right">{value}</span>
+    <div className="flex justify-between gap-4 py-1.5 text-sm border-b border-line last:border-0">
+      <span className="text-ink-soft">{label}</span>
+      <span className="font-medium text-ink text-right">{value}</span>
     </div>
   );
 }
@@ -36,11 +33,11 @@ function RatingSourceRow({ label, rating, reviewCount }: { label: string; rating
   if (!hasVal(rating)) return null;
   const numeric = parseFloat(rating!);
   return (
-    <div className="flex items-center justify-between gap-4 py-1.5 text-sm border-b border-gray-100 last:border-0">
-      <span className="text-gray-500">{label}</span>
+    <div className="flex items-center justify-between gap-4 py-1.5 text-sm border-b border-line last:border-0">
+      <span className="text-ink-soft">{label}</span>
       <span className="flex items-center gap-1.5">
         {Number.isFinite(numeric) && <StarRating value={numeric} size="xs" />}
-        <span className="font-medium text-gray-800">
+        <span className="font-medium text-ink">
           {rating}/5{hasVal(reviewCount) ? ` (${reviewCount})` : ""}
         </span>
       </span>
@@ -70,32 +67,10 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
 
   return (
     <aside className="w-full space-y-6">
-      {/* How it works */}
-      <div className="bg-white p-5 rounded border border-gray-200">
-        <h3 className="text-sm font-bold text-gray-900 mb-3">How it works</h3>
-        <div className="flex flex-col gap-4">
-          {[
-            { title: "Pick an offer", desc: "Choose a coupon or deal that fits what you're buying.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /> },
-            { title: "Copy the code", desc: "Click to reveal and copy — we'll also open the store in a new tab.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /> },
-            { title: "Save at checkout", desc: "Paste the code in the promo box before you pay.", icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /> },
-          ].map((step, idx) => (
-            <div key={step.title} className="flex items-start gap-3">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">{step.icon}</svg>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">{idx + 1}. {step.title}</p>
-                <p className="mt-0.5 text-xs text-gray-500 leading-relaxed">{step.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Store About Box */}
       {hasVal(aiContent?.hero_intro) && (
-        <div className="bg-white p-5 rounded border border-gray-200">
-          <p className="text-sm leading-relaxed text-gray-700 text-justify whitespace-pre-line">
+        <div className="bg-white p-5 rounded border border-line">
+          <p className="text-sm leading-relaxed text-ink-soft text-justify whitespace-pre-line">
             {aiContent.hero_intro}
           </p>
         </div>
@@ -103,8 +78,8 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
 
       {/* Store Trust & Info Box */}
       {showTrustPanel && aiContent && (
-        <div className="bg-white p-5 rounded border border-gray-200">
-          <h3 className="font-bold text-gray-900 mb-3">{dict.sidebar.storeTrustInfo}</h3>
+        <div className="bg-white p-5 rounded border border-line">
+          <h3 className="font-bold text-ink mb-3">{dict.sidebar.storeTrustInfo}</h3>
           <div>
             <RatingSourceRow label="Trustpilot" rating={trust?.rating} reviewCount={trust?.review_count} />
             <RatingSourceRow label="Google" rating={google?.rating} reviewCount={google?.review_count} />
@@ -113,7 +88,7 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
             {!hasVal(aiContent.cashback?.rate) && <InfoRow label={dict.sidebar.cashback} value={aiContent.cashback?.available} />}
           </div>
           {(hasVal(trust?.rating) || hasVal(google?.rating)) && (
-            <p className="mt-3 text-[10px] text-gray-400 leading-tight">
+            <p className="mt-3 text-[10px] text-ink-muted leading-tight">
               Trustpilot/Google scores are AI-researched from public listings, not a live feed — check the source directly for the current number.
             </p>
           )}
@@ -121,55 +96,55 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
       )}
 
       {/* Deals Details */}
-      <div className="bg-white border border-gray-200 p-5 rounded">
-        <h3 className="font-bold text-gray-900 mb-4">{dict.sidebar.dealsDetails}</h3>
+      <div className="bg-white border border-line p-5 rounded">
+        <h3 className="font-bold text-ink mb-4">{dict.sidebar.dealsDetails}</h3>
         <div className="space-y-3 text-sm">
-          <div className="flex justify-between border-b border-gray-100 pb-2">
-            <span className="text-gray-600">{dict.sidebar.promoCodes}</span>
+          <div className="flex justify-between border-b border-line pb-2">
+            <span className="text-ink-soft">{dict.sidebar.promoCodes}</span>
             <span className="font-semibold">{store.coupons.length}</span>
           </div>
-          <div className="flex justify-between border-b border-gray-100 pb-2">
-            <span className="text-gray-600">{dict.sidebar.deals}</span>
+          <div className="flex justify-between border-b border-line pb-2">
+            <span className="text-ink-soft">{dict.sidebar.deals}</span>
             <span className="font-semibold">{store.deals.length}</span>
           </div>
-          <div className="flex justify-between border-b border-gray-100 pb-2">
-            <span className="text-gray-600">{dict.sidebar.promotions}</span>
+          <div className="flex justify-between border-b border-line pb-2">
+            <span className="text-ink-soft">{dict.sidebar.promotions}</span>
             <span className="font-semibold">{store.promotions.length}</span>
           </div>
-          <div className="flex justify-between border-b border-gray-100 pb-2">
-            <span className="font-semibold text-gray-800">{dict.sidebar.totalOffers}</span>
-            <span className="font-bold text-gray-900">
+          <div className="flex justify-between border-b border-line pb-2">
+            <span className="font-semibold text-ink">{dict.sidebar.totalOffers}</span>
+            <span className="font-bold text-ink">
               {store.coupons.length + store.deals.length + store.promotions.length}
             </span>
           </div>
           {store.avgSavings && (
-            <div className="flex justify-between border-b border-gray-100 pb-2">
-              <span className="text-gray-600">{dict.sidebar.avgSavings}</span>
+            <div className="flex justify-between border-b border-line pb-2">
+              <span className="text-ink-soft">{dict.sidebar.avgSavings}</span>
               <span className="font-semibold">{store.avgSavings}</span>
             </div>
           )}
-          <div className="flex justify-between border-b border-gray-100 pb-2">
-            <span className="text-gray-600">{dict.sidebar.lastUpdated}</span>
+          <div className="flex justify-between border-b border-line pb-2">
+            <span className="text-ink-soft">{dict.sidebar.lastUpdated}</span>
             <span className="font-semibold">
               {new Date().toLocaleDateString("en-GB")}
             </span>
           </div>
         </div>
-        <p className="text-[10px] text-gray-400 mt-4 leading-tight">
+        <p className="text-[10px] text-ink-muted mt-4 leading-tight">
           {dict.sidebar.affiliateDisclaimer}
         </p>
       </div>
 
       {/* Discount codes rating — only shown when real votes exist */}
       {store.totalReviews > 0 && store.rating > 0 && (
-        <div className="bg-white border border-gray-200 p-5 rounded">
-          <h3 className="font-bold text-gray-900 mb-3">
+        <div className="bg-white border border-line p-5 rounded">
+          <h3 className="font-bold text-ink mb-3">
             {dict.sidebar.discountCodesRating.replace("{store}", store.name)}
           </h3>
           <div className="mb-2">
             <StarRating value={store.rating} size="md" />
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-soft">
             {dict.sidebar.averageRating
               .replace("{rating}", String(store.rating))
               .replace("{votes}", String(store.totalReviews))}
@@ -178,8 +153,8 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
       )}
 
       {/* Contact */}
-      <div className="bg-white border border-gray-200 p-5 rounded">
-        <h3 className="font-bold text-gray-900 mb-3">{dict.sidebar.contact.replace("{store}", store.name)}</h3>
+      <div className="bg-white border border-line p-5 rounded">
+        <h3 className="font-bold text-ink mb-3">{dict.sidebar.contact.replace("{store}", store.name)}</h3>
         <a
           href={store.websiteUrl}
           target="_blank"
@@ -195,13 +170,13 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
 
       {/* Categories Filter Pills */}
       {store.categories.length > 0 && (
-        <div className="bg-white p-5 rounded border border-gray-200">
-          <h3 className="font-bold text-gray-900 mb-3">{dict.sidebar.similarCategories}</h3>
+        <div className="bg-white p-5 rounded border border-line">
+          <h3 className="font-bold text-ink mb-3">{dict.sidebar.similarCategories}</h3>
           <div className="flex flex-wrap gap-2">
             {store.categories.map((cat, idx) => (
               <span
                 key={idx}
-                className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-xs text-gray-700 hover:bg-gray-100 cursor-pointer"
+                className="px-3 py-1.5 bg-canvas border border-line rounded-full text-xs text-ink-soft hover:bg-canvas-sunk cursor-pointer"
               >
                 {cat}
               </span>
@@ -210,28 +185,11 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
         </div>
       )}
 
-      {/* Similar Stores — cross-links by shared category */}
-      <RelatedStores stores={store.relatedStores} country={country || "us"} />
-
-      {/* Products Feed — only when a product source exists */}
-      {store.products && store.products.length > 0 && (
-        <div className="bg-white p-5 rounded border border-gray-200">
-          <div className="mb-4">
-            <h2 className="font-bold text-gray-900">{dict.sidebar.productsFeed}</h2>
-          </div>
-          <div className="flex flex-col gap-4">
-            {store.products.map((product) => (
-              <ProductFeedCard key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Price Comparison — only when data exists */}
       {store.priceComparisons && store.priceComparisons.length > 0 && (
-        <div className="bg-white p-5 rounded border border-gray-200">
+        <div className="bg-white p-5 rounded border border-line">
           <div className="mb-4">
-            <h2 className="font-bold text-gray-900">{dict.sidebar.priceComparison}</h2>
+            <h2 className="font-bold text-ink">{dict.sidebar.priceComparison}</h2>
           </div>
           <div className="overflow-x-auto pb-2">
             <PriceComparisonWidget items={store.priceComparisons} storeName={store.name} />
@@ -241,23 +199,23 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
 
       {/* Latest Discounts Feed — only when data exists */}
       {store.latestDiscounts && store.latestDiscounts.length > 0 && (
-        <div className="bg-amber-50/50 p-5 rounded border border-amber-200">
+        <div className="bg-brand-soft/50 p-5 rounded border border-brand-border">
           <div className="flex items-center gap-2 mb-4">
             <span className="flex h-3 w-3 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
             </span>
-            <h3 className="font-bold text-gray-900">{dict.sidebar.liveUpdates}</h3>
+            <h3 className="font-bold text-ink">{dict.sidebar.liveUpdates}</h3>
           </div>
           <div className="flex flex-col gap-3">
             {store.latestDiscounts.map((ld) => (
-              <div key={ld.id} className="rounded bg-white p-3.5 border border-amber-100 shadow-sm">
-                <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+              <div key={ld.id} className="rounded bg-white p-3.5 border border-brand-soft shadow-sm">
+                <span className="rounded bg-brand-soft px-2 py-0.5 text-[10px] font-bold text-brand-hover">
                   {ld.type}
                 </span>
-                <h4 className="text-xs font-bold text-gray-900 mt-1.5 line-clamp-1">{ld.title}</h4>
+                <h4 className="text-xs font-bold text-ink mt-1.5 line-clamp-1">{ld.title}</h4>
                 <p className="text-xs font-semibold text-emerald-600 mt-0.5">{ld.discount}</p>
-                <p className="text-[10px] text-gray-400 mt-1">{ld.updatedTime}</p>
+                <p className="text-[10px] text-ink-muted mt-1">{ld.updatedTime}</p>
               </div>
             ))}
           </div>
@@ -266,16 +224,16 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
 
       {/* Buying Guides — only when data exists */}
       {store.buyingGuides && store.buyingGuides.length > 0 && (
-        <div className="bg-white p-5 rounded border border-gray-200">
+        <div className="bg-white p-5 rounded border border-line">
           <div className="mb-4">
-            <h2 className="font-bold text-gray-900">{dict.sidebar.buyingGuides}</h2>
+            <h2 className="font-bold text-ink">{dict.sidebar.buyingGuides}</h2>
           </div>
           <div className="flex flex-col gap-4">
             {store.buyingGuides.map((guide) => (
-              <div key={guide.id} className="flex flex-col justify-between rounded border border-gray-200 bg-white p-4 shadow-sm">
+              <div key={guide.id} className="flex flex-col justify-between rounded border border-line bg-white p-4 shadow-sm">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900 leading-snug">{guide.title}</h3>
-                  <p className="mt-2 text-xs text-gray-600 leading-relaxed line-clamp-2">{guide.summary}</p>
+                  <h3 className="text-sm font-bold text-ink leading-snug">{guide.title}</h3>
+                  <p className="mt-2 text-xs text-ink-soft leading-relaxed line-clamp-2">{guide.summary}</p>
                 </div>
               </div>
             ))}
@@ -283,19 +241,9 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
         </div>
       )}
 
-      {/* FAQs — only when data exists (AI FAQs render in the main column) */}
-      {store.faqs && store.faqs.length > 0 && (
-        <div className="bg-white p-5 rounded border border-gray-200">
-          <div className="mb-4">
-            <h2 className="font-bold text-gray-900">{dict.sidebar.faqs}</h2>
-          </div>
-          <FaqAccordion faqs={store.faqs} storeName={store.name} />
-        </div>
-      )}
-
       {/* Reviews — only when data exists */}
       {store.reviews && store.reviews.length > 0 && (
-        <div className="bg-white p-5 rounded border border-gray-200 overflow-hidden">
+        <div className="bg-white p-5 rounded border border-line overflow-hidden">
           <ReviewsWidget
             reviews={store.reviews}
             rating={store.rating}

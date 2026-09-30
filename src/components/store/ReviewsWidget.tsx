@@ -19,25 +19,25 @@ export default function ReviewsWidget({
   const dict = useDictionary();
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-gray-100 pb-6">
+    <div className="rounded-2xl border border-line bg-white p-6 shadow-sm">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-6">
         <div>
-          <h3 className="text-xl font-bold text-gray-900">
+          <h3 className="text-xl font-bold text-ink">
             {dict.reviewsWidget.title.replace("{store}", storeName)}
           </h3>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-ink-soft mt-1">
             {dict.reviewsWidget.subtitle.replace("{store}", storeName)}
           </p>
         </div>
 
-        <div className="flex items-center gap-3 rounded-xl bg-amber-50 p-3">
-          <span className="text-3xl font-extrabold text-amber-900">{rating}</span>
+        <div className="flex items-center gap-3 rounded-xl bg-brand-soft p-3">
+          <span className="text-3xl font-extrabold text-brand-hover">{rating}</span>
           <div>
-            <div className="flex text-amber-400 text-sm">
+            <div className="flex text-brand text-sm">
               {"★".repeat(Math.floor(rating))}
               {"☆".repeat(5 - Math.floor(rating))}
             </div>
-            <p className="text-xs text-amber-800 font-medium">
+            <p className="text-xs text-brand-hover font-medium">
               {dict.reviewsWidget.basedOnRatings.replace("{count}", totalReviews.toLocaleString())}
             </p>
           </div>
@@ -48,18 +48,18 @@ export default function ReviewsWidget({
         {reviews.map((rev) => (
           <div
             key={rev.id}
-            className="flex flex-col justify-between rounded-xl border border-gray-100 bg-gray-50/50 p-4"
+            className="flex flex-col justify-between rounded-xl border border-line bg-canvas/50 p-4"
           >
             <div>
               <div className="flex items-center justify-between text-xs mb-2">
-                <span className="font-bold text-gray-900">{rev.author}</span>
-                <span className="text-gray-400">{rev.date}</span>
+                <span className="font-bold text-ink">{rev.author}</span>
+                <span className="text-ink-muted">{rev.date}</span>
               </div>
-              <div className="flex text-amber-400 text-xs mb-2">
+              <div className="flex text-brand text-xs mb-2">
                 {"★".repeat(rev.rating)}
               </div>
-              <h4 className="text-sm font-bold text-gray-900">{rev.title}</h4>
-              <p className="mt-1 text-xs leading-relaxed text-gray-600">
+              <h4 className="text-sm font-bold text-ink">{rev.title}</h4>
+              <p className="mt-1 text-xs leading-relaxed text-ink-soft">
                 "{rev.comment}"
               </p>
             </div>

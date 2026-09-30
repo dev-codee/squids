@@ -94,10 +94,10 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">
+                <h3 className="text-lg font-bold text-ink">
                   {result === "pending" ? "Check your inbox" : "You're all set"}
                 </h3>
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-ink-soft">
                   {result === "pending"
                     ? `We sent a confirmation link to ${email}. Click it to start getting alerts for ${store.name}.`
                     : `You'll get ${frequency} alerts for new offers from ${store.name}.`}
@@ -107,19 +107,19 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                     setOpen(false);
                     setResult(null);
                   }}
-                  className="mt-6 w-full rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                  className="mt-6 w-full rounded-xl bg-canvas-sunk px-4 py-2.5 text-sm font-semibold text-ink-soft hover:bg-canvas-sunk"
                 >
                   Close
                 </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit}>
-                <h3 className="text-lg font-bold text-gray-900">Follow {store.name}</h3>
-                <p className="mt-1 text-sm text-gray-500">
+                <h3 className="text-lg font-bold text-ink">Follow {store.name}</h3>
+                <p className="mt-1 text-sm text-ink-soft">
                   Get an email when {store.name} adds a new offer or coupon.
                 </p>
 
-                <label className="block mt-4 text-sm font-medium text-gray-700">
+                <label className="block mt-4 text-sm font-medium text-ink-soft">
                   Email address
                   <input
                     type="email"
@@ -127,17 +127,17 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
+                    className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                   />
                 </label>
 
                 <fieldset className="mt-4">
-                  <legend className="text-sm font-medium text-gray-700">How often?</legend>
+                  <legend className="text-sm font-medium text-ink-soft">How often?</legend>
                   <div className="mt-2 space-y-2">
                     {FREQUENCY_OPTIONS.map((opt) => (
                       <label
                         key={opt.value}
-                        className="flex items-start gap-2 rounded-lg border border-gray-200 p-2.5 cursor-pointer hover:border-amber-300"
+                        className="flex items-start gap-2 rounded-lg border border-line p-2.5 cursor-pointer hover:border-brand-border"
                       >
                         <input
                           type="radio"
@@ -145,24 +145,24 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                           value={opt.value}
                           checked={frequency === opt.value}
                           onChange={() => setFrequency(opt.value)}
-                          className="mt-0.5 accent-amber-500"
+                          className="mt-0.5 accent-brand"
                         />
                         <span>
-                          <span className="block text-sm font-medium text-gray-800">{opt.label}</span>
-                          <span className="block text-xs text-gray-500">{opt.hint}</span>
+                          <span className="block text-sm font-medium text-ink">{opt.label}</span>
+                          <span className="block text-xs text-ink-soft">{opt.hint}</span>
                         </span>
                       </label>
                     ))}
                   </div>
                 </fieldset>
 
-                <label className="mt-4 flex items-start gap-2 text-xs text-gray-600">
+                <label className="mt-4 flex items-start gap-2 text-xs text-ink-soft">
                   <input
                     type="checkbox"
                     required
                     checked={consent}
                     onChange={(e) => setConsent(e.target.checked)}
-                    className="mt-0.5 accent-amber-500"
+                    className="mt-0.5 accent-brand"
                   />
                   <span>
                     I agree to receive email alerts about new offers from {store.name}. I can
@@ -176,14 +176,14 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
-                    className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                    className="flex-1 rounded-xl border border-line-strong px-4 py-2.5 text-sm font-semibold text-ink-soft hover:bg-canvas"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting || !consent}
-                    className="flex-1 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {submitting ? "Following…" : "Follow store"}
                   </button>

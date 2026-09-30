@@ -65,9 +65,9 @@ export default function CouponVotes({ couponId, storeSlug, label = "Did this wor
   const down = counts?.down ?? 0;
 
   return (
-    <div className="mt-3 pt-3 border-t border-gray-100">
+    <div className="mt-3 pt-3 border-t border-line">
       <div className="flex items-center gap-2 min-w-0">
-        <span className="text-[11px] text-gray-400 font-medium whitespace-nowrap shrink-0">
+        <span className="text-[11px] text-ink-muted font-medium whitespace-nowrap shrink-0">
           {label}
         </span>
 
@@ -80,8 +80,8 @@ export default function CouponVotes({ couponId, storeSlug, label = "Did this wor
               userVote === "up"
                 ? "bg-emerald-50 border-emerald-300 text-emerald-700 shadow-sm"
                 : userVote
-                  ? "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
-                  : "bg-white border-gray-200 text-gray-500 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
+                  ? "bg-canvas border-line text-ink-muted cursor-not-allowed"
+                  : "bg-white border-line text-ink-soft hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 cursor-pointer"
             }`}
           >
             <span>👍</span>
@@ -96,8 +96,8 @@ export default function CouponVotes({ couponId, storeSlug, label = "Did this wor
               userVote === "down"
                 ? "bg-red-50 border-red-300 text-red-600 shadow-sm"
                 : userVote
-                  ? "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
-                  : "bg-white border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-300 hover:text-red-600 cursor-pointer"
+                  ? "bg-canvas border-line text-ink-muted cursor-not-allowed"
+                  : "bg-white border-line text-ink-soft hover:bg-red-50 hover:border-red-300 hover:text-red-600 cursor-pointer"
             }`}
           >
             <span>👎</span>
@@ -106,7 +106,7 @@ export default function CouponVotes({ couponId, storeSlug, label = "Did this wor
         </div>
 
         {userVote && (
-          <span className="text-[11px] text-gray-400 italic truncate">Thanks!</span>
+          <span className="text-[11px] text-ink-muted italic truncate">Thanks!</span>
         )}
       </div>
     </div>

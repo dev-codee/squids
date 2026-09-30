@@ -13,13 +13,13 @@ export default function PriceComparisonWidget({ items, storeName }: PriceCompari
   const { format } = useCurrency();
   const dict = useDictionary();
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-line bg-white p-6 shadow-sm">
       <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-xl font-bold text-gray-900">
+          <h3 className="text-xl font-bold text-ink">
             {dict.priceComparisonWidget.title}
           </h3>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-soft">
             {dict.priceComparisonWidget.subtitle.replace("{store}", storeName)}
           </p>
         </div>
@@ -32,11 +32,11 @@ export default function PriceComparisonWidget({ items, storeName }: PriceCompari
         {items.map((item) => (
           <div
             key={item.id}
-            className="flex flex-col gap-4 rounded-xl border border-gray-100 bg-gray-50/50 p-4 md:flex-row md:items-center md:justify-between"
+            className="flex flex-col gap-4 rounded-xl border border-line bg-canvas/50 p-4 md:flex-row md:items-center md:justify-between"
           >
             {/* Product info */}
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-white border border-gray-200 p-1">
+              <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-white border border-line p-1">
                 <img
                   src={item.image}
                   alt={item.productName}
@@ -44,10 +44,10 @@ export default function PriceComparisonWidget({ items, storeName }: PriceCompari
                 />
               </div>
               <div>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-hover">
                   {item.category}
                 </span>
-                <h4 className="text-sm font-bold text-gray-900">{item.productName}</h4>
+                <h4 className="text-sm font-bold text-ink">{item.productName}</h4>
               </div>
             </div>
 
@@ -63,10 +63,10 @@ export default function PriceComparisonWidget({ items, storeName }: PriceCompari
                     className={`flex items-center gap-2 rounded-xl p-2.5 border text-xs font-medium ${
                       isBestPrice
                         ? "border-emerald-300 bg-emerald-50 text-emerald-900 font-bold"
-                        : "border-gray-200 bg-white text-gray-700"
+                        : "border-line bg-white text-ink-soft"
                     }`}
                   >
-                    <span className="text-gray-500">{comp.storeName}:</span>
+                    <span className="text-ink-soft">{comp.storeName}:</span>
                     <span className={isBestPrice ? "text-emerald-700 font-extrabold" : "font-semibold"}>
                       {format(comp.price)}
                     </span>
