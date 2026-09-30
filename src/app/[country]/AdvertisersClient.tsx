@@ -2,17 +2,23 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Advertiser } from "@/lib/awin";
-import { countryFlag, countryName } from "@/lib/countries";
+import { countryName } from "@/lib/countries";
 import AdvertiserCard from "@/components/AdvertiserCard";
-import Image from "next/image";
 import Pagination from "@/components/Pagination";
 import SkeletonGrid from "@/components/SkeletonGrid";
 import type { HomeSettings } from "@/lib/db/homeSettings";
 import type { Deal } from "@/lib/deals";
+import type { Product } from "@/lib/products";
 import type { PopularShopData } from "@/lib/db/deals";
-import HomeRecentDeals from "@/components/home/HomeRecentDeals";
+import HomeHero, { type HeroTab } from "@/components/home/HomeHero";
+import HomeSection from "@/components/home/HomeSection";
+import HomeProducts from "@/components/home/HomeProducts";
+import HomeStoreDeals from "@/components/home/HomeStoreDeals";
+import HomeValueBand from "@/components/home/HomeValueBand";
+import HomeTools from "@/components/home/HomeTools";
 import HomePopularShops from "@/components/home/HomePopularShops";
 import HomeCategories from "@/components/home/HomeCategories";
+import HomeFaqs from "@/components/home/HomeFaqs";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 
 import { useSearchParams } from "next/navigation";
@@ -31,10 +37,14 @@ interface PageData {
 interface AdvertisersClientProps {
   country: string;
   initialSearch?: string;
+  /** Which hero search tab the URL asked for ("products" via `?tab=products`). */
+  initialTab?: HeroTab;
   /** Home marketing sections + hero. Optional for the focused "stores" variant. */
   homeSettings?: HomeSettings;
-  /** Newest deals for the homepage showcase. */
+  /** Newest deals for the homepage "Store deals" shelf. */
   recentDeals?: Deal[];
+  /** Products for the "Compare before you buy" row (empty hides the section). */
+  products?: Product[];
   /** Auto-populated popular shops (stores with the most deals). */
   popularShops?: PopularShopData[];
   /** "home" shows the hero + marketing sections; "stores" is a bare browsing grid. */
@@ -44,8 +54,10 @@ interface AdvertisersClientProps {
 export default function AdvertisersClient({
   country,
   initialSearch = "",
+  initialTab = "stores",
   homeSettings,
   recentDeals = [],
+  products = [],
   popularShops = [],
   variant = "home",
 }: AdvertisersClientProps) {
@@ -56,6 +68,10 @@ export default function AdvertisersClient({
   const [selectedCategory, setSelectedCategory] = useState("");
   const initialPage = parseInt(searchParams.get("page") || "1", 10);
   const [page, setPage] = useState(isNaN(initialPage) || initialPage < 1 ? 1 : initialPage);
+
+  // A product-tab search filters the comparison row server-side; the store grid
+  // stays out of the way in that mode.
+  const productMode = isHome && initialTab === "products";
 
   const [data, setData] = useState<PageData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -118,11 +134,17 @@ export default function AdvertisersClient({
         setLoading(false);
       }
     },
-    [country],
+    [country, isHome],
   );
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
+    // The home page only shows the store grid once a search is active, so skip
+    // the request entirely until then.
+    if (isHome && (productMode || (!search.trim() && !selectedCategory))) {
+      setLoading(false);
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setPage(1);
@@ -131,7 +153,7 @@ export default function AdvertisersClient({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [search, selectedCategory, load]);
+  }, [search, selectedCategory, load, isHome, productMode]);
 
   function goToPage(next: number) {
     setPage(next);
@@ -141,119 +163,116 @@ export default function AdvertisersClient({
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        {isHome ? (
-          <header className="mb-12 flex flex-col md:flex-row items-center justify-between gap-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-            <div className="w-full md:w-1/2 flex justify-center">
-              <Image
-                src="/hero-foxzil.png"
-                alt="Foxzil Deals"
-                width={500}
-                height={300}
-                className="max-w-full h-auto max-h-[300px] object-contain"
-                priority
-              />
-            </div>
-            <div className="w-full md:w-1/2 text-center md:text-left">
-              <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-                {dict.home.heroTitle}
-              </h1>
-              <p className="mt-4 text-base text-gray-500">
-                {dict.home.heroSubtitle} {countryName(country)}.
-              </p>
-            </div>
-          </header>
-        ) : (
+  // On the home page the store grid is a search result shelf: it only takes
+  // over the page once the shopper has actually searched for a store.
+  const searching = Boolean(search.trim()) && !productMode;
+  const showStoreGrid = !isHome || searching;
+
+  const storeGrid = (
+    <>
+      {error ? (
+        <div className="rounded-card border border-red-200 bg-red-50 p-8 text-center">
+          <p className="text-sm font-medium text-red-800">{dict.stores.couldntLoad}</p>
+          <p className="mt-1 text-sm text-red-600">{error}</p>
+          <button
+            onClick={() => load(search, selectedCategory, page)}
+            className="mt-4 inline-flex items-center rounded-[9px] bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-hover"
+          >
+            {dict.common.tryAgain}
+          </button>
+        </div>
+      ) : loading ? (
+        <SkeletonGrid />
+      ) : !data || data.total === 0 ? (
+        <div className="rounded-card border border-dashed border-line-strong bg-white p-12 text-center">
+          <p className="text-sm font-medium text-ink">{dict.stores.noMatchTitle}</p>
+          <p className="mt-1 text-sm text-ink-muted">{dict.stores.noMatchHint}</p>
+          {(search || selectedCategory) && (
+            <button
+              onClick={() => {
+                setSearch("");
+                setSelectedCategory("");
+              }}
+              className="mt-4 text-sm font-medium text-brand hover:text-brand-hover"
+            >
+              {dict.stores.clearFilters}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {data.advertisers.map((a) => (
+              <AdvertiserCard key={a.id} advertiser={a} country={country} />
+            ))}
+          </div>
+
+          {!isHome && (
+            <Pagination
+              page={data.page}
+              totalPages={data.totalPages}
+              total={data.total}
+              pageSize={data.pageSize}
+              onPageChange={goToPage}
+              buildHref={(p) => {
+                const base =
+                  variant === "stores"
+                    ? `/${country.toLowerCase()}/stores`
+                    : `/${country.toLowerCase()}`;
+                const ps = new URLSearchParams();
+                if (search) ps.set("search", search);
+                if (p > 1) ps.set("page", String(p));
+                const qs = ps.toString();
+                return qs ? `${base}?${qs}` : base;
+              }}
+            />
+          )}
+        </div>
+      )}
+    </>
+  );
+
+  // Focused "all stores" browsing page — no hero, no marketing sections.
+  if (!isHome) {
+    return (
+      <div className="min-h-screen bg-canvas">
+        <main className="mx-auto max-w-shell px-4 py-8 sm:px-6 lg:px-8">
           <header className="mb-8">
-            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+            <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
               {dict.stores.allStores}
             </h1>
-            <p className="mt-2 text-base text-gray-500">
+            <p className="mt-2 text-base text-ink-soft">
               {dict.stores.browseSubtitle.replace("{country}", countryName(country))}
             </p>
           </header>
-        )}
+          {storeGrid}
+        </main>
+      </div>
+    );
+  }
 
-        {error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
-            <p className="text-sm font-medium text-red-800">
-              {dict.stores.couldntLoad}
-            </p>
-            <p className="mt-1 text-sm text-red-600">{error}</p>
-            <button
-              onClick={() => load(search, selectedCategory, page)}
-              className="mt-4 inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-hover"
-            >
-              {dict.common.tryAgain}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {loading ? (
-              <SkeletonGrid />
-            ) : !data || data.total === 0 ? (
-              <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
-                <p className="text-sm font-medium text-gray-700">
-                  {dict.stores.noMatchTitle}
-                </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  {dict.stores.noMatchHint}
-                </p>
-                {(search || selectedCategory) && (
-                  <button
-                    onClick={() => {
-                      setSearch("");
-                      setSelectedCategory("");
-                    }}
-                    className="mt-4 text-sm font-medium text-accent hover:text-accent-hover"
-                  >
-                    {dict.stores.clearFilters}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                  {data.advertisers.map((a) => (
-                    <AdvertiserCard key={a.id} advertiser={a} country={country} />
-                  ))}
-                </div>
+  return (
+    <div className="min-h-screen bg-canvas">
+      <HomeHero
+        country={country}
+        initialTab={initialTab}
+        initialSearch={initialSearch}
+        showProductsTab={products.length > 0 || initialTab === "products"}
+      />
 
-                {!isHome && (
-                  <Pagination
-                    page={data.page}
-                    totalPages={data.totalPages}
-                    total={data.total}
-                    pageSize={data.pageSize}
-                    onPageChange={goToPage}
-                    buildHref={(p) => {
-                      const base = variant === "stores"
-                        ? `/${country.toLowerCase()}/stores`
-                        : `/${country.toLowerCase()}`;
-                      const ps = new URLSearchParams();
-                      if (search) ps.set("search", search);
-                      if (p > 1) ps.set("page", String(p));
-                      const qs = ps.toString();
-                      return qs ? `${base}?${qs}` : base;
-                    }}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        )}
-      </main>
-
-      {/* New Home Page Sections */}
-      {isHome && homeSettings && (
-        <>
-          <HomeRecentDeals deals={recentDeals} country={country} />
-          <HomePopularShops shops={popularShops} country={country} />
-          <HomeCategories categories={homeSettings.categories} />
-        </>
+      {showStoreGrid && (
+        <HomeSection title={dict.stores.allStores} tone="canvas">
+          {storeGrid}
+        </HomeSection>
       )}
+
+      <HomeProducts products={products} />
+      <HomeCategories categories={homeSettings?.categories} />
+      <HomePopularShops shops={popularShops} country={country} />
+      <HomeStoreDeals deals={recentDeals} country={country} />
+      <HomeValueBand country={country} />
+      <HomeTools country={country} />
+      <HomeFaqs faqs={homeSettings?.faqs ?? []} />
     </div>
   );
 }

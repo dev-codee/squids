@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #fafafa;
-  --foreground: #171717;
+  --background: #FAF9F5;
+  --foreground: #18243A;
 }
 
 body {
@@ -23,7 +23,7 @@ body {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background-color: #e5e7eb;
+  background-color: #E6E3DB;
 }
 
 .skeleton::after {
@@ -64,4 +64,13 @@ body {
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* Horizontal snap rails used by the homepage product / category rows. */
+.snap-rail {
+  scroll-snap-type: x mandatory;
+}
+
+.snap-rail > * {
+  scroll-snap-align: start;
 }

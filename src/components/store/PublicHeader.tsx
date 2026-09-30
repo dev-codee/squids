@@ -161,13 +161,13 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
     href === `/${lc}` ? pathname === `/${lc}` : pathname.startsWith(href);
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <header className="sticky top-0 z-50 border-b border-line bg-white">
       {/* Top row: logo, search, account actions */}
-      <div className="mx-auto max-w-7xl px-4 h-20 flex items-center justify-between gap-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-[72px] max-w-shell items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href={`/${lc}`} className="flex items-center gap-2 flex-shrink-0" suppressHydrationWarning>
           <Image src="/logo.png" alt="Foxzil Logo" width={32} height={32} className="object-contain" priority />
-          <span className="text-2xl font-black tracking-tight text-amber-500 hidden sm:inline">Foxzil</span>
+          <span className="hidden text-xl font-extrabold tracking-tight text-ink sm:inline">foxzil<span className="text-brand">.</span></span>
         </Link>
 
         {/* Centered Header Search Bar Pill */}
@@ -186,11 +186,11 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
                 }}
                 autoComplete="off"
                 placeholder={dict.header.searchPlaceholder}
-                className="w-full rounded-full border border-gray-300 bg-white py-3 pl-5 pr-11 text-sm text-gray-800 placeholder-gray-400 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+                className="w-full rounded-card border border-line bg-canvas py-2.5 pl-4 pr-11 text-sm text-ink outline-none transition placeholder:text-ink-muted focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/15"
               />
               <button
                 type="submit"
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-500 transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-muted transition-colors hover:text-brand"
                 aria-label="Search"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -202,11 +202,11 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
 
             {/* Live advertiser suggestions dropdown */}
             {suggestOpen && searchQuery.trim().length >= 2 && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+              <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-card border border-line bg-white shadow-card-hover">
                 {suggestLoading && suggestions.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-gray-400">Searching…</div>
+                  <div className="px-4 py-3 text-sm text-ink-muted">Searching…</div>
                 ) : suggestions.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-gray-400">No stores found.</div>
+                  <div className="px-4 py-3 text-sm text-ink-muted">No stores found.</div>
                 ) : (
                   <ul className="max-h-80 overflow-y-auto py-1">
                     {suggestions.map((a) => (
@@ -214,9 +214,9 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
                         <button
                           type="button"
                           onClick={() => selectSuggestion(a)}
-                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-amber-50"
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-brand-soft"
                         >
-                          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-[9px] border border-line bg-canvas">
                             {a.logoUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
@@ -226,17 +226,17 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
                                 loading="lazy"
                               />
                             ) : (
-                              <span className="text-sm font-semibold text-gray-400">
+                              <span className="text-sm font-semibold text-ink-muted">
                                 {a.name.charAt(0).toUpperCase()}
                               </span>
                             )}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium text-gray-800">
+                            <span className="block truncate text-sm font-medium text-ink">
                               {a.name}
                             </span>
                             {a.dealCount !== undefined && a.dealCount > 0 && (
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-ink-muted">
                                 {a.dealCount} {a.dealCount === 1 ? "offer" : "offers"}
                               </span>
                             )}
@@ -258,7 +258,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
             <button
               type="button"
               onClick={() => setCountryOpen((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-[9px] border border-line px-2.5 py-1.5 text-sm font-medium text-ink-soft transition-colors hover:border-line-strong hover:bg-canvas"
               aria-haspopup="listbox"
               aria-expanded={countryOpen}
             >
@@ -282,7 +282,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
             {countryOpen && (
               <div
                 role="listbox"
-                className="absolute right-0 mt-2 max-h-80 w-56 overflow-y-auto rounded-xl border border-gray-200 bg-white py-1 shadow-lg"
+                className="absolute right-0 mt-2 max-h-80 w-56 overflow-y-auto rounded-card border border-line bg-white py-1 shadow-card-hover"
               >
                 {regions.map((code) => {
                   const selected = code === cc;
@@ -295,8 +295,8 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
                       onClick={() => selectCountry(code)}
                       className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors ${
                         selected
-                          ? "bg-amber-50 text-amber-700 font-medium"
-                          : "text-gray-700 hover:bg-gray-50"
+                          ? "bg-brand-soft font-medium text-brand"
+                          : "text-ink-soft hover:bg-canvas"
                       }`}
                     >
                       <span className="text-base leading-none">{countryFlag(code)}</span>
@@ -320,7 +320,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
           <button
             type="button"
             title="User accounts coming soon"
-            className="cursor-default text-sm font-medium text-gray-400"
+            className="cursor-default text-sm font-medium text-ink-muted"
             aria-disabled="true"
           >
             {dict.header.signIn}
@@ -329,17 +329,17 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
       </div>
 
       {/* Bottom row: centered primary navigation */}
-      <nav className="border-t border-gray-100">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <ul className="flex items-center justify-center gap-6 sm:gap-10 py-2.5 text-sm font-medium">
+      <nav className="border-t border-line bg-white">
+        <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8">
+          <ul className="scrollbar-none flex items-center gap-6 overflow-x-auto py-3 text-sm font-medium sm:gap-8">
             {navLinks.map((link) => (
               <li key={link.label}>
                 <Link
                   href={link.href}
-                  className={`transition-colors ${
+                  className={`whitespace-nowrap transition-colors ${
                     isActive(link.href)
-                      ? "text-amber-500"
-                      : "text-gray-700 hover:text-amber-500"
+                      ? "text-brand"
+                      : "text-ink-soft hover:text-brand"
                   }`}
                 >
                   {link.label}

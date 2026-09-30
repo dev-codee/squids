@@ -13,30 +13,38 @@ interface HorizontalCouponCardProps {
   storeName: string;
   market?: string;
   merchantId?: string;
+  /** Merchant site, used for the "read current terms" links in the T&C panel. */
+  merchantUrl?: string;
 }
 
+/**
+ * Offer card: the benefit, the eligibility badge, the primary action, and a
+ * collapsible terms panel covering minimum spend, exclusions, expiry and
+ * verification. Fields we don't hold are labelled and pointed at the merchant's
+ * own terms rather than guessed at.
+ */
 export default function HorizontalCouponCard({
   coupon,
   storeName,
   market,
   merchantId,
+  merchantUrl,
 }: HorizontalCouponCardProps) {
   const dict = useDictionary();
+  const t = dict.storeV2;
   const params = useParams();
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
 
-  // Derive market & merchantId with fallbacks to route params or store name
   const routeCountry =
     (typeof params?.country === "string" ? params.country : "") || "AU";
   const routeStore = (typeof params?.store === "string" ? params.store : "") || "";
 
   const computedMarket = (market || routeCountry).toUpperCase();
   const computedMerchantId =
-    merchantId ||
-    routeStore ||
-    storeName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    merchantId || routeStore || storeName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
   // Tracked outbound URL routes through /api/outbound to associate gclid & assign network SubID
   const outboundUrl = `/api/outbound?dealId=${encodeURIComponent(coupon.id)}&slug=${encodeURIComponent(computedMerchantId)}&market=${encodeURIComponent(computedMarket)}`;
@@ -53,12 +61,12 @@ export default function HorizontalCouponCard({
     });
   };
 
-  const openMerchant = (buttonLocation: string = "coupon_card") => {
+  const openMerchant = (buttonLocation = "coupon_card") => {
     track("affiliate_click", buttonLocation);
     window.open(outboundUrl, "_blank", "noopener,noreferrer");
   };
 
-  const copyCode = (buttonLocation: string = "coupon_card") => {
+  const copyCode = (buttonLocation = "coupon_card") => {
     if (!coupon.code) return;
     navigator.clipboard
       .writeText(coupon.code)
@@ -73,178 +81,205 @@ export default function HorizontalCouponCard({
   const expiryBadge = getExpiryBadge(coupon.expiryDate);
 
   const handleReveal = () => {
-    // 1. Fire show_coupon_click
     track("show_coupon_click", "coupon_card");
-
-    // 2. Reveal code & show modal
     setRevealed(true);
     setShowModal(true);
     track("coupon_reveal", "reveal_modal");
-
-    // 3. Attempt clipboard copy
     copyCode("coupon_card");
-
-    // 4. Open outbound merchant in new tab
     openMerchant("coupon_card");
   };
 
+  // Eligibility badge shown in the card's left rail.
+  const badge = coupon.code
+    ? coupon.type === "student"
+      ? dict.cards.studentPerk
+      : coupon.type === "cashback"
+        ? dict.cards.cashbackOffer
+        : dict.common.code
+    : dict.common.deal;
+
+  const expiryText = coupon.expiryDate
+    ? new Date(coupon.expiryDate).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : dict.cards.active;
+
+  // Terms rows. Only expiry and verification are things we actually hold; the
+  // rest link out to the merchant's live terms instead of being invented.
+  const termsRows: { label: string; value: string; href?: string }[] = [
+    {
+      label: t.minimumSpend,
+      value: t.readMerchantTerms,
+      href: merchantUrl || undefined,
+    },
+    {
+      label: t.exclusions,
+      value: t.readMerchantTerms,
+      href: merchantUrl || undefined,
+    },
+    { label: t.expiry, value: expiryText },
+    {
+      label: t.verification,
+      value: coupon.verified
+        ? `${dict.cards.verified}${coupon.updatedAt ? ` · ${new Date(coupon.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}`
+        : t.readMerchantTerms,
+      href: coupon.verified ? undefined : merchantUrl || undefined,
+    },
+  ];
+
   return (
     <>
-      <div
-        className={`relative flex flex-col sm:flex-row rounded-lg border overflow-hidden shadow-sm transition hover:shadow-md group ${
-          coupon.isExclusive
-            ? "border-purple-300 bg-gradient-to-r from-purple-50/70 to-white ring-2 ring-purple-300/60 hover:border-purple-400"
-            : "border-gray-200 bg-white hover:border-emerald-300"
-        }`}
-      >
-        {coupon.isExclusive && (
-          <span className="absolute top-0 left-0 z-10 inline-flex items-center gap-1 rounded-br-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
-            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.364 1.118l1.287 3.958c.3.922-.755 1.688-1.54 1.118l-3.367-2.447a1 1 0 00-1.176 0l-3.367 2.447c-.784.57-1.838-.196-1.539-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.343 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.285-3.958z" />
-            </svg>
-            Exclusive
-          </span>
-        )}
-
-        {/* Left Section - Discount Indicator */}
-        <div className="sm:w-[15%] w-full bg-red-50/50 border-b sm:border-b-0 sm:border-r border-gray-100 flex flex-col items-center justify-center p-4 min-w-[120px]">
-          <span className="text-xl font-extrabold text-gray-800 text-center leading-tight mb-2">
-            {coupon.discount || dict.common.deal}
-          </span>
-          <span className="bg-red-100 text-red-600 text-[10px] font-bold uppercase px-2 py-0.5 rounded shadow-sm tracking-wider">
-            {coupon.code
-              ? coupon.type === "code"
-                ? dict.common.code
-                : coupon.type
-              : dict.common.deal}
-          </span>
-        </div>
-
-        {/* Middle Section - Details */}
-        <div className="flex-1 p-5 flex flex-col justify-center">
-          <h3 className="text-lg font-bold text-gray-900 leading-snug group-hover:text-emerald-700 transition-colors">
-            {coupon.title}
-          </h3>
-          <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-            {coupon.description}
-          </p>
-
-          <div className="mt-3 flex items-center gap-2">
-            {coupon.verified && (
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                {dict.cards.verified}
-              </span>
-            )}
-            {coupon.isExclusive && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-bold text-purple-700 ring-1 ring-inset ring-purple-600/20">
-                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.364 1.118l1.287 3.958c.3.922-.755 1.688-1.54 1.118l-3.367-2.447a1 1 0 00-1.176 0l-3.367 2.447c-.784.57-1.838-.196-1.539-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.343 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.285-3.958z" />
-                </svg>
-                {dict.cards.exclusive}
-              </span>
-            )}
-            {expiryBadge && (
-              <span
-                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${EXPIRY_BADGE_CLASSES[expiryBadge.tone]}`}
-              >
-                {expiryBadge.label}
+      <article className="overflow-hidden rounded-card border border-line bg-white shadow-card transition hover:shadow-card-hover">
+        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-5 sm:p-5">
+          {/* Eligibility rail */}
+          <div className="flex flex-shrink-0 items-center gap-2 sm:w-28 sm:flex-col sm:items-start">
+            <span className="inline-flex items-center rounded-md border border-line bg-canvas-sunk px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-ink-soft">
+              {badge}
+            </span>
+            {coupon.discount && (
+              <span className="text-lg font-extrabold leading-none text-ink">
+                {coupon.discount}
               </span>
             )}
           </div>
-        </div>
 
-        {/* Right Section - Action */}
-        <div className="sm:w-[25%] w-full p-5 flex flex-col items-center justify-center border-t sm:border-t-0 sm:border-l border-gray-100 min-w-[200px]">
-          {coupon.code ? (
-            <button
-              onClick={handleReveal}
-              className="w-full relative inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600 shadow-sm overflow-hidden"
-            >
-              <span className="relative z-10">
-                {copied ? dict.cards.copied : revealed ? coupon.code : dict.cards.showCouponCode}
-              </span>
-              {!revealed && (
-                <div className="absolute right-0 top-0 h-full w-8 bg-emerald-700 clip-reveal flex items-center justify-center">
-                  <span className="text-[10px]">*</span>
-                </div>
+          {/* Benefit */}
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[17px] font-bold leading-snug text-ink">
+              {coupon.title}
+            </h3>
+            {coupon.description && (
+              <p className="mt-1 line-clamp-2 text-sm text-ink-soft">
+                {coupon.description}
+              </p>
+            )}
+            {!coupon.code && (
+              <p className="mt-1 text-sm text-ink-muted">{t.noCodeNeeded}</p>
+            )}
+
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              {coupon.verified && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                  ✓ {dict.cards.verified}
+                </span>
               )}
-            </button>
-          ) : (
-            <a
-              href={outboundUrl}
-              target="_blank"
-              rel="nofollow noopener noreferrer sponsored"
-              onClick={() => track("affiliate_click", "coupon_card")}
-              className="w-full inline-flex items-center justify-center rounded-full bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600 shadow-sm"
-            >
-              {dict.cards.getDeal}
-            </a>
-          )}
-
-          <div className="mt-2 text-[11px] text-gray-500 text-center">
-            {coupon.expiryDate ? (
-              <span>
-                {dict.cards.expires}:{" "}
-                {new Date(coupon.expiryDate).toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "numeric",
-                  year: "2-digit",
-                })}
-              </span>
-            ) : (
-              <span>{dict.cards.active}</span>
-            )}
+              {coupon.isExclusive && (
+                <span className="inline-flex items-center rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand">
+                  {dict.cards.exclusive}
+                </span>
+              )}
+              {expiryBadge && (
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${EXPIRY_BADGE_CLASSES[expiryBadge.tone]}`}
+                >
+                  {expiryBadge.label}
+                </span>
+              )}
+            </div>
           </div>
-          {coupon.updatedAt && (
-            <div className="mt-0.5 text-[10px] text-gray-400 text-center">
-              {dict.cards.added}:{" "}
-              {new Date(coupon.updatedAt).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "numeric",
-                year: "2-digit",
-              })}
-            </div>
-          )}
-          <CouponVotes couponId={coupon.id} storeSlug={storeName} label={dict.cards.didThisWork} />
+
+          {/* Primary action */}
+          <div className="flex flex-shrink-0 flex-col items-stretch gap-2 sm:w-44">
+            {coupon.code ? (
+              <button
+                onClick={handleReveal}
+                className="rounded-[9px] bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+              >
+                {copied ? dict.cards.copied : revealed ? coupon.code : dict.cards.showCode}
+              </button>
+            ) : (
+              <a
+                href={outboundUrl}
+                target="_blank"
+                rel="nofollow noopener noreferrer sponsored"
+                onClick={() => track("affiliate_click", "coupon_card")}
+                className="rounded-[9px] border border-brand px-4 py-2.5 text-center text-sm font-semibold text-brand transition-colors hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+              >
+                {dict.cards.getDeal}
+              </a>
+            )}
+            <CouponVotes
+              couponId={coupon.id}
+              storeSlug={storeName}
+              label={dict.cards.didThisWork}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Code Reveal Modal */}
+        {/* Terms and conditions */}
+        <div className="border-t border-line">
+          <button
+            type="button"
+            onClick={() => setTermsOpen((v) => !v)}
+            aria-expanded={termsOpen}
+            className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-ink-soft transition-colors hover:text-ink sm:px-5"
+          >
+            {t.termsTitle}
+            <span aria-hidden className={`transition-transform ${termsOpen ? "rotate-180" : ""}`}>
+              ⌄
+            </span>
+          </button>
+
+          {termsOpen && (
+            <dl className="animate-fade-in border-t border-line bg-canvas-sunk px-4 py-3 text-sm sm:px-5">
+              {termsRows.map((row) => (
+                <div
+                  key={row.label}
+                  className="flex flex-wrap justify-between gap-2 border-b border-line py-2 last:border-0"
+                >
+                  <dt className="font-medium text-ink-soft">{row.label}</dt>
+                  <dd className="text-right text-ink">
+                    {row.href ? (
+                      <a
+                        href={row.href}
+                        target="_blank"
+                        rel="nofollow noopener noreferrer sponsored"
+                        className="text-brand underline-offset-2 hover:underline"
+                      >
+                        {row.value}
+                      </a>
+                    ) : (
+                      row.value
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      </article>
+
+      {/* Code reveal modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4">
-              <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">{dict.cards.promoCodeCopied}</h3>
-            <p className="mt-1 text-sm text-gray-500">{coupon.title}</p>
+        <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-card bg-white p-6 text-center shadow-card-hover">
+            <h3 className="text-xl font-bold text-ink">{dict.cards.promoCodeCopied}</h3>
+            <p className="mt-1 text-sm text-ink-soft">{coupon.title}</p>
 
-            <div
+            <button
+              type="button"
               onClick={() => copyCode("reveal_modal")}
-              className="my-5 rounded-xl bg-amber-50 border-2 border-dashed border-amber-300 p-4 cursor-pointer hover:bg-amber-100/60 transition group"
-              title="Click to copy code"
+              className="my-5 w-full rounded-card border-2 border-dashed border-brand-border bg-brand-soft p-4 transition hover:bg-white"
+              title={dict.cards.copyCode}
             >
-              <span className="text-2xl font-mono font-extrabold tracking-widest text-amber-900">
+              <span className="font-mono text-2xl font-extrabold tracking-widest text-ink">
                 {coupon.code}
               </span>
-              <span className="block text-xs text-amber-700 mt-1 font-sans">
-                {copied ? dict.cards.copied : "Click to copy code"}
+              <span className="mt-1 block font-sans text-xs text-brand">
+                {copied ? dict.cards.copied : dict.cards.copyCode}
               </span>
-            </div>
+            </button>
 
-            <p className="text-xs text-gray-500 mb-6">
+            <p className="mb-6 text-xs text-ink-muted">
               {dict.cards.pasteCode.replace("{store}", storeName)}
             </p>
 
             <div className="flex gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                className="flex-1 rounded-[9px] border border-line-strong px-4 py-2.5 text-sm font-semibold text-ink-soft transition hover:bg-canvas"
               >
                 {dict.cards.close}
               </button>
@@ -253,7 +288,7 @@ export default function HorizontalCouponCard({
                   setShowModal(false);
                   openMerchant("reveal_modal");
                 }}
-                className="flex-1 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 text-center"
+                className="flex-1 rounded-[9px] bg-brand px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-brand-hover"
               >
                 {dict.cards.goTo.replace("{store}", storeName)}
               </button>

@@ -7,6 +7,12 @@ import Breadcrumbs from "@/components/store/Breadcrumbs";
 import OfferList from "@/components/store/OfferList";
 import RecentlyViewedStores from "@/components/store/RecentlyViewedStores";
 import LightningDealCard from "@/components/store/LightningDealCard";
+import StoreEssentials from "@/components/store/StoreEssentials";
+import StoreProductOffers from "@/components/store/StoreProductOffers";
+import StoreInfoPanel from "@/components/store/StoreInfoPanel";
+import HowItWorks from "@/components/store/HowItWorks";
+import FaqAccordion from "@/components/store/FaqAccordion";
+import RelatedStores from "@/components/store/RelatedStores";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
 import { localeForCountry } from "@/lib/ai/languageNames";
@@ -186,15 +192,20 @@ export default async function StoreMainPage({
     },
   ];
 
+  const hasOffers =
+    store.coupons.length > 0 ||
+    store.deals.length > 0 ||
+    store.promotions.length > 0;
+
   return (
-    <div className="min-h-screen bg-[#F5F5F5] pb-16">
+    <div className="min-h-screen bg-canvas pb-16">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <StoreHeader store={store} country={params.country} />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-shell px-4 py-6 sm:px-6 lg:px-8">
         <Breadcrumbs
           items={[
             { label: "Home", href: `/${params.country}` },
@@ -202,52 +213,47 @@ export default async function StoreMainPage({
             { label: store.name },
           ]}
         />
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-          {/* Sidebar - Left Column (hidden on mobile) */}
-          <div className="hidden lg:block lg:col-span-3 space-y-6">
-            <StoreSidebar store={store} aiContent={aiContent} country={params.country} />
-            <RecentlyViewedStores
-              current={{ slug: store.slug, name: store.name, logoUrl: store.logoUrl, country: params.country }}
-            />
-          </div>
-
-          {/* Main Content - Right Column */}
-          <div className="lg:col-span-9 space-y-8">
-
-            {/* Top Header */}
-            <div className="bg-white p-6 rounded border border-gray-200 shadow-sm">
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                {pageTitle || dict.store.promoCodeTitle.replace("{store}", store.name).replace("{month}", currentMonth).replace("{year}", String(currentYear))}
+        {/* Offers on the left, merchant essentials on the right. */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="space-y-6 lg:col-span-8">
+            <header>
+              <h1 className="text-2xl font-bold tracking-tight text-ink">
+                {pageTitle ||
+                  dict.store.promoCodeTitle
+                    .replace("{store}", store.name)
+                    .replace("{month}", currentMonth)
+                    .replace("{year}", String(currentYear))}
               </h1>
+              <p className="mt-1.5 text-sm text-ink-soft">
+                {dict.storeV2.currentOffers.replace("{store}", store.name)}
+              </p>
               {pageDesc && (
-                <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-                  {pageDesc}
-                </p>
+                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{pageDesc}</p>
               )}
-            </div>
+            </header>
 
-            {/* Coupons Section — vouchers with a code */}
+            {/* Coupons — vouchers with a code */}
             {store.coupons.length > 0 && (
               <section>
-                <h2 className="text-lg font-medium text-gray-700 mb-4">
+                <h2 className="mb-3 text-base font-bold text-ink">
                   {dict.store.verifiedOffersTitle.replace("{store}", store.name)}
                 </h2>
-
                 <OfferList
                   items={store.coupons}
                   storeName={store.name}
                   market={params.country}
                   merchantId={store.slug}
+                  merchantUrl={store.websiteUrl}
                   itemLabel="coupons"
                 />
               </section>
             )}
 
-            {/* Deals Section — coupon-style offers without a code */}
+            {/* Deals — coupon-style offers without a code */}
             {store.deals.length > 0 && (
-              <section className="mt-8">
-                <h2 className="text-lg font-medium text-gray-700 mb-4">
+              <section>
+                <h2 className="mb-3 text-base font-bold text-ink">
                   {dict.store.dealsTitle.replace("{store}", store.name)}
                 </h2>
                 <OfferList
@@ -255,18 +261,19 @@ export default async function StoreMainPage({
                   storeName={store.name}
                   market={params.country}
                   merchantId={store.slug}
+                  merchantUrl={store.websiteUrl}
                   itemLabel="deals"
                 />
               </section>
             )}
 
-            {/* Promotions Section — product promotions with image/price */}
+            {/* Promotions — product promotions with image/price */}
             {store.promotions.length > 0 && (
-              <section className="mt-8">
-                <h2 className="text-lg font-medium text-gray-700 mb-4">
+              <section>
+                <h2 className="mb-3 text-base font-bold text-ink">
                   {dict.store.promotionsTitle.replace("{store}", store.name)}
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {store.promotions.map((promotion) => (
                     <LightningDealCard key={promotion.id} deal={promotion} />
                   ))}
@@ -274,26 +281,54 @@ export default async function StoreMainPage({
               </section>
             )}
 
-            {/* Empty state — advertiser exists but has no published offers yet */}
-            {store.coupons.length === 0 && store.deals.length === 0 && store.promotions.length === 0 && (
-              <div className="rounded border border-dashed border-gray-300 bg-white p-12 text-center">
-                <p className="text-sm font-semibold text-gray-700">
+            {/* Advertiser exists but has no published offers yet */}
+            {!hasOffers && (
+              <div className="rounded-card border border-dashed border-line-strong bg-white p-12 text-center">
+                <p className="text-sm font-semibold text-ink">
                   {dict.store.noOffersYet.replace("{store}", store.name)}
                 </p>
-                <p className="mt-1 text-sm text-gray-500">
+                <p className="mt-1 text-sm text-ink-muted">
                   {dict.store.couponsAppearHere}
                 </p>
               </div>
             )}
-
           </div>
+
+          <aside className="space-y-6 lg:col-span-4">
+            <StoreEssentials store={store} country={params.country} />
+            <StoreSidebar store={store} aiContent={aiContent} country={params.country} />
+            <RecentlyViewedStores
+              current={{
+                slug: store.slug,
+                name: store.name,
+                logoUrl: store.logoUrl,
+                country: params.country,
+              }}
+            />
+          </aside>
         </div>
 
-        {/* Last Verified Coupons */}
-        <LastVerifiedSection
-          verifications={verifications}
-          storeName={store.name}
-        />
+        {/* Product offers, redemption help and merchant facts run full width. */}
+        <div className="mt-8 space-y-6">
+          <StoreProductOffers products={store.products} storeName={store.name} />
+
+          {store.coupons.length > 0 && <HowItWorks />}
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <StoreInfoPanel store={store} />
+            {store.faqs.length > 0 && (
+              <FaqAccordion faqs={store.faqs} storeName={store.name} />
+            )}
+          </div>
+
+          <RelatedStores
+            stores={store.relatedStores}
+            country={params.country}
+            title={dict.storeV2.relatedTitle}
+          />
+
+          <LastVerifiedSection verifications={verifications} storeName={store.name} />
+        </div>
       </main>
     </div>
   );

@@ -18,32 +18,32 @@ export default function FaqAccordion({ faqs, storeName }: FaqAccordionProps) {
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="mb-6">
-        <h3 className="text-xl font-bold text-gray-900">
+    <div className="rounded-card border border-line bg-white p-5">
+      <div className="mb-4">
+        <h3 className="text-base font-bold text-ink">
           {dict.faqWidget.title.replace("{store}", storeName)}
         </h3>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="mt-1 text-xs text-ink-soft">
           {dict.faqWidget.subtitle.replace("{store}", storeName)}
         </p>
       </div>
 
-      <div className="divide-y divide-gray-200">
+      <div className="divide-y divide-line">
         {faqs.map((faq, idx) => {
           const isOpen = openIndex === idx;
           return (
-            <div key={idx} className="py-4">
+            <div key={idx} className="py-3">
               <button
                 onClick={() => toggle(idx)}
-                className="flex w-full items-center justify-between text-left text-base font-semibold text-gray-900 focus:outline-none"
+                className="flex w-full items-center justify-between gap-3 text-left text-sm font-semibold text-ink focus:outline-none"
               >
                 <span>{faq.question}</span>
-                <span className="ml-4 flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-canvas-sunk text-ink-muted">
                   {isOpen ? "−" : "+"}
                 </span>
               </button>
               {isOpen && (
-                <p className="mt-3 text-sm leading-relaxed text-gray-600 animate-fade-in">
+                <p className="animate-fade-in mt-2.5 text-sm leading-relaxed text-ink-soft">
                   {faq.answer}
                 </p>
               )}

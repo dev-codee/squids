@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import type { StoreData } from "@/lib/storeData";
+import { countryFlag, countryName } from "@/lib/countries";
 import { useDictionary } from "@/i18n/DictionaryProvider";
-import StarRating from "./StarRating";
 import FollowStoreButton from "./FollowStoreButton";
 
 interface StoreHeaderProps {
@@ -12,140 +12,145 @@ interface StoreHeaderProps {
   country?: string;
 }
 
+/**
+ * Store identity header: merchant name, what this page covers, the market it
+ * applies to, and the two distinct actions from the brief — "Save store"
+ * (alerts) and "Visit store" (the disclosed merchant destination).
+ *
+ * The route tabs below it stay real navigation: /coupons and /deals are
+ * separate indexed pages, so they keep their own tab strip.
+ */
 export default function StoreHeader({ store, country: countryProp }: StoreHeaderProps) {
   const dict = useDictionary();
+  const t = dict.storeV2;
   const pathname = usePathname();
   const params = useParams();
-  // Routes are /[country]/[store](/coupons|/deals) — the country segment is
-  // required, or every tab link 404s / never matches as "active".
-  const country = countryProp || (typeof params?.country === "string" ? params.country : "") || "us";
+  const country =
+    countryProp || (typeof params?.country === "string" ? params.country : "") || "us";
+  const cc = country.toUpperCase();
   const base = `/${country}/${store.slug}`;
   const currentPath = pathname || base;
 
   const tabs = [
-    { label: dict.store.tabOverview, href: base },
+    { label: t.couponsAndDeals, href: base, count: store.activeCouponsCount + store.activeDealsCount },
     { label: dict.store.tabCoupons, href: `${base}/coupons`, count: store.activeCouponsCount },
     { label: dict.store.tabDeals, href: `${base}/deals`, count: store.activeDealsCount },
   ];
 
   return (
-    <div className="bg-white border-b border-gray-200">
-      {/* Top Banner & Main Info */}
-      <div className="mx-auto max-w-7xl px-4 pt-6 pb-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-5">
-            {/* Store Logo Frame */}
-            <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
-              {store.logoUrl ? (
-                <img
-                  src={store.logoUrl}
-                  alt={`${store.name} Logo`}
-                  className="max-h-full max-w-full object-contain"
-                  onError={(e) => {
-                    // Fallback if image fails to load
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
-                />
-              ) : (
-                <span className="text-2xl font-bold text-gray-400">
-                  {store.name.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
+    <div className="border-b border-line bg-white">
+      <div className="mx-auto max-w-shell px-4 pt-6 sm:px-6 lg:px-8">
+        {/* Identity card */}
+        <div className="rounded-card border border-line bg-brand-soft/70 p-5 sm:p-6">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-card border border-line bg-white p-2.5">
+                {store.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={store.logoUrl}
+                    alt={`${store.name} logo`}
+                    className="max-h-full max-w-full object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <span className="text-xl font-bold text-ink-muted">
+                    {store.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
 
-            <div>
-              <div className="flex items-center gap-2">
-                {/* h2: the page body supplies its own h1 (SEO title/H1 per route) */}
-                <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-                  {dict.store.verifiedOffersTitle.replace("{store}", store.name)}
+              <div className="min-w-0">
+                {/* h2: each route supplies its own h1 below. */}
+                <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">
+                  {store.name}
                 </h2>
-                <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
-                  {dict.store.verifiedStore}
-                </span>
-              </div>
+                <p className="mt-0.5 text-sm font-medium text-ink-soft">
+                  {t.offersAndPrices}
+                </p>
+                <p className="mt-1 text-sm text-ink-soft">{t.checkOffer}</p>
 
-              {/* Rating, reviews & savings — only shown when data exists */}
-              <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                {store.totalReviews > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <StarRating value={store.rating} size="sm" />
-                    <span className="font-semibold text-gray-900">{store.rating}</span>
-                    <span className="text-gray-500">
-                      ({store.totalReviews.toLocaleString()} {dict.store.reviews})
-                    </span>
-                  </div>
-                )}
-                {store.avgSavings && (
-                  <>
-                    {store.totalReviews > 0 && <span className="text-gray-300">•</span>}
-                    <span className="font-medium text-emerald-600">
-                      {dict.sidebar.avgSavings}: <span className="font-bold">{store.avgSavings}</span>
-                    </span>
-                  </>
-                )}
-                <span className="font-medium text-gray-700">
-                  {dict.store.couponsCount.replace("{count}", String(store.activeCouponsCount))} · {dict.store.dealsCount.replace("{count}", String(store.activeDealsCount))}
-                </span>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-medium text-ink-soft">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-1">
+                    <span aria-hidden>{countryFlag(cc)}</span>
+                    {countryName(cc)}
+                  </span>
+                  {store.websiteUrl && (
+                    <a
+                      href={store.websiteUrl}
+                      target="_blank"
+                      rel="nofollow noopener noreferrer sponsored"
+                      className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 transition-colors hover:border-brand-border hover:text-brand"
+                    >
+                      {t.officialWebsite}
+                      <span aria-hidden>↗</span>
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col items-stretch gap-2 sm:items-end">
-            <a
-              href={store.websiteUrl}
-              target="_blank"
-              rel="nofollow noopener noreferrer sponsored"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-            >
-              {dict.store.shopDirect.replace("{store}", store.name)}
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-            <FollowStoreButton
-              store={{
-                slug: store.slug,
-                network: store.network,
-                advertiserId: store.advertiserId,
-                name: store.name,
-              }}
-              country={country}
-              compact
-            />
+            {/* Two distinct actions */}
+            <div className="flex flex-shrink-0 flex-col gap-2 sm:flex-row md:flex-col lg:flex-row">
+              <FollowStoreButton
+                store={{
+                  slug: store.slug,
+                  network: store.network,
+                  advertiserId: store.advertiserId,
+                  name: store.name,
+                }}
+                country={country}
+                compact
+                label={t.saveStore}
+              />
+              <a
+                href={store.websiteUrl}
+                target="_blank"
+                rel="nofollow noopener noreferrer sponsored"
+                className="inline-flex items-center justify-center gap-1.5 rounded-[9px] bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+              >
+                {t.visitStore}
+                <span aria-hidden>↗</span>
+              </a>
+            </div>
           </div>
         </div>
 
-        {/* Navigation Tabs — sticky so it stays reachable while scrolling long offer lists */}
-        <div className="sticky top-0 z-30 -mx-4 mt-6 flex overflow-x-auto border-b border-gray-200 bg-white px-4 scrollbar-none sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-          <nav className="-mb-px flex space-x-8">
-            {tabs.map((tab) => {
-              const isActive = currentPath === tab.href;
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  className={`inline-flex items-center gap-2 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition ${
-                    isActive
-                      ? "border-amber-500 text-amber-600 font-semibold"
-                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+        {/* Affiliate disclosure, next to the outgoing actions as the brief requires */}
+        <p className="mt-3 flex items-start gap-2 rounded-card border border-brand-border bg-brand-soft px-4 py-2.5 text-xs text-ink-soft">
+          <span aria-hidden className="text-brand">ⓘ</span>
+          {t.commissionBanner}
+        </p>
+
+        {/* Route tabs */}
+        <nav className="scrollbar-none mt-4 flex gap-6 overflow-x-auto border-b border-line">
+          {tabs.map((tab) => {
+            const isActive = currentPath === tab.href;
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                aria-current={isActive ? "page" : undefined}
+                className={`inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3 text-sm transition ${
+                  isActive
+                    ? "border-brand font-semibold text-brand"
+                    : "border-transparent font-medium text-ink-soft hover:border-line-strong hover:text-ink"
+                }`}
+              >
+                {tab.label}
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                    isActive ? "bg-brand-soft text-brand" : "bg-canvas-sunk text-ink-muted"
                   }`}
                 >
-                  {tab.label}
-                  {tab.count !== undefined && (
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        isActive ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+                  {tab.count}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );

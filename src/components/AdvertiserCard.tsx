@@ -5,7 +5,7 @@ import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 
 const RELATIONSHIP_STYLES: Record<string, string> = {
   joined: "bg-green-50 text-green-700 ring-green-600/20",
-  pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  pending: "bg-brand-soft text-brand-hover ring-brand-hover/20",
   notjoined: "bg-gray-50 text-gray-600 ring-gray-500/20",
 };
 
@@ -171,11 +171,11 @@ export default function AdvertiserCard({
       <Link href={`/${country.toLowerCase()}/${slug}`} className="block h-full">
         <div className={`relative group flex flex-col items-center justify-between rounded-xl border bg-white p-3 shadow-sm transition cursor-pointer h-28 sm:h-32 ${
           advertiser.isFlagship 
-            ? "border-amber-400 hover:border-amber-500 shadow-md hover:shadow-lg bg-amber-50/10" 
-            : "border-gray-200 hover:border-amber-300 hover:shadow-md"
+            ? "border-brand hover:border-brand shadow-md hover:shadow-lg bg-brand-soft/10" 
+            : "border-gray-200 hover:border-brand-border hover:shadow-md"
         }`}>
           {advertiser.isFlagship && (
-            <div className="absolute -top-2.5 right-2 bg-gradient-to-r from-amber-400 to-amber-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
+            <div className="absolute -top-2.5 right-2 bg-gradient-to-r from-brand to-brand text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
               FLAGSHIP
             </div>
           )}
@@ -191,7 +191,7 @@ export default function AdvertiserCard({
                 loading="lazy"
               />
             ) : (
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700 font-bold text-base shadow-inner">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-soft text-brand-hover font-bold text-base shadow-inner">
                 {advertiser.name.charAt(0).toUpperCase()}
               </div>
             )}
@@ -199,7 +199,7 @@ export default function AdvertiserCard({
 
           {/* Store Name below the image */}
           <div className="h-[32%] w-full flex items-center justify-center border-t border-gray-100 pt-1 text-center">
-            <span className="text-xs font-bold text-gray-800 truncate px-1 group-hover:text-amber-600 transition-colors">
+            <span className="text-xs font-bold text-gray-800 truncate px-1 group-hover:text-brand-hover transition-colors">
               {advertiser.name}
             </span>
           </div>

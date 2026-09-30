@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getHomeSettings } from "@/lib/db/homeSettings";
 import { getRecentDeals, getPopularShops } from "@/lib/db/deals";
+import { getProductsFromDb } from "@/lib/db/products";
+import type { Product } from "@/lib/products";
 import AdvertisersClient from "./AdvertisersClient";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
@@ -63,19 +65,34 @@ export default async function CountryHomePage({
   }
 
   const search = typeof searchParams.search === "string" ? searchParams.search : "";
+  // `?tab=products` puts the hero on the product search, and filters the
+  // "Compare before you buy" row by the same query.
+  const tab = searchParams.tab === "products" ? "products" : "stores";
   const country = rawCountry.toUpperCase();
-  const [homeSettings, recentDeals, popularShops] = await Promise.all([
+
+  const [homeSettings, recentDeals, popularShops, products] = await Promise.all([
     getHomeSettings(),
     getRecentDeals(10, country),
     getPopularShops({ minDeals: 10, limit: 8, country }),
+    // Products are optional content — an unreachable/empty collection simply
+    // hides the comparison row rather than failing the page.
+    getProductsFromDb({
+      pageSize: 6,
+      search: tab === "products" ? search : undefined,
+    })
+      .then((r) => r.products)
+      .catch(() => [] as Product[]),
   ]);
+
   return (
     <AdvertisersClient
       country={country}
       initialSearch={search}
+      initialTab={tab}
       homeSettings={homeSettings}
       recentDeals={recentDeals}
       popularShops={popularShops}
+      products={products}
     />
   );
 }

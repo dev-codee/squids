@@ -31,6 +31,8 @@ interface OfferListProps {
   storeName: string;
   market?: string;
   merchantId?: string;
+  /** Merchant site, passed through to each card's terms panel. */
+  merchantUrl?: string;
   /** Label used in the empty-filter state, e.g. "coupons" or "deals". */
   itemLabel?: string;
 }
@@ -45,6 +47,7 @@ export default function OfferList({
   storeName,
   market,
   merchantId,
+  merchantUrl,
   itemLabel = "offers",
 }: OfferListProps) {
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -80,22 +83,22 @@ export default function OfferList({
                 key={f.key}
                 type="button"
                 onClick={() => setFilter(f.key)}
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                   filter === f.key
-                    ? "bg-amber-500 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    ? "border-brand bg-brand text-white"
+                    : "border-line bg-white text-ink-soft hover:border-line-strong hover:text-ink"
                 }`}
               >
                 {f.label}
               </button>
             ))}
           </div>
-          <label className="flex items-center gap-2 text-xs text-gray-500">
+          <label className="flex items-center gap-2 text-xs text-ink-muted">
             Sort by
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+              className="rounded-[9px] border border-line bg-white px-2 py-1.5 text-xs font-medium text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             >
               {SORTS.map((s) => (
                 <option key={s.key} value={s.key}>
@@ -108,11 +111,11 @@ export default function OfferList({
       )}
 
       {visible.length === 0 ? (
-        <div className="rounded border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
+        <div className="rounded-card border border-dashed border-line-strong bg-white p-8 text-center text-sm text-ink-muted">
           No {itemLabel} match this filter.
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {visible.map((item) => (
             <HorizontalCouponCard
               key={item.id}
@@ -120,6 +123,7 @@ export default function OfferList({
               storeName={storeName}
               market={market}
               merchantId={merchantId}
+              merchantUrl={merchantUrl}
             />
           ))}
         </div>
