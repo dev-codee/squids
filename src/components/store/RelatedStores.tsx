@@ -24,13 +24,12 @@ export default function RelatedStores({ stores, country, title = "Similar stores
           >
             <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-md bg-canvas-sunk">
               {store.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={store.logoUrl}
                   alt={`${store.name} logo`}
                   className="max-h-full max-w-full object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = "none";
-                  }}
+                  loading="lazy"
                 />
               ) : (
                 <span className="text-sm font-bold text-ink-muted">

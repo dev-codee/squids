@@ -331,7 +331,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
       {/* Bottom row: centered primary navigation */}
       <nav className="border-t border-line bg-white">
         <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8">
-          <ul className="scrollbar-none flex items-center gap-6 overflow-x-auto py-3 text-sm font-medium sm:gap-8">
+          <ul className="scrollbar-none flex items-center justify-center gap-6 overflow-x-auto py-3 text-sm font-medium sm:gap-8">
             {navLinks.map((link) => (
               <li key={link.label}>
                 <Link

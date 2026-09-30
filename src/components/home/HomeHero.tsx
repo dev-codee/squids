@@ -57,7 +57,7 @@ export default function HomeHero({
     <section className="bg-canvas pt-6 sm:pt-8">
       <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8">
         <div className="overflow-hidden rounded-card border border-line bg-white">
-          <div className="grid items-stretch lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+          <div className="grid items-stretch lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             {/* Copy + search */}
             <div className="px-6 py-10 sm:px-10 sm:py-14">
               <h1 className="text-[28px] font-extrabold leading-[1.1] tracking-tight text-ink sm:text-4xl lg:text-[44px]">
@@ -128,12 +128,12 @@ export default function HomeHero({
             </div>
 
             {/* Lifestyle image */}
-            <div className="relative hidden min-h-[320px] bg-canvas-sunk lg:block">
+            <div className="relative hidden min-h-[260px] bg-canvas-sunk lg:block">
               <Image
                 src="/hero-foxzil.png"
                 alt=""
                 fill
-                sizes="(min-width: 1024px) 45vw, 0px"
+                sizes="(min-width: 1024px) 38vw, 0px"
                 className="object-cover object-center"
                 priority
               />
