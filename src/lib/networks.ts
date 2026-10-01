@@ -89,3 +89,19 @@ export function cleanAdvertiserName(name: string): string {
     .trim();
   return cleaned || name; // fallback to original if stripped completely
 }
+
+/**
+ * Canonical public store-page slug for an advertiser name.
+ *
+ * Single source of truth. Every link, the sitemap and the store page's own
+ * canonical must agree, or the sitemap advertises URLs that only 301-redirect
+ * and internal links burn a redirect on every click. Market suffixes such as
+ * "(WW)" or "- DE" are stripped first via {@link cleanAdvertiserName}, so
+ * "invideo - WW" and "invideo" resolve to the same page.
+ */
+export function storeSlug(name: string): string {
+  return cleanAdvertiserName(name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}

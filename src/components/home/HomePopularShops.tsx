@@ -2,16 +2,9 @@
 
 import Link from "next/link";
 import type { PopularShopData } from "@/lib/db/deals";
-import { cleanAdvertiserName } from "@/lib/networks";
+import { cleanAdvertiserName, storeSlug } from "@/lib/networks";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 import HomeSection from "./HomeSection";
-
-function storeSlug(name: string): string {
-  return cleanAdvertiserName(name)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
 
 /** Popular stores row — logo tiles with the live offer count. */
 export default function HomePopularShops({

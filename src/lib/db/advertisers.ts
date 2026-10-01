@@ -13,7 +13,7 @@ import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
 import { NOT_EXPIRED } from "@/lib/expiry";
 import { normalizeCountryCode, foreignCountrySignals } from "@/lib/countries";
-import { cleanAdvertiserName } from "@/lib/networks";
+import { cleanAdvertiserName, storeSlug } from "@/lib/networks";
 import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 import { CACHE_TAGS, PUBLIC_REVALIDATE } from "@/lib/cache";
 import type {
@@ -589,11 +589,7 @@ export async function ensureAdvertiserStorePage(
 
 /** Turn an advertiser name into a URL slug (lowercase, hyphenated). */
 export function slugifyAdvertiserName(name: string): string {
-  const clean = cleanAdvertiserName(name || "");
-  return clean
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+  return storeSlug(name);
 }
 
 /** Escape a string for safe use inside a RegExp. */

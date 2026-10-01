@@ -12,7 +12,7 @@ import DealModal from "@/components/admin/DealModal";
 import DiscoveredDealsModal from "@/components/admin/DiscoveredDealsModal";
 import ResearchDealsModal from "@/components/admin/ResearchDealsModal";
 import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
-import { cleanAdvertiserName } from "@/lib/networks";
+import { storeSlug } from "@/lib/networks";
 import { normalizeCountryCode } from "@/lib/countries";
 
 const PAGE_SIZE = 24;
@@ -273,11 +273,8 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
                   advertiser.region
                 );
                 const country = cc && cc !== "WW" && cc.length === 2 ? cc.toLowerCase() : "us";
-                const storeSlug = (cleanAdvertiserName(advertiser.name || "") || advertiser.name || "")
-                  .toLowerCase()
-                  .replace(/[^a-z0-9]+/g, "-")
-                  .replace(/(^-|-$)/g, "");
-                const publicStoreUrl = `/${country}/${storeSlug}`;
+                // Same helper the public store page canonicalises with.
+                const publicStoreUrl = `/${country}/${storeSlug(advertiser.name || "")}`;
 
                 return (
                   <a

@@ -7,13 +7,7 @@ import { dealDisplayTitle, dealDisplayDescription } from "@/lib/deals";
 import { localeForCountry } from "@/lib/ai/languageNames";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 import HomeSection from "./HomeSection";
-
-function storeSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+import { storeSlug } from "@/lib/networks";
 
 type Filter = "all" | "codes" | "deals" | "delivery";
 

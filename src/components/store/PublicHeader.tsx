@@ -8,14 +8,7 @@ import { countryFlag, countryName } from "@/lib/countries";
 import { REGION_CODES, REGION_COOKIE, REGION_COOKIE_MAX_AGE } from "@/lib/regions";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 import type { Advertiser } from "@/lib/awin";
-
-/** Build the public store-page slug from an advertiser name (matches AdvertiserCard). */
-function storeSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
+import { storeSlug } from "@/lib/networks";
 
 export default function PublicHeader({ country = "" }: { country?: string }) {
   const dict = useDictionary();

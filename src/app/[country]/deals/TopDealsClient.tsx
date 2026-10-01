@@ -10,6 +10,7 @@ import { useDictionary } from "@/i18n/DictionaryProvider";
 
 import { dealDisplayTitle, dealDisplayDescription } from "@/lib/deals";
 import { localeForCountry } from "@/lib/ai/languageNames";
+import { storeSlug } from "@/lib/networks";
 
 const PAGE_SIZE = 24;
 
@@ -19,13 +20,6 @@ interface PageData {
   totalPages: number;
   total: number;
   pageSize: number;
-}
-
-function storeSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 }
 
 function DealCard({ deal, country }: { deal: Deal; country: string }) {

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getDb } from "@/lib/mongodb";
 import { REGION_CODES, getSiteUrl } from "@/lib/regions";
-import { cleanAdvertiserName } from "@/lib/networks";
+import { storeSlug } from "@/lib/networks";
 
 export const revalidate = 86400; // Revalidate sitemap daily
 
@@ -83,11 +83,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const wwCodes = new Set(["ww", "global", "int", "00"]);
 
     stores.forEach((store) => {
-      const cleanName = cleanAdvertiserName(store.name || "");
-      const slug = cleanName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "") || String(store.id);
+      // Same helper the store page canonicalises with, so every sitemap URL
+      // resolves directly instead of 301-redirecting.
+      const slug = storeSlug(store.name || "") || String(store.id);
 
       const rawCountry = (store.countryCode || store.region || "us").toLowerCase();
       // WW/GLOBAL stores serve all markets — default their sitemap entry to /us

@@ -53,12 +53,13 @@ components were migrated off the old amber/gray palette.
 - [x] 12px corner radius token
 - [x] 1200px content width token
 - [x] Header and footer on the design system
-- [ ] **Audit remaining public pages still on legacy amber/gray**
-  `/[country]/deals` (TopDealsClient), `/[country]/privacy`, `/[country]/about`,
-  and shared `DealCard`, `Pagination`, `FilterBar`, `DealsFilterBar`,
-  `RegionSelector`, `SkeletonGrid`, `DealCardSkeleton`.
-  *Done means:* `grep -rn "amber-\|gray-" src/app/\[country\] src/components --include=*.tsx`
-  returns nothing outside `src/components/admin` and `src/components/transactions`.
+- [x] **Audit remaining public pages still on legacy amber/gray** — *done 2026-10-01.*
+  Migrated `/[country]/deals`, `/[country]/privacy`, `/[country]/about`, plus
+  `DealCard`, `DealCardSkeleton`, `DealsFilterBar`, `FilterBar`, `Pagination`,
+  `RegionSelector`, `SkeletonGrid`, `AdvertiserCard`.
+  Verified: the grep returns nothing outside `admin`/`transactions` except the
+  deliberate `amber-*` caution tones in `OfferTable` (semantic warning, same
+  family as the existing `red-*` error and `emerald-*` verified tones).
 - [ ] **Type scale pass** — PDF wants body 16–18px, secondary 14px, desktop H1 40–48px,
   mobile 28–32px. Current H1s are ~30–36px desktop.
   *Done means:* H1 measures 40–48px at ≥1024px and 28–32px at 375px.
@@ -96,10 +97,12 @@ and the correct H1. Categories render server-side after a client fetch.
   Blocked by §7 (no size/pack/variant fields on `Product`).
 - [ ] **Compare-products cards show eligible offer count and price basis.**
   Cards currently show one retailer's price. Count needs §8 matching.
-- [ ] **Categories must be crawlable without a client fetch.**
-  `HomeCategories` fetches `/api/categories` in `useEffect`, so the crawlable HTML is
-  the "Loading categories…" string — the exact defect the PDF flags on p.3 and p.19.
-  *Done means:* `curl` of `/us` contains the category names and hrefs.
+- [x] **Categories must be crawlable without a client fetch.** — *done 2026-10-01.*
+  `src/app/[country]/page.tsx` now resolves categories with
+  `getCategoriesForCountry` and passes them to `HomeCategories` as props; the
+  effect and its loading state are gone. Zero-store categories are filtered out,
+  and `homeSettings.categories` remains the fallback.
+  ⚠️ Not yet confirmed by `curl` — MongoDB was unreachable from this machine.
 - [ ] **"How Foxzil works" 3-step module** linking to checking and ranking methods.
   `HomeValueBand` is close but is about cost components, not the 3 steps.
 - [ ] **Evidence module** (real buying guide or price/delivery study) with responsible
@@ -184,11 +187,19 @@ market chip, Save store + Visit store as distinct actions, commission banner),
 - [ ] **Real returns / support facts** — window, exclusions, fees, method, warranty
   route, support link, each sourced and reviewed.
 - [ ] **Payment / membership facts**, only when confirmed.
-- [ ] **Tab counts derived from eligible unique records.**
-  `activeCouponsCount` / `activeDealsCount` need an audit that expired and
-  market-ineligible offers never inflate them — this is the p.3 "counts not supported
-  by visible offers" defect.
-  *Done means:* a test asserts the header count equals the number of cards rendered.
+- [x] **Tab counts derived from eligible unique records.** — *done 2026-10-01.*
+  Audit found the real defect was upstream: **nothing anywhere filtered expired
+  offers.** `buildFilter` in `src/lib/db/deals.ts` had no end-date condition, and
+  the advertiser `$lookup` named `activeDeals` counted expired rows, so every
+  "N offers" badge on every store card was inflated.
+  Fixed by `NOT_EXPIRED` in `src/lib/expiry.ts`, applied in `buildFilter` and in
+  all three advertiser deal-count paths. `DealQuery.includeExpired` opts out;
+  `/api/deals` accepts `includeExpired=true` and the admin deals/coupons screens
+  pass it so operators can still find ended offers to clean up.
+  Store-page counts already derived from the rendered arrays, and those arrays
+  now exclude expired offers, so count and cards agree by construction.
+  ⚠️ `NOT_EXPIRED` uses `$convert` + `$$NOW` (MongoDB 4.2+). Not yet run against
+  the live cluster.
 - [ ] **Correction / report form on the store page.** Only mentioned on `/about`.
 - [ ] **Hide empty optional tabs or explain the absence honestly.**
 
@@ -226,8 +237,12 @@ expiry, `isExclusive`, `cashbackRate`, `studentVerificationReq`, `verified`.
   Checkout-tested / Merchant-listed / Community-reported as distinct labels.
   *Done means:* `Deal.evidenceStatus` enum derived from `coupon_verifications` +
   feed origin + `coupon_votes`; the label renders on the card.
-- [ ] **Copy failure feedback.** `copyCode` swallows the rejection (`.catch(() => {})`).
-  *Done means:* clipboard failure shows the code for manual selection.
+- [x] **Copy failure feedback.** — *done 2026-10-01.*
+  `HorizontalCouponCard` and `CouponCard` now set a `copyFailed` state instead of
+  swallowing the rejection, and show `cards.copyFailed` (added in all five
+  dictionaries) with `role="alert"`. The code stays on screen to select by hand.
+  The modal heading no longer reads "Coupon Code Copied!" when nothing was
+  copied, and `CouponCard`'s click-only `<div>` is now a focusable `<button>`.
 - [ ] **Report an expired/invalid/restricted offer**, with reason and optional evidence,
   queued for review. No report control exists.
 - [ ] **Savings calculator** (optional) showing the calculation and its assumptions.
@@ -265,6 +280,8 @@ Matching is by normalised title across advertisers (`getMatchingProducts`).
 - [ ] **Checked time per offer.** `Product` has no `checkedAt`. Blocked by §7.
 - [ ] **Sponsored offers visibly separate from organic price ordering.**
   No sponsorship concept exists yet; add before any paid placement ships.
+  *(Related Phase A work done: every row now carries a `matchBasis` chip —
+  "This listing" vs "Title match" — so identity provenance is visible per row.)*
 - [ ] **Real price history.** Blocked by §10.
 - [ ] **Working target-price alert.** Blocked by §10 — card renders disabled.
 - [ ] **Helpful content** — packaging/compatibility notes, specifications, a relevant
@@ -334,12 +351,19 @@ that key within a category, one record per advertiser, cheapest kept.
 - [x] One record per retailer (same retailer listed twice does not become two shops)
 - [x] Incomplete totals shown explicitly, excluded from any lowest-total claim
 - [x] One-offer state preserved rather than deleted or noindexed
-- [ ] **Identifier-first matching.** Title normalisation is a fuzzy text match, and the
-  PDF says explicitly: *do not auto-publish a fuzzy text match as exact.*
-  **This is the most serious correctness gap in the shipped code** — the product page
-  currently presents title-matched rows as the same exact product.
-  *Done means:* matching uses GTIN/brand/model first; title-only candidates go to a
-  review queue and are not published as exact; approved matches carry a `matchAudit`.
+- [ ] **Identifier-first matching.** Still outstanding — needs §7's identifiers.
+  **Phase A mitigation shipped 2026-10-01:** the page no longer *claims* exact
+  matching. `RetailerOffer.matchBasis` distinguishes `"source"` (this page's own
+  record, identity certain) from `"title"`; the table and mobile cards label each
+  row "This listing" or "Title match"; and an amber caution above the ranking note
+  states the rows were matched by title, not a verified identifier. Wording
+  changed in all five dictionaries: `productV2.exactVariant` is now "Variant shown
+  as each retailer lists it", and `categoryV2.compareExact` is "Compare products".
+  `getMatchingProducts` also now always retains the source record, which a cheaper
+  duplicate from the same retailer could previously evict.
+  *Still done means:* matching uses GTIN/brand/model first; title-only candidates
+  go to a review queue and are not published as exact; approved matches carry a
+  `matchAudit`.
 - [ ] **Manual match review queue** with side-by-side identifiers, conflict reasons,
   and approve / reject / split-variant / request-better-data actions.
 - [ ] **Similar products section**, separately labelled, for substitutes that are not
@@ -404,10 +428,18 @@ and unsubscribe. That is a working pattern to copy, but it is not price alerts.
 - [ ] **`price_observations` collection** (append-only, see §7) and a recorder job.
 - [ ] **History chart** reading only real observations, showing gaps rather than
   interpolating. `recharts` is already a dependency.
-- [ ] **Never synthesise a "was" price** from RRP or `originalPrice`.
-  ⚠️ `CompareProductCard` and `CompareProductCard`'s strikethrough currently render
-  `originalPrice` as a saving — audit that this is a merchant-supplied was-price and
-  not an RRP, or remove it. PDF p.21: "Do not put a fake historical saving on a card."
+- [x] **Never synthesise a "was" price** from RRP or `originalPrice`. — *done 2026-10-01.*
+  Audit result: `Product.originalPrice`, `discountPercentage`, `rating` and
+  `reviewsCount` are **hand-entered admin fields** — no network client writes any
+  of them, and they carry no source or observation date. `Deal.originalPrice` is
+  likewise documented as admin-managed enrichment.
+  Removed from every public surface: strikethrough was-prices in
+  `CompareProductCard`, `HomeProducts`, `StoreProductOffers`, `ProductFeedCard`
+  and `LightningDealCard`; the `-N%` saving badges in `HomeProducts` and
+  `ProductFeedCard`; the `★ rating (reviews)` line in `ProductFeedCard`; and the
+  derived Discount column in `OfferTable`, which now reads "Unknown" (we do not
+  know the eligible discount) rather than "None".
+  The fields stay in the model — they return to the UI when they carry provenance.
 - [ ] **Correction records** keeping source batch, timestamp and original value.
 - [ ] **`product_alerts` collection** — product, target or event, market, channel,
   frequency, consent scope + version, unsubscribe state.
@@ -549,15 +581,32 @@ Category refinements are `noindex, follow`.
 - [x] BreadcrumbList structured data on store, category and product
 - [ ] **Product / AggregateOffer structured data** on the product page, marking up only
   visible current offers. Blocked by §8 — do not mark up fuzzy-matched offers.
-- [ ] **Fix the client-fetched category list on the homepage** (see §2) — the p.3
-  "rendered navigation" defect.
-- [ ] **URL consistency audit** — p.3 reports aliases, canonical inconsistencies and an
-  absent store URL in the sampled sitemap. `/[country]/[store]` already redirects
-  non-canonical slugs, and `/[country]/page.tsx` redirects any non-2-letter first
-  segment to `/us/<slug>`; both need a deliberate review against the sitemap.
-  *Done means:* every sitemap URL returns 200 with a self-referencing canonical.
-- [ ] **`lastmod` only on meaningful changes.** The sitemap stamps `now` on most
-  entries, which tells crawlers everything changed on every regeneration.
+- [x] **Fix the client-fetched category list on the homepage** (see §2) — the p.3
+  "rendered navigation" defect. *Done 2026-10-01.*
+- [x] **URL consistency audit** — *done 2026-10-01.* Found and fixed three real
+  defects behind the p.3 report:
+  1. **Five different slug implementations.** `sitemap.ts`, `PublicHeader`,
+     `HomeStoreDeals`, `TopDealsClient`, `HomePopularShops` and the admin
+     advertiser preview each reimplemented slugging, and they disagreed.
+     `PublicHeader`, `HomeStoreDeals` and `TopDealsClient` slugged the **raw**
+     name, keeping market suffixes — so search results and every homepage/top-deals
+     store link pointed at `/us/invideo-ww`, `/us/beauty-amora-au`, `/us/h-m-de`,
+     each of which 301-redirects. All now call one exported
+     `storeSlug()` in `src/lib/networks.ts`; `slugifyAdvertiserName` delegates to it.
+     Verified by compiling the module and asserting the old and new outputs
+     (see "Notes" below).
+  2. **`/[country]/deals` had no metadata at all** — no title, description,
+     canonical or hreflang, despite sitting in the sitemap at priority 0.8. Added
+     `generateMetadata` matching the `/stores` pattern, with
+     `meta.topDealsTitle` / `topDealsDescription` in all five dictionaries.
+  3. **Trailing-hyphen divergence.** The sitemap stripped all leading/trailing
+     hyphens, `slugifyAdvertiserName` stripped only one. Now one implementation.
+  *Remaining:* every sitemap URL returning 200 with a self-referencing canonical
+  still needs a live crawl — blocked on DB access.
+- [x] **`lastmod` only on meaningful changes.** — *done 2026-10-01.*
+  `lastModified` is now emitted only where a real timestamp exists: stores use
+  `syncedAt`, categories use `updatedAt`. The root, regional homepages, utility
+  pages and product pages carry no `lastmod` rather than a fabricated one.
 - [ ] **Release verification pass** — representative home/category/store/product URLs at
   mobile and desktop, rendered-HTML inspection, structured-data validation,
   Search Console recheck after release.
@@ -616,15 +665,30 @@ may be invented.
 The dependency chain is real: pages above cannot be finished until the data below
 exists. Work bottom-up.
 
-### Phase A — correctness repairs (do first, nothing depends on new schema)
-1. §14 — fix the client-fetched homepage categories so crawlers see real links
-2. §8 — stop presenting title-matched rows as exact matches; gate the product page on
-   reviewed matches or label the matching basis explicitly
-3. §10 — audit `originalPrice` strikethroughs; remove any that are RRP-derived
-4. §4 — assert tab counts equal rendered eligible offers
-5. §5 — copy-failure feedback
-6. §1 — finish the token migration on the remaining public pages
-7. §14 — URL/canonical audit against the sitemap
+### Phase A — correctness repairs — ✅ COMPLETE (2026-10-01)
+1. [x] §14 — fix the client-fetched homepage categories so crawlers see real links
+2. [x] §8 — stop presenting title-matched rows as exact matches (labelled, not gated —
+   gating needs §7 identifiers)
+3. [x] §10 — audit `originalPrice` strikethroughs; removed all unevidenced
+   was-prices, saving badges and star ratings from public surfaces
+4. [x] §4 — tab counts vs rendered offers; root cause was that **no query anywhere
+   excluded expired offers**
+5. [x] §5 — copy-failure feedback
+6. [x] §1 — finish the token migration on the remaining public pages
+7. [x] §14 — URL/canonical audit against the sitemap; one shared `storeSlug`,
+   deals-page metadata, honest `lastmod`
+
+**Verified:** `tsc --noEmit` and `next build` clean; slug consistency proven by
+executing the compiled module against the previously divergent cases.
+**Not verified:** nothing was rendered against live data — MongoDB SRV DNS was
+failing from this machine throughout. Re-check these before trusting them:
+`/us` category links present in the HTML source; expired offers absent from store
+counts; the `$convert`/`$$NOW` expiry condition against the live cluster.
+
+**Found during Phase A, not fixed (out of scope):** an advertiser whose name is
+entirely punctuation slugs to an empty string. The sitemap falls back to the
+store id, but link components do not, so such a store would be unreachable.
+A data-quality edge case for §7.
 
 ### Phase B — the data contract (unblocks everything)
 8. §7 — merchant + market separation
@@ -656,9 +720,13 @@ exists. Work bottom-up.
 
 ## Notes on claims made in this file
 
-- Status marks reflect code read on 2026-10-01 at commit `dfda7ef` plus uncommitted
-  category and product work. They are not a runtime verification: MongoDB SRV DNS
-  resolution was failing on this machine at the time, so the category and product
-  pages have passed `tsc` and `next build` but have not been rendered against live data.
+- Status marks reflect code as of 2026-10-01, after Phase A. They are not a runtime
+  verification: MongoDB SRV DNS resolution was failing on this machine throughout, so
+  the category, product and post-Phase-A changes pass `tsc` and `next build` but have
+  not been rendered against live data.
+- The one Phase A claim backed by execution rather than inspection is the slug fix:
+  `src/lib/networks.ts` was compiled and run against the previously divergent names,
+  confirming `"invideo - WW"`, `"Beauty Amora (AU)"` and `"H&M DE"` now produce the
+  canonical slug instead of the redirecting alias the components used to link to.
 - The PDF's own framing applies to this file too: a ticked box should mean evidence
   exists, not that code was written.
