@@ -59,14 +59,7 @@ export default function StoreProductOffers({
                 <p className="mt-1 text-xs text-ink-muted">{p.category}</p>
               )}
 
-              <p className="mt-2.5 flex items-baseline gap-2">
-                <span className="text-base font-bold text-ink">{format(p.salePrice)}</span>
-                {p.originalPrice > p.salePrice && (
-                  <span className="text-xs text-ink-muted line-through">
-                    {format(p.originalPrice)}
-                  </span>
-                )}
-              </p>
+              <p className="mt-2.5 text-base font-bold text-ink">{format(p.salePrice)}</p>
               <p className="mt-0.5 text-[11px] text-ink-muted">
                 {p.inStock ? storeName : `${storeName} · ${t.notAvailable}`}
               </p>

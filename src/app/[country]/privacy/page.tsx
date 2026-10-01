@@ -40,43 +40,43 @@ export default async function PrivacyPage({ params }: { params: { country: strin
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+      <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
         {dict.privacy.title}
       </h1>
-      <p className="mt-2 text-sm text-gray-500">Last updated: 1 September 2026</p>
+      <p className="mt-2 text-sm text-ink-soft">Last updated: 1 September 2026</p>
 
-      <div className="mt-6 space-y-8 text-base leading-relaxed text-gray-600">
+      <div className="mt-6 space-y-8 text-base leading-relaxed text-ink-soft">
         <p>{dict.privacy.intro}</p>
 
         <section>
-          <h2 className="text-lg font-semibold text-gray-900">{dict.privacy.collectTitle}</h2>
+          <h2 className="text-lg font-semibold text-ink">{dict.privacy.collectTitle}</h2>
           <p className="mt-2">{dict.privacy.collectBody}</p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-gray-900">{dict.privacy.affiliateTitle}</h2>
+          <h2 className="text-lg font-semibold text-ink">{dict.privacy.affiliateTitle}</h2>
           <p className="mt-2">{dict.privacy.affiliateBody}</p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-gray-900">{dict.privacy.cookiesTitle}</h2>
+          <h2 className="text-lg font-semibold text-ink">{dict.privacy.cookiesTitle}</h2>
           <p className="mt-2">{dict.privacy.cookiesBody}</p>
         </section>
 
         {/* Extended GDPR/ePrivacy sections */}
         <section>
-          <h2 className="text-lg font-semibold text-gray-900">Data controller</h2>
+          <h2 className="text-lg font-semibold text-ink">Data controller</h2>
           <p className="mt-2">
             The data controller for this website is <strong>Foxzil Ltd.</strong>, United Kingdom.
             For data protection enquiries contact:{" "}
-            <a href="mailto:privacy@foxzil.com" className="text-amber-600 underline hover:text-amber-700">
+            <a href="mailto:privacy@foxzil.com" className="text-brand-hover underline hover:text-brand-hover">
               privacy@foxzil.com
             </a>
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-gray-900">Third-party processors</h2>
+          <h2 className="text-lg font-semibold text-ink">Third-party processors</h2>
           <p className="mt-2">
             We use the following third-party services which may process data on our behalf:
           </p>
@@ -89,7 +89,7 @@ export default async function PrivacyPage({ params }: { params: { country: strin
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-gray-900">Data retention</h2>
+          <h2 className="text-lg font-semibold text-ink">Data retention</h2>
           <p className="mt-2">
             We retain anonymous analytics data for up to 26 months. Affiliate tracking cookies
             set by our network partners follow each network's own retention policy (typically
@@ -99,12 +99,12 @@ export default async function PrivacyPage({ params }: { params: { country: strin
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-gray-900">Your rights</h2>
+          <h2 className="text-lg font-semibold text-ink">Your rights</h2>
           <p className="mt-2">
             Under GDPR and equivalent legislation, you have the right to access, correct,
             or erase personal data we hold about you, and to object to or restrict its
             processing. To exercise these rights, email{" "}
-            <a href="mailto:privacy@foxzil.com" className="text-amber-600 underline hover:text-amber-700">
+            <a href="mailto:privacy@foxzil.com" className="text-brand-hover underline hover:text-brand-hover">
               privacy@foxzil.com
             </a>
             . We will respond within 30 days.
@@ -112,10 +112,10 @@ export default async function PrivacyPage({ params }: { params: { country: strin
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-gray-900">{dict.privacy.contactTitle}</h2>
+          <h2 className="text-lg font-semibold text-ink">{dict.privacy.contactTitle}</h2>
           <p className="mt-2">
             For general questions about this Privacy Policy, email{" "}
-            <a href="mailto:privacy@foxzil.com" className="text-amber-600 underline hover:text-amber-700">
+            <a href="mailto:privacy@foxzil.com" className="text-brand-hover underline hover:text-brand-hover">
               privacy@foxzil.com
             </a>
             . You can also control or delete cookies through your browser settings at any time.

@@ -4,20 +4,62 @@ import type { Metadata } from "next";
 import { getCategoryBySlug } from "@/lib/db/categories";
 import { getAdvertisersFromDb } from "@/lib/db/advertisers";
 import { getDealsFromDb } from "@/lib/db/deals";
-import { countryName, countryFlag } from "@/lib/countries";
+import { getProductsFromDb, type ProductSort } from "@/lib/db/products";
+import type { Product } from "@/lib/products";
+import { countryName } from "@/lib/countries";
 import AdvertiserCard from "@/components/AdvertiserCard";
 import CouponCard from "@/components/store/CouponCard";
+import Breadcrumbs from "@/components/store/Breadcrumbs";
+import CompareProductCard from "@/components/category/CompareProductCard";
+import CategoryFilters from "@/components/category/CategoryFilters";
+import CategorySort from "@/components/category/CategorySort";
+import CrawlablePagination from "@/components/category/CrawlablePagination";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
 
 export const dynamic = "force-dynamic";
 
 const COUNTRY_CODE_RE = /^[A-Za-z]{2}$/;
+const PRODUCT_PAGE_SIZE = 12;
+const DEAL_PAGE_SIZE = 12;
+
+type Tab = "products" | "deals";
+
+/** Read the listing controls out of the URL. */
+function readParams(searchParams: Record<string, string | string[] | undefined>) {
+  const str = (key: string) =>
+    typeof searchParams[key] === "string" ? (searchParams[key] as string) : undefined;
+
+  const num = (key: string) => {
+    const raw = str(key);
+    if (raw === undefined || raw === "") return undefined;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+  };
+
+  const rawSort = str("sort");
+  const sort: ProductSort =
+    rawSort === "price-asc" || rawSort === "price-desc" ? rawSort : "relevance";
+
+  const pageRaw = Number(str("page") ?? "1");
+  const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
+
+  return {
+    tab: (str("tab") === "deals" ? "deals" : "products") as Tab,
+    page,
+    sort,
+    inStockOnly: str("stock") === "1",
+    minPrice: num("min"),
+    maxPrice: num("max"),
+  };
+}
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: { country: string; slug: string };
+  searchParams: Record<string, string | string[] | undefined>;
 }): Promise<Metadata> {
   if (!COUNTRY_CODE_RE.test(params.country)) return {};
   const country = params.country.toUpperCase();
@@ -31,7 +73,8 @@ export async function generateMetadata({
   ]);
   if (!category) return {};
 
-  const translatedCategoryName = (dict.categoryNames as Record<string, string>)[category.name] ?? category.name;
+  const translatedCategoryName =
+    (dict.categoryNames as Record<string, string>)[category.name] ?? category.name;
 
   const [advertisersResult, dealsResult] = await Promise.all([
     getAdvertisersFromDb({ country, category: category.name, pageSize: 1 }),
@@ -41,6 +84,7 @@ export async function generateMetadata({
     (advertisersResult?.advertisers?.length ?? 0) === 0 &&
     (dealsResult?.deals?.length ?? 0) === 0;
 
+  const basePath = `/${params.country.toLowerCase()}/category/${slug}`;
   const hreflang: Record<string, string> = {};
   for (const code of REGION_CODES) {
     const r = getRegionConfig(code);
@@ -48,172 +92,320 @@ export async function generateMetadata({
   }
   hreflang["x-default"] = `${siteUrl}/us/category/${slug}`;
 
+  // The unfiltered category is the canonical page. Sort/filter/page combinations
+  // are navigable but must not spawn duplicate crawl paths of their own.
+  const { tab, page, sort, inStockOnly, minPrice, maxPrice } = readParams(searchParams);
+  const isRefined =
+    sort !== "relevance" || inStockOnly || minPrice !== undefined || maxPrice !== undefined;
+
   return {
-    title: dict.meta.categoryTitle.replace("{category}", translatedCategoryName).replace("{country}", name),
-    description: dict.meta.categoryDescription.replace("{category}", translatedCategoryName).replace("{country}", name),
+    title: dict.meta.categoryTitle
+      .replace("{category}", translatedCategoryName)
+      .replace("{country}", name),
+    description: dict.meta.categoryDescription
+      .replace("{category}", translatedCategoryName)
+      .replace("{country}", name),
     alternates: {
-      canonical: `${siteUrl}/${params.country.toLowerCase()}/category/${slug}`,
+      canonical: `${siteUrl}${basePath}`,
       languages: hreflang,
     },
-    robots: isEmpty ? { index: false, follow: true } : { index: true, follow: true },
+    robots:
+      isEmpty || isRefined
+        ? { index: false, follow: true }
+        : { index: true, follow: true },
+    other: page > 1 || tab === "deals" ? { "foxzil-view": `${tab}-${page}` } : {},
   };
 }
 
 export default async function CategoryDetailPage({
   params,
+  searchParams,
 }: {
   params: { country: string; slug: string };
+  searchParams: Record<string, string | string[] | undefined>;
 }) {
   const country = params.country.toUpperCase();
+  const lc = params.country.toLowerCase();
   const slug = params.slug;
 
   const [category, dict] = await Promise.all([
     getCategoryBySlug(slug),
     getDictionary(country),
   ]);
-  if (!category) {
-    notFound();
-  }
+  if (!category) notFound();
 
-  // Fetch advertisers matching category & country
-  const advertisersResult = await getAdvertisersFromDb({
-    country,
-    category: category.name,
-    pageSize: 48,
-  });
+  const t = dict.categoryV2;
+  const { tab, page, sort, inStockOnly, minPrice, maxPrice } = readParams(searchParams);
+  const basePath = `/${lc}/category/${slug}`;
 
-  // Fetch deals matching category & country
-  const dealsResult = await getDealsFromDb({
-    country,
-    search: category.name,
-    pageSize: 24,
-  });
+  /** Rebuild the current URL with one or more params changed. */
+  const buildHref = (changes: Record<string, string | number | null>) => {
+    const next = new URLSearchParams();
+    const carry: Record<string, string | undefined> = {
+      tab: tab === "deals" ? "deals" : undefined,
+      sort: sort !== "relevance" ? sort : undefined,
+      stock: inStockOnly ? "1" : undefined,
+      min: minPrice !== undefined ? String(minPrice) : undefined,
+      max: maxPrice !== undefined ? String(maxPrice) : undefined,
+      page: page > 1 ? String(page) : undefined,
+      ...Object.fromEntries(
+        Object.entries(changes).map(([k, v]) => [k, v === null ? undefined : String(v)]),
+      ),
+    };
+    for (const [k, v] of Object.entries(carry)) {
+      if (v !== undefined && v !== "") next.set(k, v);
+    }
+    const qs = next.toString();
+    return qs ? `${basePath}?${qs}` : basePath;
+  };
 
+  const [productsResult, advertisersResult, dealsResult] = await Promise.all([
+    // Products are optional content — an empty or unreachable collection just
+    // leaves the compare tab empty rather than failing the page.
+    getProductsFromDb({
+      category: category.name,
+      page: tab === "products" ? page : 1,
+      pageSize: PRODUCT_PAGE_SIZE,
+      inStockOnly,
+      minPrice,
+      maxPrice,
+      sort,
+    }).catch(() => ({
+      products: [] as Product[],
+      page: 1,
+      pageSize: PRODUCT_PAGE_SIZE,
+      total: 0,
+      totalPages: 1,
+    })),
+    getAdvertisersFromDb({ country, category: category.name, pageSize: 12 }),
+    getDealsFromDb({
+      country,
+      search: category.name,
+      page: tab === "deals" ? page : 1,
+      pageSize: DEAL_PAGE_SIZE,
+    }),
+  ]);
+
+  const products = productsResult.products;
   const advertisers = advertisersResult?.advertisers || [];
   const deals = dealsResult?.deals || [];
+  const dealTotal = dealsResult?.total ?? deals.length;
+  const dealTotalPages = Math.max(1, Math.ceil(dealTotal / DEAL_PAGE_SIZE));
 
   const siteUrl = getSiteUrl();
-  const translatedCategoryName = (dict.categoryNames as Record<string, string>)[category.name] ?? category.name;
+  const translatedCategoryName =
+    (dict.categoryNames as Record<string, string>)[category.name] ?? category.name;
+
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: dict.header.home, item: `${siteUrl}/${country.toLowerCase()}` },
-      { "@type": "ListItem", position: 2, name: dict.categories.allCategories, item: `${siteUrl}/${country.toLowerCase()}/categories` },
-      { "@type": "ListItem", position: 3, name: translatedCategoryName, item: `${siteUrl}/${country.toLowerCase()}/category/${category.slug}` },
+      { "@type": "ListItem", position: 1, name: dict.header.home, item: `${siteUrl}/${lc}` },
+      { "@type": "ListItem", position: 2, name: dict.categories.allCategories, item: `${siteUrl}/${lc}/categories` },
+      { "@type": "ListItem", position: 3, name: translatedCategoryName, item: `${siteUrl}${basePath}` },
     ],
   };
 
+  const hasFilters = inStockOnly || minPrice !== undefined || maxPrice !== undefined;
+  const countLabel = (n: number, one: string, many: string) =>
+    n === 1 ? one : many.replace("{count}", String(n));
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "products", label: t.tabProducts },
+    { key: "deals", label: t.tabDeals },
+  ];
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-      {/* Category Header Hero */}
-      <div className="mb-10 rounded-3xl border border-gray-200 bg-gradient-to-br from-white to-accent-soft/30 p-8 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">
-                  {countryFlag(country)} {countryName(country)}
-                </span>
-                <span className="text-xs text-gray-400 font-mono">/{category.slug}</span>
-              </div>
-              <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-gray-900">
-                {dict.categories.promoCodesDeals.replace("{category}", translatedCategoryName)}
-              </h1>
-            </div>
-          </div>
+    <div className="min-h-screen bg-canvas pb-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
 
-          <Link
-            href={`/${country.toLowerCase()}/categories`}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-accent hover:text-accent-hover self-start sm:self-auto"
-          >
-            ← {dict.categories.allCategories}
-          </Link>
-        </div>
-        {category.description && (
-          <p className="mt-4 text-sm text-gray-600 max-w-3xl leading-relaxed">
-            {category.description}
-          </p>
-        )}
-      </div>
+      <div className="mx-auto max-w-shell px-4 py-6 sm:px-6 lg:px-8">
+        <Breadcrumbs
+          items={[
+            { label: dict.header.home, href: `/${lc}` },
+            { label: dict.categories.allCategories, href: `/${lc}/categories` },
+            { label: translatedCategoryName },
+          ]}
+        />
 
-      {/* Matching Stores Section */}
-      <section className="mb-12">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
-            {dict.categories.storesInCountry
-              .replace("{category}", translatedCategoryName)
-              .replace("{country}", countryName(country))}
-          </h2>
-          <span className="text-xs font-medium text-gray-500">
-            {dict.categories.storesAvailable.replace("{count}", String(advertisers.length))}
-          </span>
-        </div>
+        {/* Title and buying context */}
+        <header className="mt-2">
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+            {t.pageTitle.replace("{category}", translatedCategoryName)}
+          </h1>
+          <p className="mt-2 max-w-2xl text-base text-ink-soft">{t.pageSubtitle}</p>
+          {category.description && (
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-soft">
+              {category.description}
+            </p>
+          )}
+        </header>
 
-        {advertisers.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
-            {dict.categories.noStores
-              .replace("{category}", translatedCategoryName)
-              .replace("{country}", countryName(country))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {advertisers.map((advertiser) => (
-              <AdvertiserCard
-                key={advertiser.id}
-                advertiser={advertiser}
-                country={country}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Active Deals Section */}
-      {deals.length > 0 && (
-        <section>
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">
-              {dict.categories.latestDeals.replace("{category}", translatedCategoryName)}
-            </h2>
-            <span className="text-xs font-medium text-gray-500">
-              {dict.categories.activePromotions.replace("{count}", String(deals.length))}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {deals.map((deal) => {
-              const couponItem = {
-                id: String(deal.id),
-                title: deal.title,
-                code: deal.code,
-                discount: deal.discountText || "",
-                type: deal.subtype || "code",
-                description: deal.description || "",
-                verified: false,
-                expiryDate: deal.endDate,
-                updatedAt: deal.syncedAt ? new Date(deal.syncedAt).toISOString() : null,
-                isExclusive: deal.isExclusive,
-                cashbackRate: deal.cashbackRate || undefined,
-                studentVerificationReq: deal.studentVerificationReq || undefined,
-                affiliateUrl: deal.trackingUrl || undefined,
-              };
-
+        {/* Tabs + disclosure */}
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div role="tablist" aria-label={translatedCategoryName} className="flex gap-2">
+            {tabs.map((item) => {
+              const active = tab === item.key;
               return (
-                <CouponCard
-                  key={deal.id}
-                  coupon={couponItem}
-                  storeName={deal.advertiser?.name || category.name}
-                  market={params.country}
-                  merchantId={deal.advertiser?.id ? String(deal.advertiser.id) : undefined}
-                />
+                <Link
+                  key={item.key}
+                  href={buildHref({ tab: item.key === "products" ? null : item.key, page: null })}
+                  role="tab"
+                  aria-selected={active}
+                  className={`rounded-[9px] border px-5 py-2.5 text-sm font-semibold transition-colors ${
+                    active
+                      ? "border-brand bg-brand text-white"
+                      : "border-line bg-white text-ink-soft hover:border-line-strong hover:text-ink"
+                  }`}
+                >
+                  {item.label}
+                </Link>
               );
             })}
           </div>
+          <p className="text-xs text-ink-muted">{t.disclosure}</p>
+        </div>
 
+        {/* Listing */}
+        <div
+          className={`mt-6 gap-6 ${
+            tab === "products" ? "grid lg:grid-cols-[240px_minmax(0,1fr)]" : "block"
+          }`}
+        >
+          {tab === "products" && <CategoryFilters />}
+
+          <div>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-ink">
+                  {tab === "products" ? t.compareExact : t.tabDeals}
+                </h2>
+                <p className="mt-0.5 text-sm text-ink-muted">
+                  {tab === "products"
+                    ? countLabel(productsResult.total, t.oneResult, t.resultsCount)
+                    : countLabel(dealTotal, t.oneDeal, t.dealsCount)}
+                </p>
+              </div>
+              {tab === "products" && products.length > 0 && <CategorySort />}
+            </div>
+
+            {tab === "products" ? (
+              products.length === 0 ? (
+                <div className="rounded-card border border-dashed border-line-strong bg-white p-12 text-center">
+                  <p className="text-sm font-medium text-ink">{t.noProducts}</p>
+                  {hasFilters && (
+                    <Link
+                      href={buildHref({ stock: null, min: null, max: null, page: null })}
+                      className="mt-3 inline-block text-sm font-semibold text-brand hover:underline"
+                    >
+                      {t.clearFilters}
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {products.map((product) => (
+                      <CompareProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
+                  <CrawlablePagination
+                    page={productsResult.page}
+                    totalPages={productsResult.totalPages}
+                    buildHref={(p) => buildHref({ page: p > 1 ? p : null })}
+                    previousLabel={t.previous}
+                    nextLabel={t.next}
+                  />
+                </>
+              )
+            ) : deals.length === 0 ? (
+              <div className="rounded-card border border-dashed border-line-strong bg-white p-12 text-center text-sm text-ink-muted">
+                {t.noDeals}
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {deals.map((deal) => (
+                    <CouponCard
+                      key={deal.id}
+                      coupon={{
+                        id: String(deal.id),
+                        title: deal.title,
+                        code: deal.code,
+                        discount: deal.discountText || "",
+                        type: deal.subtype || "code",
+                        description: deal.description || "",
+                        verified: false,
+                        expiryDate: deal.endDate,
+                        updatedAt: deal.syncedAt
+                          ? new Date(deal.syncedAt).toISOString()
+                          : null,
+                        isExclusive: deal.isExclusive,
+                        cashbackRate: deal.cashbackRate || undefined,
+                        studentVerificationReq: deal.studentVerificationReq || undefined,
+                        affiliateUrl: deal.trackingUrl || undefined,
+                      }}
+                      storeName={deal.advertiser?.name || category.name}
+                      market={params.country}
+                      merchantId={
+                        deal.advertiser?.id ? String(deal.advertiser.id) : undefined
+                      }
+                    />
+                  ))}
+                </div>
+                <CrawlablePagination
+                  page={page}
+                  totalPages={dealTotalPages}
+                  buildHref={(p) => buildHref({ page: p > 1 ? p : null })}
+                  previousLabel={t.previous}
+                  nextLabel={t.next}
+                />
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Prefer a store? */}
+        {advertisers.length > 0 && (
+          <section className="mt-10">
+            <div className="mb-4 flex items-end justify-between gap-4">
+              <h2 className="text-lg font-bold text-ink">{t.preferStore}</h2>
+              <Link
+                href={`/${lc}/stores`}
+                className="text-sm font-medium text-ink-soft transition-colors hover:text-brand"
+              >
+                {t.allStores} <span aria-hidden>→</span>
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {advertisers.map((advertiser) => (
+                <AdvertiserCard
+                  key={advertiser.id}
+                  advertiser={advertiser}
+                  country={country}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* How we compare */}
+        <section className="mt-10 flex flex-col gap-3 rounded-card border border-brand-border bg-brand-soft px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-ink">{t.howWeCompare}</h2>
+            <p className="mt-0.5 text-sm text-ink-soft">{t.howWeCompareBody}</p>
+          </div>
+          <Link
+            href={`/${lc}/about`}
+            className="flex-shrink-0 text-sm font-semibold text-brand hover:underline"
+          >
+            {t.viewMethod} <span aria-hidden>→</span>
+          </Link>
         </section>
-      )}
+      </div>
     </div>
   );
 }

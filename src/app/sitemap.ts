@@ -15,12 +15,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
   const entries: MetadataRoute.Sitemap = [];
 
-  const now = new Date();
+  // `lastmod` is only emitted where a real change timestamp exists. Stamping
+  // "now" on every regeneration tells crawlers the whole site changed each time,
+  // which makes the signal worthless.
 
   // 1. Root Homepage
   entries.push({
     url: siteUrl,
-    lastModified: now,
     changeFrequency: "daily",
     priority: 1.0,
   });
@@ -29,7 +30,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   REGION_CODES.forEach((code: string) => {
     entries.push({
       url: `${siteUrl}/${code.toLowerCase()}`,
-      lastModified: now,
       changeFrequency: "daily",
       priority: 0.9,
     });
@@ -39,9 +39,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   REGION_CODES.forEach((code: string) => {
     const c = code.toLowerCase();
     entries.push(
-      { url: `${siteUrl}/${c}/stores`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
-      { url: `${siteUrl}/${c}/deals`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
-      { url: `${siteUrl}/${c}/categories`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+      { url: `${siteUrl}/${c}/stores`, changeFrequency: "weekly", priority: 0.7 },
+      { url: `${siteUrl}/${c}/deals`, changeFrequency: "daily", priority: 0.8 },
+      { url: `${siteUrl}/${c}/categories`, changeFrequency: "weekly", priority: 0.7 },
     );
   });
 
@@ -51,7 +51,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const categories = await db
       .collection("categories")
       .find({})
-      .project({ _id: 0, slug: 1 })
+      .project({ _id: 0, slug: 1, updatedAt: 1 })
       .toArray();
 
     REGION_CODES.forEach((code: string) => {
@@ -59,7 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         if (cat.slug) {
           entries.push({
             url: `${siteUrl}/${code.toLowerCase()}/category/${cat.slug}`,
-            lastModified: now,
+            ...(cat.updatedAt ? { lastModified: new Date(cat.updatedAt) } : {}),
             changeFrequency: "weekly",
             priority: 0.6,
           });
@@ -98,13 +98,37 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       entries.push({
         url: `${siteUrl}/${validCountry}/${slug}`,
-        lastModified: store.syncedAt ? new Date(store.syncedAt) : now,
+        ...(store.syncedAt ? { lastModified: new Date(store.syncedAt) } : {}),
         changeFrequency: "weekly",
         priority: 0.8,
       });
     });
   } catch (err) {
     console.error("[sitemap] Failed to load stores for sitemap:", err);
+  }
+
+  // 6. Product comparison pages. One canonical entry per product, on the
+  //    default market — region variants are reachable via hreflang.
+  try {
+    const db = await getDb();
+    const products = await db
+      .collection("products")
+      .find({})
+      .project({ _id: 0, id: 1 })
+      .limit(5000)
+      .toArray();
+
+    products.forEach((product) => {
+      if (typeof product.id === "number") {
+        entries.push({
+          url: `${siteUrl}/us/product/${product.id}`,
+          changeFrequency: "daily",
+          priority: 0.6,
+        });
+      }
+    });
+  } catch (err) {
+    console.error("[sitemap] Failed to load products for sitemap:", err);
   }
 
   return entries;

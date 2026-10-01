@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getCategoriesForCountry } from "@/lib/db/categories";
 import { countryName, countryFlag } from "@/lib/countries";
+import Breadcrumbs from "@/components/store/Breadcrumbs";
+import CategorySearch from "@/components/category/CategorySearch";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
 
@@ -39,68 +41,90 @@ export async function generateMetadata({
 
 export default async function PublicCategoriesPage({
   params,
+  searchParams,
 }: {
   params: { country: string };
+  searchParams: Record<string, string | string[] | undefined>;
 }) {
   const country = params.country.toUpperCase();
-  const [categories, dict] = await Promise.all([
-    getCategoriesForCountry(country),
+  const lc = params.country.toLowerCase();
+  const search =
+    typeof searchParams.q === "string" ? searchParams.q.trim() : "";
+
+  const [allCategories, dict] = await Promise.all([
+    getCategoriesForCountry(country, search ? { search } : undefined),
     getDictionary(country),
   ]);
+  const t = dict.categoryV2;
+
+  // Only publish categories that actually have something behind them — empty
+  // navigation stubs are worse than no entry at all.
+  const categories = allCategories.filter((cat) => (cat.storeCount ?? 0) > 0);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      {/* Header Banner */}
-      <div className="mb-10 text-center sm:text-left">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
-          {countryFlag(country)} {countryName(country)} {dict.categories.catalog}
-        </span>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
-          {dict.categories.browseTitle}
-        </h1>
-        <p className="mt-2 text-base text-gray-600 max-w-2xl">
-          {dict.categories.browseSubtitle}
-        </p>
-      </div>
+    <div className="min-h-screen bg-canvas pb-16">
+      <div className="mx-auto max-w-shell px-4 py-6 sm:px-6 lg:px-8">
+        <Breadcrumbs
+          items={[
+            { label: dict.header.home, href: `/${lc}` },
+            { label: dict.categories.allCategories },
+          ]}
+        />
 
-      {/* Categories Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {categories.map((cat) => (
-          <Link
-            key={cat.slug}
-            href={`/${country.toLowerCase()}/category/${cat.slug}`}
-            className="group flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-accent/40 hover:shadow-md"
-          >
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-accent bg-accent-soft px-2.5 py-1 rounded-md">
-                  {dict.categories.category}
+        <header className="mt-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs font-medium text-ink-soft">
+            {countryFlag(country)} {countryName(country)}
+          </span>
+          <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+            {t.directoryTitle}
+          </h1>
+          <p className="mt-2 max-w-2xl text-base text-ink-soft">
+            {t.directorySubtitle.replace("{country}", countryName(country))}
+          </p>
+          <CategorySearch />
+        </header>
+
+        {categories.length === 0 ? (
+          <div className="mt-8 rounded-card border border-dashed border-line-strong bg-white p-12 text-center">
+            <p className="text-sm font-medium text-ink">{t.noCategories}</p>
+            {search && (
+              <Link
+                href={`/${lc}/categories`}
+                className="mt-3 inline-block text-sm font-semibold text-brand hover:underline"
+              >
+                {t.clearFilters}
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {categories.map((cat) => (
+              <Link
+                key={cat.slug}
+                href={`/${lc}/category/${cat.slug}`}
+                className="group flex flex-col rounded-card border border-line bg-white p-5 transition hover:border-brand-border hover:shadow-card"
+              >
+                <span
+                  aria-hidden
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-canvas-sunk text-xl transition-colors group-hover:bg-brand-soft"
+                >
+                  {cat.icon || "🏷️"}
                 </span>
-                {cat.isFeatured && (
-                  <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                    {dict.categories.featured}
-                  </span>
+                <h2 className="mt-3 text-base font-bold text-ink group-hover:text-brand">
+                  {(dict.categoryNames as Record<string, string>)[cat.name] ?? cat.name}
+                </h2>
+                {cat.description && (
+                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-soft">
+                    {cat.description}
+                  </p>
                 )}
-              </div>
-
-              <h3 className="mt-4 text-lg font-bold text-gray-900 group-hover:text-accent transition">
-                {cat.name}
-              </h3>
-              {cat.description && (
-                <p className="mt-1 text-xs text-gray-500 line-clamp-2">
-                  {cat.description}
-                </p>
-              )}
-            </div>
-
-            <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4 text-xs font-medium text-gray-500">
-              <span>{dict.categories.storesCount.replace("{count}", String(cat.storeCount ?? 0))}</span>
-              <span className="flex items-center gap-1 text-accent group-hover:text-accent-hover font-semibold">
-                {dict.categories.exploreDeals} <span aria-hidden>→</span>
-              </span>
-            </div>
-          </Link>
-        ))}
+                <span className="mt-auto pt-4 text-xs font-medium text-ink-muted">
+                  {cat.storeCount} {t.storesLabel}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

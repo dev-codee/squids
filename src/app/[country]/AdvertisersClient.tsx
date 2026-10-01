@@ -17,7 +17,7 @@ import HomeStoreDeals from "@/components/home/HomeStoreDeals";
 import HomeValueBand from "@/components/home/HomeValueBand";
 import HomeTools from "@/components/home/HomeTools";
 import HomePopularShops from "@/components/home/HomePopularShops";
-import HomeCategories from "@/components/home/HomeCategories";
+import HomeCategories, { type HomeCategoryTile } from "@/components/home/HomeCategories";
 import HomeFaqs from "@/components/home/HomeFaqs";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 
@@ -47,6 +47,8 @@ interface AdvertisersClientProps {
   products?: Product[];
   /** Auto-populated popular shops (stores with the most deals). */
   popularShops?: PopularShopData[];
+  /** Server-resolved category tiles for the "Shop by category" row. */
+  categories?: HomeCategoryTile[];
   /** "home" shows the hero + marketing sections; "stores" is a bare browsing grid. */
   variant?: "home" | "stores";
 }
@@ -59,6 +61,7 @@ export default function AdvertisersClient({
   recentDeals = [],
   products = [],
   popularShops = [],
+  categories = [],
   variant = "home",
 }: AdvertisersClientProps) {
   const isHome = variant === "home";
@@ -266,8 +269,12 @@ export default function AdvertisersClient({
         </HomeSection>
       )}
 
-      <HomeProducts products={products} />
-      <HomeCategories categories={homeSettings?.categories} />
+      <HomeProducts products={products} country={country} />
+      <HomeCategories
+        categories={categories}
+        fallback={homeSettings?.categories}
+        country={country}
+      />
       <HomePopularShops shops={popularShops} country={country} />
       <HomeStoreDeals deals={recentDeals} country={country} />
       <HomeValueBand country={country} />

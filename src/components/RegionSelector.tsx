@@ -36,7 +36,7 @@ export default function RegionSelector({
 
 
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white py-1.5 pl-3 pr-1.5 text-sm text-gray-600 shadow-card">
+    <div className="inline-flex items-center gap-2 rounded-full border border-line bg-white py-1.5 pl-3 pr-1.5 text-sm text-ink-soft shadow-card">
       {/* globe icon */}
       <svg
         width="16"
@@ -45,14 +45,14 @@ export default function RegionSelector({
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
-        className="text-gray-400"
+        className="text-ink-muted"
         aria-hidden
       >
         <circle cx="12" cy="12" r="9" />
         <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
       </svg>
 
-      <span className="text-gray-500">
+      <span className="text-ink-soft">
         {detecting ? "Detecting your region…" : "Showing advertisers for"}
       </span>
 

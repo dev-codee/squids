@@ -11,6 +11,7 @@
 
 import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
+import { NOT_EXPIRED } from "@/lib/expiry";
 import { normalizeCountryCode, foreignCountrySignals } from "@/lib/countries";
 import { cleanAdvertiserName } from "@/lib/networks";
 import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
@@ -317,6 +318,8 @@ async function getAdvertisersFromDbUncached(
                 },
               },
             },
+            // An expired offer must not keep a store listed or inflate its count.
+            { $match: NOT_EXPIRED },
           ],
           as: "activeDeals",
         },
@@ -349,6 +352,7 @@ async function getAdvertisersFromDbUncached(
 
       const dealFilter: Record<string, unknown> = {
         "advertiser.id": idMatch,
+        ...NOT_EXPIRED,
       };
       if (doc.network) {
         dealFilter.network = doc.network;
@@ -420,6 +424,7 @@ async function getShowcaseAdvertisersUncached(
                 },
               },
             },
+            { $match: NOT_EXPIRED },
             { $count: "n" },
           ],
           as: "dealAgg",

@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getHomeSettings } from "@/lib/db/homeSettings";
+import { getCategoriesForCountry } from "@/lib/db/categories";
 import { getRecentDeals, getPopularShops } from "@/lib/db/deals";
 import { getProductsFromDb } from "@/lib/db/products";
 import type { Product } from "@/lib/products";
@@ -70,7 +71,7 @@ export default async function CountryHomePage({
   const tab = searchParams.tab === "products" ? "products" : "stores";
   const country = rawCountry.toUpperCase();
 
-  const [homeSettings, recentDeals, popularShops, products] = await Promise.all([
+  const [homeSettings, recentDeals, popularShops, products, categories] = await Promise.all([
     getHomeSettings(),
     getRecentDeals(10, country),
     getPopularShops({ minDeals: 10, limit: 8, country }),
@@ -82,7 +83,20 @@ export default async function CountryHomePage({
     })
       .then((r) => r.products)
       .catch(() => [] as Product[]),
+    // Resolved here so the category links are in the crawlable HTML rather than
+    // arriving after a client-side fetch.
+    getCategoriesForCountry(country).catch(() => []),
   ]);
+
+  const categoryTiles = categories
+    .filter((c) => (c.storeCount ?? 0) > 0)
+    .slice(0, 12)
+    .map((c) => ({
+      name: c.name,
+      slug: c.slug,
+      icon: c.icon,
+      storeCount: c.storeCount,
+    }));
 
   return (
     <AdvertisersClient
@@ -93,6 +107,7 @@ export default async function CountryHomePage({
       recentDeals={recentDeals}
       popularShops={popularShops}
       products={products}
+      categories={categoryTiles}
     />
   );
 }

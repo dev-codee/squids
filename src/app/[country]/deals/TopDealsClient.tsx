@@ -39,10 +39,10 @@ function DealCard({ deal, country }: { deal: Deal; country: string }) {
   return (
     <Link
       href={`/${country.toLowerCase()}/${slug}`}
-      className="group flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md"
+      className="group flex h-full flex-col rounded-2xl border border-line bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-border hover:shadow-md"
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-canvas">
           {deal.advertiser.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -52,13 +52,13 @@ function DealCard({ deal, country }: { deal: Deal; country: string }) {
               loading="lazy"
             />
           ) : (
-            <span className="text-base font-semibold text-gray-400">
+            <span className="text-base font-semibold text-ink-muted">
               {deal.advertiser.name.charAt(0).toUpperCase()}
             </span>
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-gray-900">
+          <p className="truncate text-sm font-semibold text-ink">
             {deal.advertiser.name}
           </p>
           <div className="mt-0.5 flex items-center gap-1.5">
@@ -72,7 +72,7 @@ function DealCard({ deal, country }: { deal: Deal; country: string }) {
               </span>
             )}
             {deal.isExclusive && (
-              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+              <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand-hover">
                 {dict.common.exclusive}
               </span>
             )}
@@ -85,27 +85,27 @@ function DealCard({ deal, country }: { deal: Deal; country: string }) {
         )}
       </div>
 
-      <h3 className="mt-4 line-clamp-2 text-sm font-semibold text-gray-900 group-hover:text-amber-600">
+      <h3 className="mt-4 line-clamp-2 text-sm font-semibold text-ink group-hover:text-brand-hover">
         {title}
       </h3>
       {description && (
-        <p className="mt-1.5 line-clamp-2 text-xs text-gray-500">
+        <p className="mt-1.5 line-clamp-2 text-xs text-ink-soft">
           {description}
         </p>
       )}
 
       <div className="mt-auto pt-4">
         {deal.code ? (
-          <div className="flex items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2">
-            <span className="truncate font-mono text-xs font-semibold text-gray-700">
+          <div className="flex items-center justify-between rounded-lg border border-dashed border-line-strong bg-canvas px-3 py-2">
+            <span className="truncate font-mono text-xs font-semibold text-ink-soft">
               {deal.code}
             </span>
-            <span className="ml-2 flex-shrink-0 text-xs font-medium text-amber-600">
+            <span className="ml-2 flex-shrink-0 text-xs font-medium text-brand-hover">
               {dict.common.reveal} →
             </span>
           </div>
         ) : (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-hover">
             {dict.common.getThisDeal} <span aria-hidden>→</span>
           </span>
         )}
@@ -161,13 +161,13 @@ export default function TopDealsClient({ country }: { country: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-canvas">
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+          <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
             {dict.deals.topDeals}
           </h1>
-          <p className="mt-2 text-base text-gray-500">
+          <p className="mt-2 text-base text-ink-soft">
             {dict.deals.subtitle.replace("{country}", countryName(country))}
           </p>
         </header>
@@ -178,7 +178,7 @@ export default function TopDealsClient({ country }: { country: string }) {
             <p className="mt-1 text-sm text-red-600">{error}</p>
             <button
               onClick={() => load(page)}
-              className="mt-4 inline-flex items-center rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-600"
+              className="mt-4 inline-flex items-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-hover"
             >
               {dict.common.tryAgain}
             </button>
@@ -186,9 +186,9 @@ export default function TopDealsClient({ country }: { country: string }) {
         ) : loading ? (
           <SkeletonGrid />
         ) : !data || data.total === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
-            <p className="text-sm font-medium text-gray-700">{dict.deals.noDealsTitle}</p>
-            <p className="mt-1 text-sm text-gray-500">
+          <div className="rounded-xl border border-dashed border-line-strong bg-white p-12 text-center">
+            <p className="text-sm font-medium text-ink-soft">{dict.deals.noDealsTitle}</p>
+            <p className="mt-1 text-sm text-ink-soft">
               {dict.deals.noDealsHint}
             </p>
           </div>

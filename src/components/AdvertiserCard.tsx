@@ -6,7 +6,7 @@ import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 const RELATIONSHIP_STYLES: Record<string, string> = {
   joined: "bg-green-50 text-green-700 ring-green-600/20",
   pending: "bg-brand-soft text-brand-hover ring-brand-hover/20",
-  notjoined: "bg-gray-50 text-gray-600 ring-gray-500/20",
+  notjoined: "bg-canvas text-ink-soft ring-line-strong/20",
 };
 
 
@@ -14,7 +14,7 @@ function StatusBadge({ relationship }: { relationship: string | null }) {
   if (!relationship) return null;
   const style =
     RELATIONSHIP_STYLES[relationship.toLowerCase()] ??
-    "bg-gray-50 text-gray-600 ring-gray-500/20";
+    "bg-canvas text-ink-soft ring-line-strong/20";
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ring-1 ring-inset ${style}`}
@@ -38,10 +38,10 @@ export default function AdvertiserCard({
   adminHref,
 }: AdvertiserCardProps) {
   const content = (
-    <div className="group flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-card transition hover:border-gray-300 hover:shadow-card-hover cursor-pointer h-full justify-between">
+    <div className="group flex flex-col rounded-xl border border-line bg-white p-5 shadow-card transition hover:border-line-strong hover:shadow-card-hover cursor-pointer h-full justify-between">
       <div>
         <div className="flex items-start gap-4 pr-16">
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-canvas">
             {advertiser.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -51,17 +51,17 @@ export default function AdvertiserCard({
                 loading="lazy"
               />
             ) : (
-              <span className="text-lg font-semibold text-gray-400">
+              <span className="text-lg font-semibold text-ink-muted">
                 {advertiser.name.charAt(0).toUpperCase()}
               </span>
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-semibold text-gray-900 group-hover:text-accent transition">
+            <h3 className="truncate text-sm font-semibold text-ink group-hover:text-accent transition">
               {advertiser.name}
             </h3>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <p className="text-[11px] font-mono text-gray-400">#{advertiser.id}</p>
+              <p className="text-[11px] font-mono text-ink-muted">#{advertiser.id}</p>
               <span className="inline-flex items-center rounded bg-blue-50 px-1.5 py-0.2 text-[10px] font-bold text-blue-700 uppercase tracking-wide border border-blue-100">
                 {advertiser.network || "awin"}
               </span>
@@ -70,16 +70,16 @@ export default function AdvertiserCard({
           <StatusBadge relationship={advertiser.relationship} />
         </div>
 
-        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs border-t border-gray-100 pt-3">
+        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-xs border-t border-line pt-3">
           <div>
-            <dt className="text-gray-400">Network</dt>
+            <dt className="text-ink-muted">Network</dt>
             <dd className="mt-0.5 font-bold uppercase text-blue-700">
               {advertiser.network || "awin"}
             </dd>
           </div>
 
           <div>
-            <dt className="text-gray-400">Total Deals / Offers</dt>
+            <dt className="text-ink-muted">Total Deals / Offers</dt>
             <dd className="mt-0.5 font-bold text-emerald-600">
               {advertiser.dealCount ?? 0} {advertiser.dealCount === 1 ? "offer" : "offers"}
             </dd>
@@ -87,8 +87,8 @@ export default function AdvertiserCard({
 
           {(advertiser.region || advertiser.countryCode) && (
             <div>
-              <dt className="text-gray-400">Region</dt>
-              <dd className="mt-0.5 font-medium text-gray-700">
+              <dt className="text-ink-muted">Region</dt>
+              <dd className="mt-0.5 font-medium text-ink-soft">
                 {(() => {
                   const norm = normalizeCountryCode(advertiser.countryCode || advertiser.region);
                   if (norm === "WW" || advertiser.region === "00" || advertiser.countryCode === "00") {
@@ -103,24 +103,24 @@ export default function AdvertiserCard({
 
           {advertiser.commission && (
             <div>
-              <dt className="text-gray-400">Commission</dt>
-              <dd className="mt-0.5 font-medium text-gray-700">
+              <dt className="text-ink-muted">Commission</dt>
+              <dd className="mt-0.5 font-medium text-ink-soft">
                 {advertiser.commission}
               </dd>
             </div>
           )}
           {advertiser.currencyCode && (
             <div>
-              <dt className="text-gray-400">Currency</dt>
-              <dd className="mt-0.5 font-medium text-gray-700">
+              <dt className="text-ink-muted">Currency</dt>
+              <dd className="mt-0.5 font-medium text-ink-soft">
                 {advertiser.currencyCode}
               </dd>
             </div>
           )}
           {advertiser.status && (
             <div>
-              <dt className="text-gray-400">Status</dt>
-              <dd className="mt-0.5 font-medium capitalize text-gray-700">
+              <dt className="text-ink-muted">Status</dt>
+              <dd className="mt-0.5 font-medium capitalize text-ink-soft">
                 {advertiser.status}
               </dd>
             </div>
@@ -172,7 +172,7 @@ export default function AdvertiserCard({
         <div className={`relative group flex flex-col items-center justify-between rounded-xl border bg-white p-3 shadow-sm transition cursor-pointer h-28 sm:h-32 ${
           advertiser.isFlagship 
             ? "border-brand hover:border-brand shadow-md hover:shadow-lg bg-brand-soft/10" 
-            : "border-gray-200 hover:border-brand-border hover:shadow-md"
+            : "border-line hover:border-brand-border hover:shadow-md"
         }`}>
           {advertiser.isFlagship && (
             <div className="absolute -top-2.5 right-2 bg-gradient-to-r from-brand to-brand text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10">
@@ -198,14 +198,14 @@ export default function AdvertiserCard({
           </div>
 
           {/* Store Name below the image */}
-          <div className="h-[32%] w-full flex items-center justify-center border-t border-gray-100 pt-1 text-center">
-            <span className="text-xs font-bold text-gray-800 truncate px-1 group-hover:text-brand-hover transition-colors">
+          <div className="h-[32%] w-full flex items-center justify-center border-t border-line pt-1 text-center">
+            <span className="text-xs font-bold text-ink truncate px-1 group-hover:text-brand-hover transition-colors">
               {advertiser.name}
             </span>
           </div>
 
           {advertiser.dealCount !== undefined && advertiser.dealCount > 0 && (
-            <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-white text-gray-600 text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm border border-gray-100 flex items-center gap-1 whitespace-nowrap group-hover:border-accent group-hover:text-accent transition-colors z-10">
+            <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-white text-ink-soft text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-sm border border-line flex items-center gap-1 whitespace-nowrap group-hover:border-accent group-hover:text-accent transition-colors z-10">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400"></span>
               {advertiser.dealCount} total {advertiser.dealCount === 1 ? "offer" : "offers"}
             </div>

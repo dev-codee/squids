@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { Product } from "@/lib/products";
 import { useCurrency } from "@/i18n/CurrencyProvider";
 import { useDictionary } from "@/i18n/DictionaryProvider";
@@ -10,7 +11,14 @@ import HomeSection from "./HomeSection";
  * Products tab. Renders nothing when the region has no products, so the section
  * simply disappears instead of showing an empty shelf.
  */
-export default function HomeProducts({ products }: { products: Product[] }) {
+export default function HomeProducts({
+  products,
+  country,
+}: {
+  products: Product[];
+  country: string;
+}) {
+  const lc = country.toLowerCase();
   const dict = useDictionary();
   const t = dict.homeV2;
   const { format } = useCurrency();
@@ -22,8 +30,6 @@ export default function HomeProducts({ products }: { products: Product[] }) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {products.map((p) => {
           const sale = p.salePrice;
-          const original = p.originalPrice;
-          const href = p.trackingUrl;
 
           return (
             <article
@@ -42,11 +48,6 @@ export default function HomeProducts({ products }: { products: Product[] }) {
                 ) : (
                   <span className="text-sm text-ink-muted">{p.title.charAt(0)}</span>
                 )}
-                {typeof p.discountPercentage === "number" && p.discountPercentage > 0 && (
-                  <span className="absolute left-3 top-3 rounded-md bg-brand px-2 py-0.5 text-[11px] font-bold text-white">
-                    -{p.discountPercentage}%
-                  </span>
-                )}
               </div>
 
               <div className="flex flex-1 flex-col p-4">
@@ -58,30 +59,15 @@ export default function HomeProducts({ products }: { products: Product[] }) {
                 )}
 
                 {typeof sale === "number" && (
-                  <p className="mt-3 flex items-baseline gap-2">
-                    <span className="text-lg font-bold text-ink">{format(sale)}</span>
-                    {typeof original === "number" && original > sale && (
-                      <span className="text-xs text-ink-muted line-through">
-                        {format(original)}
-                      </span>
-                    )}
-                  </p>
+                  <p className="mt-3 text-lg font-bold text-ink">{format(sale)}</p>
                 )}
 
-                {href ? (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="nofollow noopener noreferrer sponsored"
-                    className="mt-auto block rounded-[9px] bg-brand px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
-                  >
-                    {t.checkOffers}
-                  </a>
-                ) : (
-                  <span className="mt-auto block rounded-[9px] border border-line px-4 py-2.5 text-center text-sm font-semibold text-ink-muted">
-                    {t.comingSoon}
-                  </span>
-                )}
+                <Link
+                  href={`/${lc}/product/${p.id}`}
+                  className="mt-auto block rounded-[9px] bg-brand px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+                >
+                  {t.checkOffers}
+                </Link>
               </div>
             </article>
           );

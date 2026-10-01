@@ -39,6 +39,9 @@ export default function AdminDealsPage() {
           pageSize: String(PAGE_SIZE),
           type: currentType,
           status: currentStatus,
+          // Operators need to see ended offers in order to clean them up;
+          // public listings exclude them.
+          includeExpired: "true",
         });
         if (currentSearch) params.set("search", currentSearch);
 

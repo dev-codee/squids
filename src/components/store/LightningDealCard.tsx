@@ -79,15 +79,12 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
         </h4>
         <p className="mt-1 text-xs text-ink-soft line-clamp-2">{deal.description}</p>
 
-        {/* Price & Savings */}
-        <div className="mt-3 flex items-baseline gap-2">
-          {deal.salePrice && (
-            <span className="text-xl font-extrabold text-ink">{deal.salePrice}</span>
-          )}
-          {deal.originalPrice && (
-            <span className="text-xs text-ink-muted line-through">{deal.originalPrice}</span>
-          )}
-        </div>
+        {/* Price. `originalPrice` is admin-managed enrichment with no source or
+            observation date behind it, so it is not shown as a struck-through
+            "was" price — that would be an unevidenced saving claim. */}
+        {deal.salePrice && (
+          <p className="mt-3 text-xl font-extrabold text-ink">{deal.salePrice}</p>
+        )}
 
         {/* Lightning Claim Progress Bar */}
         {deal.stockPercentage !== undefined && (

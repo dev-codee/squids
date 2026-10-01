@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
   const search = params.get("search") ?? undefined;
   const network = params.get("network") ?? undefined;
   const page = Number.parseInt(params.get("page") ?? "1", 10) || 1;
+  // Expired offers are hidden from public listings. Admin screens pass this so
+  // operators can still find and clean up offers that have ended.
+  const includeExpired = params.get("includeExpired") === "true";
   const pageSize =
     Number.parseInt(params.get("pageSize") ?? "", 10) || undefined;
 
@@ -45,6 +48,7 @@ export async function GET(request: NextRequest) {
         network,
         page,
         pageSize,
+        includeExpired,
       });
 
       // If querying by advertiserId and MongoDB returned 0 deals (and no search filter active),
@@ -68,6 +72,7 @@ export async function GET(request: NextRequest) {
               type,
               country,
               network,
+              includeExpired,
               page,
               pageSize,
             });

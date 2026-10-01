@@ -17,6 +17,7 @@ import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 import type { Deal, DealQuery, PagedDeals } from "@/lib/deals";
 import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE, dealDisplayTitle } from "@/lib/deals";
 import { CACHE_TAGS, PUBLIC_REVALIDATE, revalidatePublic } from "@/lib/cache";
+import { NOT_EXPIRED } from "@/lib/expiry";
 import { slugifyAdvertiserName } from "@/lib/db/advertisers";
 
 const COLLECTION = "deals";
@@ -124,6 +125,13 @@ export async function upsertDeals(
  */
 function buildFilter(query: DealQuery & { network?: string }): Record<string, unknown> {
   const conditions: Record<string, unknown>[] = [];
+
+  // Expired offers are excluded everywhere unless a caller explicitly opts in.
+  // Counts are derived from the same filtered set, so a count can never claim
+  // more offers than the page actually shows.
+  if (!query.includeExpired) {
+    conditions.push(NOT_EXPIRED);
+  }
 
   if (query.network) {
     conditions.push({ network: query.network });

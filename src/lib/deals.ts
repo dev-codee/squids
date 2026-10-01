@@ -432,6 +432,12 @@ export interface DealQuery {
   country?: string;
   page?: number;
   pageSize?: number;
+  /**
+   * Include offers whose end date has passed. Off by default: an expired offer
+   * must never appear in a public listing or inflate an active count. Admin
+   * tooling that genuinely needs the full set opts in explicitly.
+   */
+  includeExpired?: boolean;
 }
 
 /**

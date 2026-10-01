@@ -66,6 +66,9 @@ export default function AdminCouponsPage() {
           pageSize: String(PAGE_SIZE),
           type: "voucher",
           status: currentStatus,
+          // Operators need to see ended offers in order to clean them up;
+          // public listings exclude them.
+          includeExpired: "true",
         });
         if (currentSearch) params.set("search", currentSearch);
 

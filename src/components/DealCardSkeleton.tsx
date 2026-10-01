@@ -4,7 +4,7 @@ export default function DealCardSkeleton({ count = 6 }: { count?: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="rounded-xl border border-gray-200 bg-white p-5 shadow-card"
+          className="rounded-xl border border-line bg-white p-5 shadow-card"
         >
           {/* Header */}
           <div className="flex items-center gap-3">
@@ -27,7 +27,7 @@ export default function DealCardSkeleton({ count = 6 }: { count?: number }) {
           </div>
 
           {/* Footer */}
-          <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
+          <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
             <div className="skeleton h-3 w-24 rounded" />
             <div className="skeleton h-7 w-20 rounded-lg" />
           </div>

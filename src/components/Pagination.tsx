@@ -56,13 +56,13 @@ export default function Pagination({
             }}
             aria-label="Previous page"
             aria-disabled={page <= 1}
-            className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:bg-gray-50 ${page <= 1 ? "pointer-events-none opacity-40" : ""}`}
+            className={`${btnBase} border-line bg-white text-ink-soft hover:bg-canvas ${page <= 1 ? "pointer-events-none opacity-40" : ""}`}
           >
             ‹
           </a>
         ) : (
           <button
-            className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:bg-gray-50`}
+            className={`${btnBase} border-line bg-white text-ink-soft hover:bg-canvas`}
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
             aria-label="Previous page"
@@ -75,7 +75,7 @@ export default function Pagination({
           item === "…" ? (
             <span
               key={`gap-${i}`}
-              className="inline-flex h-9 min-w-9 items-center justify-center text-sm text-gray-400"
+              className="inline-flex h-9 min-w-9 items-center justify-center text-sm text-ink-muted"
             >
               …
             </span>
@@ -88,7 +88,7 @@ export default function Pagination({
               className={`${btnBase} ${
                 item === page
                   ? "border-accent bg-accent text-white"
-                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  : "border-line bg-white text-ink-soft hover:bg-canvas"
               }`}
             >
               {item}
@@ -101,7 +101,7 @@ export default function Pagination({
               className={`${btnBase} ${
                 item === page
                   ? "border-accent bg-accent text-white"
-                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  : "border-line bg-white text-ink-soft hover:bg-canvas"
               }`}
             >
               {item}
@@ -119,13 +119,13 @@ export default function Pagination({
             }}
             aria-label="Next page"
             aria-disabled={page >= totalPages}
-            className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:bg-gray-50 ${page >= totalPages ? "pointer-events-none opacity-40" : ""}`}
+            className={`${btnBase} border-line bg-white text-ink-soft hover:bg-canvas ${page >= totalPages ? "pointer-events-none opacity-40" : ""}`}
           >
             ›
           </a>
         ) : (
           <button
-            className={`${btnBase} border-gray-200 bg-white text-gray-600 hover:bg-gray-50`}
+            className={`${btnBase} border-line bg-white text-ink-soft hover:bg-canvas`}
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages}
             aria-label="Next page"

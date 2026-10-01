@@ -18,14 +18,14 @@ function ExpiryBadge({ endDate }: { endDate: string | null }) {
   const days = daysUntil(endDate);
   if (days === null) return null;
 
-  let colorClass = "text-gray-500";
+  let colorClass = "text-ink-soft";
   let label = `Expires in ${days} day${days !== 1 ? "s" : ""}`;
 
   if (days <= 2) {
     colorClass = "text-red-600";
     label = days === 0 ? "Expires today" : `Expires in ${days} day${days !== 1 ? "s" : ""}`;
   } else if (days <= 7) {
-    colorClass = "text-amber-600";
+    colorClass = "text-brand-hover";
   }
 
   return (
@@ -71,12 +71,12 @@ function CopyCodeButton({ code }: { code: string }) {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="inline-flex items-center rounded-md border-2 border-dashed border-gray-300 bg-gray-50 px-3 py-1.5 font-mono text-sm font-semibold tracking-wide text-gray-800">
+      <span className="inline-flex items-center rounded-md border-2 border-dashed border-line-strong bg-canvas px-3 py-1.5 font-mono text-sm font-semibold tracking-wide text-ink">
         {code}
       </span>
       <button
         onClick={handleCopy}
-        className="relative inline-flex items-center justify-center rounded-md border border-gray-200 bg-white p-1.5 text-gray-500 shadow-card transition hover:bg-gray-50 hover:text-gray-700"
+        className="relative inline-flex items-center justify-center rounded-md border border-line bg-white p-1.5 text-ink-soft shadow-card transition hover:bg-canvas hover:text-ink-soft"
         aria-label="Copy code"
         title="Copy code"
       >
@@ -93,7 +93,7 @@ function CopyCodeButton({ code }: { code: string }) {
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg">
+            <span className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-ink px-2 py-1 text-xs text-white shadow-lg">
               Copied!
             </span>
           </>
@@ -132,11 +132,11 @@ export default function DealCard({ deal }: { deal: Deal }) {
   };
 
   return (
-    <div className="group flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-card transition hover:border-gray-300 hover:shadow-card-hover">
+    <div className="group flex flex-col rounded-xl border border-line bg-white p-5 shadow-card transition hover:border-line-strong hover:shadow-card-hover">
       {/* Header: advertiser info + type badge */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-canvas">
             {deal.advertiser.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -146,12 +146,12 @@ export default function DealCard({ deal }: { deal: Deal }) {
                 loading="lazy"
               />
             ) : (
-              <span className="text-sm font-semibold text-gray-400">
+              <span className="text-sm font-semibold text-ink-muted">
                 {deal.advertiser.name.charAt(0).toUpperCase()}
               </span>
             )}
           </div>
-          <span className="truncate text-xs font-medium text-gray-500">
+          <span className="truncate text-xs font-medium text-ink-soft">
             {deal.advertiser.name}
           </span>
         </div>
@@ -166,11 +166,11 @@ export default function DealCard({ deal }: { deal: Deal }) {
 
       {/* Title + description */}
       <div className="mt-3 flex-1">
-        <h3 className="text-sm font-semibold leading-snug text-gray-900 line-clamp-2">
+        <h3 className="text-sm font-semibold leading-snug text-ink line-clamp-2">
           {deal.title}
         </h3>
         {deal.description && (
-          <p className="mt-1 text-xs leading-relaxed text-gray-500 line-clamp-2">
+          <p className="mt-1 text-xs leading-relaxed text-ink-soft line-clamp-2">
             {deal.description}
           </p>
         )}
@@ -204,7 +204,7 @@ export default function DealCard({ deal }: { deal: Deal }) {
       )}
 
       {/* Footer: expiry + CTA */}
-      <div className="mt-4 flex items-center justify-between gap-2 border-t border-gray-100 pt-3">
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3">
         <ExpiryBadge endDate={deal.endDate} />
 
         {deal.trackingUrl ? (
@@ -231,7 +231,7 @@ export default function DealCard({ deal }: { deal: Deal }) {
             </svg>
           </a>
         ) : (
-          <span className="text-xs text-gray-400">No link available</span>
+          <span className="text-xs text-ink-muted">No link available</span>
         )}
       </div>
     </div>

@@ -34,6 +34,7 @@ export default function HorizontalCouponCard({
   const t = dict.storeV2;
   const params = useParams();
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
@@ -71,11 +72,17 @@ export default function HorizontalCouponCard({
     navigator.clipboard
       .writeText(coupon.code)
       .then(() => {
+        setCopyFailed(false);
         setCopied(true);
         track("coupon_copy", buttonLocation);
         setTimeout(() => setCopied(false), 3000);
       })
-      .catch(() => {});
+      .catch(() => {
+        // Clipboard access can be denied or unavailable. Say so and leave the
+        // code on screen to select, rather than failing silently.
+        setCopied(false);
+        setCopyFailed(true);
+      });
   };
 
   const expiryBadge = getExpiryBadge(coupon.expiryDate);
@@ -255,7 +262,10 @@ export default function HorizontalCouponCard({
       {showModal && (
         <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-card bg-white p-6 text-center shadow-card-hover">
-            <h3 className="text-xl font-bold text-ink">{dict.cards.promoCodeCopied}</h3>
+            {/* The heading must not claim a copy that did not happen. */}
+            <h3 className="text-xl font-bold text-ink">
+              {copied ? dict.cards.promoCodeCopied : dict.cards.copyCode}
+            </h3>
             <p className="mt-1 text-sm text-ink-soft">{coupon.title}</p>
 
             <button
@@ -271,6 +281,12 @@ export default function HorizontalCouponCard({
                 {copied ? dict.cards.copied : dict.cards.copyCode}
               </span>
             </button>
+
+            {copyFailed && (
+              <p role="alert" className="-mt-3 mb-4 text-xs font-medium text-red-700">
+                {dict.cards.copyFailed}
+              </p>
+            )}
 
             <p className="mb-6 text-xs text-ink-muted">
               {dict.cards.pasteCode.replace("{store}", storeName)}
