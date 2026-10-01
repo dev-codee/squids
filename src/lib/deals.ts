@@ -5,6 +5,8 @@
  * Mirrors the patterns established in `awin.ts` (caching, error classes, normalisation).
  */
 
+import type { PromotionStructure } from "@/lib/model/promotion";
+
 const AWIN_BASE_URL = "https://api.awin.com";
 
 // ---------------------------------------------------------------------------
@@ -125,6 +127,32 @@ export interface Deal {
    * so stale-removal must skip them — otherwise the next sync would delete them.
    */
   isManual?: boolean;
+
+  // --- Data contract: structured promotion -------------------------------
+  /**
+   * Structured benefit, shopper conditions, timezone and evidence status.
+   *
+   * `discountText` is free prose, so nothing can evaluate eligibility or
+   * compute a discount from it. This is the machine-readable form. Optional
+   * because records predate it; absent means the promotion has not been
+   * structured and is not calculable.
+   */
+  promotion?: PromotionStructure | null;
+
+  /** Stable store-market this promotion belongs to. Replaces name-based joins. */
+  merchantMarketId?: string | null;
+
+  // --- Data contract: freshness ------------------------------------------
+  /**
+   * When the *source* last changed the record, as the source reported it.
+   * Distinct from when we fetched it and from when a person checked it — a
+   * fetch failure must not make old data appear freshly checked.
+   */
+  sourceUpdatedAt?: string | null;
+  /** When we last successfully retrieved it from the source. */
+  fetchedAt?: string | null;
+  /** When a person last verified it. Never written by an automated job. */
+  checkedAt?: string | null;
 
   // --- AI-generated copy (Claude) ------------------------------------------
   /** AI-written shopper-facing title. Preferred over `title` on public pages. */

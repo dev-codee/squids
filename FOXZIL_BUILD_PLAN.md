@@ -21,7 +21,7 @@ Legend: **✅ Done** · **🟡 Partial** · **❌ Missing** · **🚫 Deferred**
 | 4 | Store detail page | p.22–23 | 🟡 Partial |
 | 5 | Coupon card data contract | p.24 | 🟡 Partial |
 | 6 | Exact-product comparison page | p.25–26 | 🟡 Partial |
-| 7 | Core data model | p.13 | ❌ Missing |
+| 7 | Core data model | p.13 | 🟡 Contract defined, not populated |
 | 8 | Matching & ranking | p.14 | 🟡 Partial |
 | 9 | Price / discount / delivery rules | p.15 | ❌ Missing |
 | 10 | Price history & alerts | p.27 | ❌ Missing |
@@ -290,7 +290,7 @@ Matching is by normalised title across advertisers (`getMatchingProducts`).
 
 ---
 
-## 7. Core data model — ❌ Missing
+## 7. Core data model — 🟡 Contract defined, not yet populated
 
 **PDF (p.13):** the foundation everything else rests on. This is the highest-leverage
 work in the document.
@@ -300,43 +300,86 @@ Current collections: `advertisers`, `deals`, `products`, `categories`, `transact
 `reviews`, `faqs`, `buyingGuides`, `home_settings`, `sync_meta`, `activity_logs`,
 `ppc_permissions`.
 
-- [ ] **Merchant + market separation.** `Advertiser` mixes merchant identity with
-  market (`region`, `countryCode`, `countryCodes`). PDF wants a stable merchant ID
-  *and* a separate store-market ID, with canonical store URL, approved domains,
-  local policies, feed/source IDs and programme permissions per market.
-  This is the p.3 defect "Australian beauty offers appearing in other markets" —
-  the PDF says fix the data model, not the wording.
-  *Done means:* a `merchant_markets` collection keyed `(merchantId, market)`;
-  all public queries join through it; no query filters a market by display name.
-- [ ] **Exact product entity.** `Product` has `id, advertiserId, title, category,
-  imageUrl, originalPrice, salePrice, discountPercentage, rating, reviewsCount,
-  inStock, trackingUrl`. Missing: GTIN, brand, model/MPN, size, colour/flavour,
-  pack count, condition, regional specification, and an audit record for manual
-  matches.
-  *Done means:* a `products` document can be compared on identity alone, with a
-  `matchAudit` sub-document naming reviewer and decision.
-- [ ] **Retailer offer as its own entity.** Today a product row *is* the offer, so one
-  product cannot have offers from two retailers without duplicate rows.
-  *Done means:* `offers` collection keyed `(merchantMarketId, productId, sourceItemId)`
-  with item price, currency, stock, condition, deep link, `sourceUpdatedAt`,
-  `fetchedAt`, `checkedAt`, eligibility and `current|stale|quarantined` status.
-- [ ] **Promotion entity** with stable ID, code or automatic benefit, value/cap,
-  qualifying products, min spend, customer type, market, start/end **with timezone**,
-  stacking rules, evidence status and source. (Supersedes §5's field list.)
-- [ ] **Delivery / charges entity.** Destination zone or postcode range, thresholds and
-  whether they apply before or after discount, service level, mandatory fees,
-  tax-included flag, source URL, checked time.
-  **Unknown must be a distinct value, never zero.**
-- [ ] **Price observation (append-only).** Product/offer identity, observed timestamp,
-  original currency, item price, eligible cost basis, availability, source batch.
-  Genuine gaps and later corrections retained as records.
-- [ ] **Separate `source_updated_at`, `fetched_at`, `checked_at`.**
-  Deals currently have only `syncedAt` + `firstSeenAt`, so a fetch failure can make
-  old data look freshly checked — the exact failure p.12 warns about.
-- [ ] **Consent record separate from the subscriber.** `SubscriberDoc` has `consentAt`
-  but no consent *scope* or *version*.
+**Added 2026-10-01 (Phase B):** `merchant_markets`, `offers`, `delivery_rules`,
+plus identity fields on `products` and promotion structure on `deals`.
+Models in `src/lib/model/`, persistence in `src/lib/db/`, backfill in
+`src/lib/migrations/backfill-data-contract.ts`. 62 unit tests (`npm test`).
 
----
+**The keystone:** `src/lib/model/known.ts` defines `Known<T>` — a tagged union
+where a value is either `{known: true, value}` or `{known: false, reason}`.
+Every money field on a delivery rule, offer and promotion benefit uses it, so
+`?? 0` on a missing charge is not expressible. `sumKnown` propagates unknown:
+one unknown component makes the whole total unknown, which is what keeps an item
+price from being presented as a delivered total.
+
+- [x] **Merchant + market separation.** — *done 2026-10-01.*
+  `merchant_markets`, one document per `(merchant, market)`, keyed
+  `<network>:<merchantId>:<MARKET>`. Carries the **stored** canonical slug (so a
+  rename cannot move a page), per-market currency, approved domains, feed source
+  IDs, `ProgrammePermissions`, commission terms, policy URLs, status and review
+  stamps. Unique index on `(market, slug)` — the lookup a store page performs,
+  replacing name-slugging. `canPublish()` gates on confirmed rights.
+  ⚠️ The public store page still resolves via `getAdvertiserBySlug`. Switching
+  that read path is Phase C; doing it before the backfill has run and rights are
+  granted would 404 every store.
+- [x] **Exact product entity.** — *done 2026-10-01.*
+  `ProductIdentity` adds GTIN, brand, MPN, size, colour, flavour, pack count,
+  condition, regional spec, market, an `identifiers[]` array and `matchAudit`.
+  `Product` extends it; all fields optional because a backfill cannot invent
+  them. `identifiersAgree()` requires a shared strong identifier **and** no
+  contradiction on variant fields — a matching GTIN with a different pack size
+  returns a conflict, per the brief.
+- [x] **Retailer offer as its own entity.** — *done 2026-10-01.*
+  `offers`, keyed `<merchantMarketId>:<sourceItemId>`, with `Known<number>` item
+  price, stock state, condition, destination URL, eligibility, source batch, and
+  `draft|current|stale|quarantined` status. Indexed on `(productId, status)`.
+  `upsertOffers` is idempotent and only writes `status`/`statusReason`/`checkedAt`
+  on insert, so an ingest cannot republish something a reviewer quarantined.
+- [x] **Promotion entity.** — *done 2026-10-01.*
+  `PromotionStructure` on the deal record: structured benefit (kind, value,
+  `isUpTo`, cap), conditions (min spend + its basis, eligible categories and
+  products, exclusions, customer type, membership/app/account/subscription,
+  payment method, stacking), IANA timezone, and the three-way `EvidenceStatus`
+  (checkout-tested / merchant-listed / community-reported). `parseDiscountText`
+  seeds the benefit from the existing `discountText`, conservatively — anything
+  it cannot read stays unknown.
+- [x] **Delivery / charges entity.** — *done 2026-10-01.*
+  `delivery_rules` with destination zone (market, regions, postcode prefixes),
+  service level, `Known<number>` charge, free threshold **and its
+  before/after-discount basis**, mandatory fees, tax-included flag, restrictions,
+  source URL and check time. `deliveryFor()` returns unknown when the basis is
+  unknown, because the same basket gives opposite answers under each — proven by
+  test. **Unknown is a distinct value, never zero.**
+- [x] **Separate `source_updated_at`, `fetched_at`, `checked_at`.** — *done 2026-10-01.*
+  On offers and on deals. `ageStatus()` measures freshness from the source
+  stamp, falling back to fetch — never from render time — and an offer with
+  neither is stale, not fresh. The backfill maps the old `syncedAt` to
+  `fetchedAt` and leaves `checkedAt` null, because nobody has checked it.
+- [ ] **Consent record separate from the subscriber.** Still outstanding.
+  `SubscriberDoc` has `consentAt` but no consent scope or version. Belongs with
+  the product-alert work in §10.
+
+**How to populate it**
+
+```
+node scripts/run-migrate-data-contract.mjs --dry-run     # reports, writes nothing
+node scripts/run-migrate-data-contract.mjs               # applies
+```
+or `POST /api/admin/migrate-data-contract` (session-protected) with
+`{"dryRun": true}`.
+
+The backfill derives merchant-markets from advertisers, offers from the existing
+product rows, and promotion structure from `discountText`. It is idempotent.
+**It publishes nothing:** merchant-markets land as `pending` with no permissions,
+offers land as `draft`. A worldwide-only advertiser is *not* expanded across
+every region — that is how Australian offers reached other markets — it gets one
+record in the default market and a warning for an operator to decide.
+
+Operator APIs: `GET/PATCH/POST /api/admin/merchant-markets` (grant rights,
+record a named reviewer — required to activate) and
+`GET/PUT/DELETE /api/admin/delivery-rules` (blank money fields stay unknown;
+`sourceUrl` and `checkedBy` are required; a free-delivery threshold without a
+stated basis is rejected).
 
 ## 8. Matching & ranking — 🟡 Partial
 
@@ -690,12 +733,29 @@ entirely punctuation slugs to an empty string. The sitemap falls back to the
 store id, but link components do not, so such a store would be unreachable.
 A data-quality edge case for §7.
 
-### Phase B — the data contract (unblocks everything)
-8. §7 — merchant + market separation
-9. §7 — exact product entity (GTIN, brand, model, size, pack, condition)
-10. §7 — retailer offer as its own entity, with the three timestamps
-11. §7 — delivery/charges entity, with Unknown as a distinct value
-12. §7 — promotion entity with structured benefit and shopper conditions
+### Phase B — the data contract — ✅ COMPLETE (2026-10-01)
+8. [x] §7 — merchant + market separation
+9. [x] §7 — exact product entity (GTIN, brand, model, size, pack, condition)
+10. [x] §7 — retailer offer as its own entity, with the three timestamps
+11. [x] §7 — delivery/charges entity, with Unknown as a distinct value
+12. [x] §7 — promotion entity with structured benefit and shopper conditions
+
+**Verified:** `npm test` — 62 unit tests covering the invariants that matter:
+unknown never reads as zero; one unknown component makes a total unknown; the
+brief's own worked example (p.14) ranks B then A and excludes C; a matching GTIN
+with a conflicting pack size is not an exact match; a title match is never
+publishable as exact; a worldwide code is never expanded into every region.
+`tsc --noEmit` and `next build` clean.
+
+**Not verified:** nothing has been run against a database — MongoDB SRV DNS was
+still failing from this machine. Before trusting Phase B, run the backfill with
+`--dry-run` and read the warnings.
+
+**Deliberately not done in Phase B:** the public read paths still use the old
+collections. Switching the store page to resolve via `merchant_markets`, and the
+product page to read `offers`, is Phase C — doing it before the backfill has run
+and an operator has granted rights would 404 every store and empty every
+comparison.
 
 ### Phase C — the calculation
 13. §9 — eligible delivered total calculator, unit-tested on the PDF's worked example

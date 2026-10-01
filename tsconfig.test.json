@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": ".test-out",
+    "incremental": false,
+    "jsx": "react-jsx",
+    "types": [
+      "node"
+    ],
+    "plugins": [],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "baseUrl": "."
+  },
+  "include": [
+    "src/lib/model/**/*.ts",
+    "src/lib/expiry.ts",
+    "src/lib/networks.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
