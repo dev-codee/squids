@@ -33,3 +33,6 @@ next-env.d.ts
 
 # test build output
 .test-out/
+
+# env backups (contain credentials)
+.env*.bak-*
