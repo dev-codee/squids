@@ -16,25 +16,24 @@ export const maxDuration = 300;
  * write is an idempotent upsert on a stable ID, and operator-owned fields are
  * only written on insert.
  *
- * Body (optional): { dryRun?: boolean, defaultMarket?: string }
+ * Body (optional): { dryRun?: boolean }
  * A dry run reports what *would* be written and touches nothing.
+ *
+ * Advertisers that name no configured market are skipped rather than parked in
+ * a default one, and slug collisions are withheld for an operator to merge.
  */
 export async function POST(request: NextRequest) {
   let dryRun = false;
-  let defaultMarket = "US";
 
   try {
     const body = await request.json();
     dryRun = Boolean(body?.dryRun);
-    if (typeof body?.defaultMarket === "string" && /^[A-Za-z]{2}$/.test(body.defaultMarket)) {
-      defaultMarket = body.defaultMarket.toUpperCase();
-    }
   } catch {
     // No body is fine — defaults apply.
   }
 
   try {
-    const report = await runDataContractBackfill({ dryRun, defaultMarket });
+    const report = await runDataContractBackfill({ dryRun });
 
     if (!dryRun) {
       await logActivity({
@@ -52,14 +51,13 @@ export async function POST(request: NextRequest) {
           total: report.merchantMarkets.scanned + report.offers.scanned,
         },
         status: report.warnings.length > 0 ? "warning" : "success",
-        metadata: { warningCount: report.warnings.length, defaultMarket },
+        metadata: { warningCount: report.warnings.length },
       }).catch(() => {});
     }
 
     return NextResponse.json({
       ok: true,
       dryRun,
-      defaultMarket,
       report,
       // Say plainly that this published nothing, so nobody assumes it did.
       note: dryRun

@@ -6,7 +6,6 @@
  *
  *   node scripts/run-migrate-data-contract.mjs --dry-run
  *   node scripts/run-migrate-data-contract.mjs
- *   node scripts/run-migrate-data-contract.mjs --default-market=AU
  *
  * Safe to re-run. Every write is an idempotent upsert on a stable ID, and
  * operator-owned fields (permissions, status, checkedAt, review stamps) are only
@@ -45,10 +44,6 @@ const uri = process.env.MONGODB_URI;
 if (!uri) { console.error("MONGODB_URI not set"); process.exit(1); }
 
 const DRY_RUN = process.argv.includes("--dry-run");
-const DEFAULT_MARKET = (
-  process.argv.find((a) => a.startsWith("--default-market="))?.split("=")[1] ?? "US"
-).toUpperCase();
-
 /**
  * Configured markets, read from src/lib/regions.ts so this script and the app
  * can never drift apart. A hardcoded copy here silently created merchant-markets
@@ -171,7 +166,7 @@ async function run() {
   const db = client.db("awin_affiliates");
   const now = new Date();
 
-  console.log(`[data-contract] ${DRY_RUN ? "DRY RUN — nothing will be written" : "applying"}; default market ${DEFAULT_MARKET}\n`);
+  console.log(`[data-contract] ${DRY_RUN ? "DRY RUN — nothing will be written" : "applying"}\n`);
 
   // ---- 1. merchant_markets ------------------------------------------------
   const advertisers = await db.collection("advertisers").find({}, { projection: { _id: 0 } }).toArray();
@@ -192,17 +187,22 @@ async function run() {
     }
 
     const { markets, worldwide } = resolveMarkets(adv);
-    let targets = markets;
-    if (targets.length === 0) {
-      targets = [DEFAULT_MARKET];
+
+    // An advertiser that names no configured market is SKIPPED, not parked in a
+    // default one. A first dry run put 730 merchants into US this way — "Kiwi
+    // BR", "Casa Andina PE", "Answear UA", "Shopee MY", "Kaspersky LATAM" among
+    // them. A wrong country association is not made harmless by a pending status.
+    if (markets.length === 0) {
+      mmSkipped++;
       warnings.push(
         worldwide
-          ? `advertiser ${id} ("${name}"): worldwide code only — created in ${DEFAULT_MARKET} alone; add other markets deliberately`
-          : `advertiser ${id} ("${name}"): no market on record — created in ${DEFAULT_MARKET} as a placeholder, status pending`,
+          ? `advertiser ${id} ("${name}"): worldwide code only, no specific market — skipped; assign its markets deliberately`
+          : `advertiser ${id} ("${name}"): no configured market on record — skipped; assign a market before publishing`,
       );
+      continue;
     }
 
-    for (const market of targets) {
+    for (const market of markets) {
       mmRecords.push({
         id: `${network}:${id}:${market}`,
         merchantId: id, network, market,
@@ -215,13 +215,35 @@ async function run() {
     }
   }
 
-  if (!DRY_RUN && mmRecords.length) {
+  // `(market, slug)` is uniquely indexed — it is the public store URL. Two
+  // advertisers resolving to the same pair is a duplicate in the source data
+  // ("Nolo (US)" vs "Nolo US"; four "Triple Eight Distribution" rows). Writing
+  // them would throw a duplicate-key error mid-batch or hand one merchant's
+  // canonical URL to another, so the colliding group is withheld entirely.
+  const byKey = new Map();
+  for (const r of mmRecords) {
+    const key = `${r.market}|${r.slug}`;
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key).push(r);
+  }
+  const safeRecords = [];
+  for (const [key, group] of byKey) {
+    if (group.length === 1) { safeRecords.push(group[0]); continue; }
+    mmSkipped += group.length;
+    warnings.push(
+      `slug collision on ${key}: ${group.length} advertisers resolve to the same store URL (` +
+      group.map((g) => `${g.merchantId} "${g.displayName}"`).join(", ") +
+      ") — all withheld; merge the duplicates first",
+    );
+  }
+
+  if (!DRY_RUN && safeRecords.length) {
     const col = db.collection("merchant_markets");
     await col.createIndex({ id: 1 }, { unique: true });
     await col.createIndex({ market: 1, slug: 1 }, { unique: true });
     await col.createIndex({ merchantId: 1, network: 1 });
     await col.createIndex({ status: 1, market: 1 });
-    await col.bulkWrite(mmRecords.map((mm) => ({
+    await col.bulkWrite(safeRecords.map((mm) => ({
       updateOne: {
         filter: { id: mm.id },
         update: {
@@ -241,11 +263,11 @@ async function run() {
       },
     })), { ordered: false });
   }
-  console.log(`merchant_markets: scanned ${advertisers.length}, prepared ${mmRecords.length}, skipped ${mmSkipped}`);
+  console.log(`merchant_markets: scanned ${advertisers.length}, prepared ${safeRecords.length}, skipped ${mmSkipped}`);
 
   // ---- 2. offers ----------------------------------------------------------
   const mmDocs = DRY_RUN
-    ? mmRecords
+    ? safeRecords
     : await db.collection("merchant_markets")
         .find({}, { projection: { _id: 0, id: 1, merchantId: 1, market: 1, currency: 1 } }).toArray();
 

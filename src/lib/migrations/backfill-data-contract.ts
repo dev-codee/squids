@@ -38,7 +38,7 @@ export interface BackfillReport {
 }
 
 export async function backfillMerchantMarkets(
-  opts: { dryRun?: boolean; defaultMarket?: string } = {},
+  opts: { dryRun?: boolean } = {},
 ): Promise<BackfillReport["merchantMarkets"] & { warnings: string[] }> {
   const db = await getDb();
   const advertisers = await db
@@ -76,19 +76,24 @@ export async function backfillMerchantMarkets(
       },
       REGION_CODES,
     );
-    let targets = markets;
 
-    if (targets.length === 0) {
-      const fallback = (opts.defaultMarket ?? "US").toUpperCase();
-      targets = [fallback];
+    // An advertiser that names no configured market is skipped, not parked in a
+    // default one. A first dry run against live data put 730 merchants into US
+    // this way — among them "Kiwi BR", "Casa Andina PE", "Answear UA",
+    // "Shopee MY", "Kaspersky LATAM". Assigning a merchant to a market it does
+    // not serve is precisely the defect this entity exists to prevent, and a
+    // `pending` status does not make a wrong country association harmless.
+    if (markets.length === 0) {
+      skipped++;
       warnings.push(
         worldwide
-          ? `advertiser ${id} ("${name}"): worldwide code only — created in ${fallback} alone; an operator must add any other markets deliberately`
-          : `advertiser ${id} ("${name}"): no market on record — created in ${fallback} as a placeholder, status pending`,
+          ? `advertiser ${id} ("${name}"): worldwide code only, no specific market — skipped; assign its markets deliberately`
+          : `advertiser ${id} ("${name}"): no configured market on record — skipped; assign a market before publishing`,
       );
+      continue;
     }
 
-    for (const market of targets) {
+    for (const market of markets) {
       const region = getRegionConfig(market);
       records.push({
         id: merchantMarketId(network, id, market),
@@ -111,17 +116,45 @@ export async function backfillMerchantMarkets(
     }
   }
 
+  // `(market, slug)` is uniquely indexed, because it is the public store URL.
+  // Two advertisers resolving to the same pair is a data-quality duplicate
+  // ("Nolo (US)" and "Nolo US"; four separate "Triple Eight Distribution"
+  // rows). Writing them would either throw a duplicate-key error mid-batch or
+  // hand one merchant's canonical URL to another arbitrarily, so the whole
+  // colliding group is withheld for an operator to merge.
+  const byKey = new Map<string, MerchantMarket[]>();
+  for (const r of records) {
+    const key = `${r.market}|${r.slug}`;
+    const group = byKey.get(key) ?? [];
+    group.push(r);
+    byKey.set(key, group);
+  }
+
+  const safe: MerchantMarket[] = [];
+  for (const [key, group] of byKey) {
+    if (group.length === 1) {
+      safe.push(group[0]);
+      continue;
+    }
+    skipped += group.length;
+    warnings.push(
+      `slug collision on ${key}: ${group.length} advertisers resolve to the same store URL (${group
+        .map((g) => `${g.merchantId} "${g.displayName}"`)
+        .join(", ")}) — all withheld; merge the duplicates first`,
+    );
+  }
+
   if (opts.dryRun) {
-    return { scanned: advertisers.length, upserted: records.length, modified: 0, skipped, warnings };
+    return { scanned: advertisers.length, upserted: safe.length, modified: 0, skipped, warnings };
   }
 
   await ensureMerchantMarketIndexes();
-  const res = await upsertMerchantMarkets(records);
+  const res = await upsertMerchantMarkets(safe);
   return { scanned: advertisers.length, ...res, skipped, warnings };
 }
 
 export async function backfillOffers(
-  opts: { dryRun?: boolean; defaultMarket?: string } = {},
+  opts: { dryRun?: boolean } = {},
 ): Promise<BackfillReport["offers"] & { warnings: string[] }> {
   const db = await getDb();
   const products = await db
@@ -253,7 +286,7 @@ export async function backfillPromotionStructure(
 
 /** Run every backfill in dependency order. */
 export async function runDataContractBackfill(
-  opts: { dryRun?: boolean; defaultMarket?: string } = {},
+  opts: { dryRun?: boolean } = {},
 ): Promise<BackfillReport> {
   await ensureDeliveryIndexes();
 
