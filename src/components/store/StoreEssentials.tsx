@@ -2,7 +2,6 @@
 
 import type { StoreData } from "@/lib/storeData";
 import { useDictionary } from "@/i18n/DictionaryProvider";
-import FollowStoreButton from "./FollowStoreButton";
 
 /**
  * "Before you shop" rail: the merchant facts a shopper needs before committing
@@ -71,23 +70,6 @@ export default function StoreEssentials({
         </p>
       </section>
 
-      <section className="rounded-card border border-line bg-brand-soft/70 p-4">
-        <h2 className="text-sm font-bold text-ink">{t.saveThisStore}</h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
-          {t.saveThisStoreDesc.replace("{store}", store.name)}
-        </p>
-        <div className="mt-3">
-          <FollowStoreButton
-            store={{
-              slug: store.slug,
-              network: store.network,
-              advertiserId: store.advertiserId,
-              name: store.name,
-            }}
-            country={country}
-          />
-        </div>
-      </section>
     </div>
   );
 }

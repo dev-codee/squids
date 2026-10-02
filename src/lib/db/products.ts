@@ -1,5 +1,13 @@
 import { getDb } from "@/lib/mongodb";
 import type { Product, PagedProducts } from "@/lib/products";
+import type { MatchCandidate, MatchResult } from "@/lib/model/matching";
+import {
+  classifyMatch,
+  orderedMatches,
+  productMatchKey,
+  canClaimComparison,
+} from "@/lib/model/matching";
+import { getRulingsForProduct, queueMatchReview } from "@/lib/db/match-reviews";
 
 const COLLECTION = "products";
 
@@ -133,20 +141,10 @@ export async function deleteProduct(id: number): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 /**
- * Normalise a product title into a match key.
- *
- * The feed carries no GTIN, brand or model field, so the title is the only
- * signal we have for "this is the same product at another retailer". We lower
- * case, strip punctuation and collapse whitespace; anything more aggressive
- * starts merging genuinely different variants.
+ * Re-exported from the matching model, where the rule it belongs to lives: a
+ * normalised title proposes a candidate, it never confirms one.
  */
-export function productMatchKey(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ");
-}
+export { productMatchKey };
 
 /** Single product by its numeric id. */
 export async function getProductById(id: number): Promise<Product | null> {
@@ -156,43 +154,159 @@ export async function getProductById(id: number): Promise<Product | null> {
   return (doc as Product) ?? null;
 }
 
+/** One comparison row: the product record plus how it was matched. */
+export interface MatchedProduct {
+  product: Product;
+  result: MatchResult;
+}
+
+export interface ProductMatches {
+  rows: MatchedProduct[];
+  /** True only with two independent retailers matched on identifiers. */
+  canClaimComparison: boolean;
+  /** Candidates shown but not proven — the count the page must be honest about. */
+  reviewCount: number;
+}
+
+function toCandidate(product: Product): MatchCandidate {
+  return { ...product, id: product.id, advertiserId: product.advertiserId, title: product.title };
+}
+
 /**
- * Every product record matching the same normalised title, one per retailer.
+ * Every product record that may be the same item, one row per retailer.
  *
- * Matching is done in the application rather than the query because the match
- * key is derived, not stored. The candidate set is narrowed by category first
- * so this stays a bounded scan.
+ * Identifier-first: candidates are proposed by category and title (that is all
+ * a query can do cheaply), then `classifyMatch` decides each one on
+ * identifiers, with a reviewer's standing ruling outranking everything. Rows it
+ * calls "not-a-match" are dropped; rows it sends to review are kept but carry
+ * that basis, so the page can display them without claiming them.
+ *
+ * Pairs needing a decision are queued for the review desk as a side effect.
+ * That write is best-effort — a comparison page must still render if the queue
+ * is unavailable.
  */
-export async function getMatchingProducts(product: Product): Promise<Product[]> {
+export async function getMatchingProducts(product: Product): Promise<ProductMatches> {
   const db = await getDb();
   const col = db.collection<Product>(COLLECTION);
 
   const key = productMatchKey(product.title);
-  const filter: Record<string, unknown> = {};
-  if (product.category) filter.category = product.category;
+  const source = toCandidate(product);
+
+  // Candidate net: anything sharing a strong identifier, plus the title group
+  // within the category. The identifier arm is what makes this identifier-first
+  // rather than a title search wearing a new label.
+  const identifierClauses: Record<string, unknown>[] = [];
+  if (product.gtin) identifierClauses.push({ gtin: product.gtin });
+  if (product.mpn && product.brand) {
+    identifierClauses.push({ mpn: product.mpn, brand: product.brand });
+  }
+
+  const titleClause: Record<string, unknown> = product.category
+    ? { category: product.category }
+    : {};
 
   const candidates = (await col
-    .find(filter, { projection: { _id: 0 } })
+    .find(
+      identifierClauses.length
+        ? { $or: [...identifierClauses, titleClause] }
+        : titleClause,
+      { projection: { _id: 0 } },
+    )
     .limit(2000)
     .toArray()) as Product[];
 
-  const matches = candidates.filter((c) => productMatchKey(c.title) === key);
+  const rulings = await getRulingsForProduct(product.id).catch(
+    () => new Map<string, never>() as never,
+  );
 
-  // One record per retailer — keep the cheapest when a retailer lists it twice.
-  const byRetailer = new Map<number, Product>();
-  for (const match of matches) {
-    const existing = byRetailer.get(match.advertiserId);
-    const price = match.salePrice ?? Number.POSITIVE_INFINITY;
-    const existingPrice = existing?.salePrice ?? Number.POSITIVE_INFINITY;
-    if (!existing || price < existingPrice) byRetailer.set(match.advertiserId, match);
+  const considered = candidates.filter(
+    (c) =>
+      c.id !== product.id &&
+      (productMatchKey(c.title) === key ||
+        (Boolean(product.gtin) && c.gtin === product.gtin) ||
+        (Boolean(product.mpn) && c.mpn === product.mpn && c.brand === product.brand)),
+  );
+
+  const classified = considered.map((candidate) => ({
+    candidate,
+    result: classifyMatch(source, toCandidate(candidate), rulings),
+  }));
+
+  // One row per retailer. An exact match always beats a review candidate from
+  // the same retailer; among equals, the cheaper price wins.
+  const byRetailer = new Map<number, { candidate: Product; result: MatchResult }>();
+  for (const entry of classified) {
+    if (entry.result.decision === "not-a-match") continue;
+    if (entry.candidate.advertiserId === product.advertiserId) continue;
+    const existing = byRetailer.get(entry.candidate.advertiserId);
+    if (!existing) {
+      byRetailer.set(entry.candidate.advertiserId, entry);
+      continue;
+    }
+    const betterBasis =
+      entry.result.decision === "exact" && existing.result.decision !== "exact";
+    const cheaper =
+      entry.result.decision === existing.result.decision &&
+      (entry.candidate.salePrice ?? Number.POSITIVE_INFINITY) <
+        (existing.candidate.salePrice ?? Number.POSITIVE_INFINITY);
+    if (betterBasis || cheaper) byRetailer.set(entry.candidate.advertiserId, entry);
   }
 
-  // The record this comparison is for always stays in the set, even when the
-  // same retailer lists a cheaper duplicate — it is the one row whose identity
-  // is certain, and the page labels it as such.
-  byRetailer.set(product.advertiserId, product);
+  // The record this comparison is for is always row one: it is the only row
+  // whose identity is certain, because it is the page's own listing.
+  const sourceRow: MatchedProduct = {
+    product,
+    result: {
+      candidateId: product.id,
+      decision: "exact",
+      basis: "identifier",
+      matchedOn: [],
+      conflicts: [],
+      reviewBasis: null,
+      reason: "This page's own listing",
+    },
+  };
 
-  return Array.from(byRetailer.values());
+  const others = orderedMatches(Array.from(byRetailer.values()).map((e) => e.result));
+  const byId = new Map(
+    Array.from(byRetailer.values()).map((e) => [e.candidate.id, e.candidate]),
+  );
+  const rows: MatchedProduct[] = [
+    sourceRow,
+    ...others
+      .map((result) => {
+        const match = byId.get(result.candidateId);
+        return match ? { product: match, result } : null;
+      })
+      .filter((r): r is MatchedProduct => r !== null),
+  ];
+
+  // Queue what a person still has to decide. Never blocks the page.
+  void Promise.all(
+    rows
+      .filter((row) => row.result.decision === "review")
+      .map((row) =>
+        queueMatchReview({
+          source: { id: product.id, title: product.title, advertiserId: product.advertiserId },
+          candidate: {
+            id: row.product.id,
+            title: row.product.title,
+            advertiserId: row.product.advertiserId,
+          },
+          result: row.result,
+        }).catch(() => undefined),
+      ),
+  );
+
+  return {
+    rows,
+    // The source listing counts as one of the two retailers: its identity is
+    // certain, so a second exact row is what completes the claim.
+    canClaimComparison: canClaimComparison(
+      rows.map((row) => ({ result: row.result, advertiserId: row.product.advertiserId })),
+    ),
+    reviewCount: rows.filter((row) => row.result.decision === "review").length,
+  };
 }
 
 /** Other products in the same category, for the "related products" row. */
@@ -222,4 +336,64 @@ export async function getRelatedProducts(
     if (out.length >= limit) break;
   }
   return out;
+}
+
+/**
+ * Other variants of the same product — the size/colour/pack switcher.
+ *
+ * Variants are found on identity, never on title: records sharing a brand and
+ * model (or a brand alone, where no model is recorded) but differing on a
+ * variant field. A product with no identity fields has no variants to offer,
+ * which is the honest answer — guessing them from title fragments is how a
+ * 30 ml and a 60 ml end up compared as one item.
+ */
+export async function getProductVariants(
+  product: Product,
+  limit = 12,
+): Promise<Product[]> {
+  if (!product.brand) return [];
+
+  const db = await getDb();
+  const col = db.collection<Product>(COLLECTION);
+
+  const filter: Record<string, unknown> = { brand: product.brand, id: { $ne: product.id } };
+  if (product.mpn) filter.mpn = product.mpn;
+
+  const docs = (await col
+    .find(filter, { projection: { _id: 0 } })
+    .limit(limit * 4)
+    .toArray()) as Product[];
+
+  const differs = (a: Product, b: Product) =>
+    (a.size ?? null) !== (b.size ?? null) ||
+    (a.colour ?? null) !== (b.colour ?? null) ||
+    (a.flavour ?? null) !== (b.flavour ?? null) ||
+    (a.packCount ?? null) !== (b.packCount ?? null);
+
+  // One entry per distinct variant, so a variant stocked by five retailers
+  // offers one switch target rather than five.
+  const seen = new Set<string>();
+  const out: Product[] = [];
+  for (const doc of docs) {
+    if (!differs(doc, product)) continue;
+    const key = [doc.size, doc.colour, doc.flavour, doc.packCount].join("|");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(doc);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+/** A short human label for a variant switch, e.g. "30 ml · Blue · 3-pack". */
+export function variantLabel(product: Product): string {
+  const parts = [
+    product.size,
+    product.colour,
+    product.flavour,
+    typeof product.packCount === "number" && product.packCount > 1
+      ? `${product.packCount}-pack`
+      : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : product.title;
 }

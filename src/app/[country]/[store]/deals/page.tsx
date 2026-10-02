@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { loadStoreData } from "@/lib/storeData";
 import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
-import RecentlyViewedStores from "@/components/store/RecentlyViewedStores";
 import LightningDealCard from "@/components/store/LightningDealCard";
 import OfferList from "@/components/store/OfferList";
 import type { DealItem } from "@/lib/storeData";
@@ -108,9 +107,6 @@ export default async function StoreDealsPage({
             { label: store.name, href: `/${params.country}/${store.slug}` },
             { label: "Deals" },
           ]}
-        />
-        <RecentlyViewedStores
-          current={{ slug: store.slug, name: store.name, logoUrl: store.logoUrl, country: params.country }}
         />
         {/* Banner */}
         <div className="rounded-2xl bg-gradient-to-r from-red-600 via-brand-hover to-brand p-8 text-white shadow-lg">

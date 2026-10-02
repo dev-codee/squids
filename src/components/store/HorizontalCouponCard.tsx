@@ -140,16 +140,20 @@ export default function HorizontalCouponCard({
     <>
       <article className="overflow-hidden rounded-card border border-line bg-white shadow-card transition hover:shadow-card-hover">
         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-5 sm:p-5">
-          {/* Eligibility rail */}
-          <div className="flex flex-shrink-0 items-center gap-2 sm:w-28 sm:flex-col sm:items-start">
-            <span className="inline-flex items-center rounded-md border border-line bg-canvas-sunk px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-ink-soft">
-              {badge}
-            </span>
-            {coupon.discount && (
-              <span className="text-lg font-extrabold leading-none text-ink">
-                {coupon.discount}
+          {/* Eligibility rail: one tile carrying both the offer kind and the
+              discount value, so the number a shopper scans for sits inside the
+              badge rather than floating beside it. */}
+          <div className="flex flex-shrink-0 sm:w-28">
+            <div className="flex w-full min-w-[84px] flex-col items-center justify-center gap-1 rounded-card border border-brand-border bg-brand-soft/60 px-3 py-2.5 text-center">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">
+                {badge}
               </span>
-            )}
+              {coupon.discount && (
+                <span className="text-xl font-extrabold leading-none text-brand">
+                  {coupon.discount}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Benefit */}

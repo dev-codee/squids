@@ -11,7 +11,13 @@
  */
 
 import { cache } from "react";
-import { getAdvertiserBySlug, slugifyAdvertiserName, ensureAdvertiserStorePage, getRelatedAdvertisers } from "@/lib/db/advertisers";
+import {
+  getAdvertiserBySlug,
+  slugifyAdvertiserName,
+  ensureAdvertiserStorePage,
+  getRelatedAdvertisers,
+  getShowcaseAdvertisersFromDb,
+} from "@/lib/db/advertisers";
 import { ensureAdvertiserSeo } from "@/lib/ai/storeSeo";
 import type { StorePageContent } from "@/lib/ai/storeContent";
 import { getDealsFromDb, ensureDealAiContent } from "@/lib/db/deals";
@@ -505,17 +511,62 @@ async function loadStoreDataUncached(
     date: g.date || "",
   }));
 
+  // Similar stores, in three tiers so the row is never near-empty:
+  //   1. the editor's pinned picks, in their order;
+  //   2. stores sharing a category with this one;
+  //   3. the region's flagship stores, as a last resort.
+  // A visitor who has only ever opened this one store still sees a full row,
+  // which the per-browser "recently viewed" strip cannot give them.
+  const MIN_SIMILAR = 4;
+  const MAX_SIMILAR = 8;
+
+  const manualSlugs = (advertiser.similarStoreSlugs ?? [])
+    .map((slug) => slug.trim().toLowerCase())
+    .filter((slug) => slug && slug !== finalSlug);
+
+  const manualAdvertisers = (
+    await Promise.all(
+      manualSlugs
+        .slice(0, MAX_SIMILAR)
+        .map((slug) => safeQuery(() => getAdvertiserBySlug(slug, country), null)),
+    )
+  ).filter((a): a is Advertiser => Boolean(a));
+
   const relatedAdvertisers = await safeQuery(
     () =>
       getRelatedAdvertisers(
         storeMeta.categories,
         { id: advertiser!.id, network: advertiser!.network ?? "awin" },
         country,
-        6,
+        MAX_SIMILAR,
       ),
     [] as Advertiser[],
   );
-  const relatedStores: RelatedStoreItem[] = relatedAdvertisers.map((a) => ({
+
+  const picked: Advertiser[] = [];
+  const seenSlugs = new Set<string>([finalSlug]);
+  const add = (list: readonly Advertiser[]) => {
+    for (const a of list) {
+      if (picked.length >= MAX_SIMILAR) return;
+      const slug = slugifyAdvertiserName(a.name);
+      if (!slug || seenSlugs.has(slug)) continue;
+      seenSlugs.add(slug);
+      picked.push(a);
+    }
+  };
+
+  add(manualAdvertisers);
+  add(relatedAdvertisers);
+
+  if (picked.length < MIN_SIMILAR) {
+    const showcase = await safeQuery(
+      () => getShowcaseAdvertisersFromDb({ country, pageSize: MAX_SIMILAR * 2 }),
+      null,
+    );
+    add(showcase?.advertisers ?? []);
+  }
+
+  const relatedStores: RelatedStoreItem[] = picked.map((a) => ({
     slug: slugifyAdvertiserName(a.name),
     name: a.name,
     logoUrl: a.logoUrl,

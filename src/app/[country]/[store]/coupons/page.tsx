@@ -3,8 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { loadStoreData } from "@/lib/storeData";
 import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
-import RecentlyViewedStores from "@/components/store/RecentlyViewedStores";
-import CouponCard from "@/components/store/CouponCard";
+import HorizontalCouponCard from "@/components/store/HorizontalCouponCard";
 import type { CouponItem } from "@/lib/storeData";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
@@ -88,14 +87,17 @@ export default async function StoreCouponsPage({
             {items.length} {badge.text}
           </span>
         </div>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* List view, not a grid: the same stacked card the store page uses, so
+            the code, its terms and the expiry stay readable at a glance. */}
+        <div className="space-y-4">
           {items.map((coupon) => (
-            <CouponCard
+            <HorizontalCouponCard
               key={coupon.id}
               coupon={coupon}
               storeName={store.name}
               market={params.country}
               merchantId={store.slug}
+              merchantUrl={store.websiteUrl}
             />
           ))}
         </div>
@@ -116,9 +118,6 @@ export default async function StoreCouponsPage({
             { label: store.name, href: `/${params.country}/${store.slug}` },
             { label: "Coupons" },
           ]}
-        />
-        <RecentlyViewedStores
-          current={{ slug: store.slug, name: store.name, logoUrl: store.logoUrl, country: params.country }}
         />
         {/* Intro */}
         <div className="rounded-2xl bg-gradient-to-r from-brand to-brand-hover p-8 text-white shadow-lg">

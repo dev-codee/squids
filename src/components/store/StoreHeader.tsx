@@ -32,9 +32,9 @@ export default function StoreHeader({ store, country: countryProp }: StoreHeader
   const currentPath = pathname || base;
 
   const tabs = [
-    { label: t.couponsAndDeals, href: base, count: store.activeCouponsCount + store.activeDealsCount },
-    { label: dict.store.tabCoupons, href: `${base}/coupons`, count: store.activeCouponsCount },
-    { label: dict.store.tabDeals, href: `${base}/deals`, count: store.activeDealsCount },
+    { label: t.allOffers, href: base, count: store.activeCouponsCount + store.activeDealsCount },
+    { label: t.tabCoupons, href: `${base}/coupons`, count: store.activeCouponsCount },
+    { label: t.tabPromotions, href: `${base}/deals`, count: store.activeDealsCount },
   ];
 
   return (
@@ -92,37 +92,56 @@ export default function StoreHeader({ store, country: countryProp }: StoreHeader
               </div>
             </div>
 
-            {/* Two distinct actions */}
-            <div className="flex flex-shrink-0 flex-col gap-2 sm:flex-row md:flex-col lg:flex-row">
-              <FollowStoreButton
-                store={{
-                  slug: store.slug,
-                  network: store.network,
-                  advertiserId: store.advertiserId,
-                  name: store.name,
-                }}
-                country={country}
-                compact
-                label={t.saveStore}
-              />
-              <a
-                href={store.websiteUrl}
-                target="_blank"
-                rel="nofollow noopener noreferrer sponsored"
-                className="inline-flex items-center justify-center gap-1.5 rounded-[9px] bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
-              >
-                {t.visitStore}
-                <span aria-hidden>↗</span>
-              </a>
+            {/* Two distinct actions, with the offer-alert sign-up directly below
+                them — it belongs with the other store-level actions rather than
+                halfway down the sidebar. */}
+            <div className="flex w-full flex-shrink-0 flex-col gap-3 md:w-auto md:min-w-[260px]">
+              <div className="flex flex-col gap-2 sm:flex-row md:justify-end">
+                <FollowStoreButton
+                  store={{
+                    slug: store.slug,
+                    network: store.network,
+                    advertiserId: store.advertiserId,
+                    name: store.name,
+                  }}
+                  country={country}
+                  compact
+                  label={t.saveStore}
+                />
+                <a
+                  href={store.websiteUrl}
+                  target="_blank"
+                  rel="nofollow noopener noreferrer sponsored"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-[9px] bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+                >
+                  {t.visitStore}
+                  <span aria-hidden>↗</span>
+                </a>
+              </div>
+
+              <div className="rounded-card border border-brand-border bg-white/80 p-3.5">
+                <h3 className="text-sm font-bold text-ink">{t.saveThisStore}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                  {t.saveThisStoreDesc.replace("{store}", store.name)}
+                </p>
+                <div className="mt-2.5">
+                  <FollowStoreButton
+                    store={{
+                      slug: store.slug,
+                      network: store.network,
+                      advertiserId: store.advertiserId,
+                      name: store.name,
+                    }}
+                    country={country}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Affiliate disclosure, next to the outgoing actions as the brief requires */}
-        <p className="mt-3 flex items-start gap-2 rounded-card border border-brand-border bg-brand-soft px-4 py-2.5 text-xs text-ink-soft">
-          <span aria-hidden className="text-brand">ⓘ</span>
-          {t.commissionBanner}
-        </p>
+        {/* The affiliate disclosure is carried in the page footer rather than as
+            a banner above the offers. */}
 
         {/* Route tabs */}
         <nav className="scrollbar-none mt-4 flex gap-6 overflow-x-auto border-b border-line">

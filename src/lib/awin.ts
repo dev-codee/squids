@@ -48,6 +48,14 @@ export interface Advertiser {
   avgSavings?: string;
   rating?: number;
   isFlagship?: boolean;
+  /**
+   * Hand-picked "similar stores" for this advertiser's page, as store slugs.
+   *
+   * Operator-owned: the page falls back to shared-category stores and then to
+   * the region's flagship stores, so this only has to carry the picks an editor
+   * actually wants pinned, in the order they want them.
+   */
+  similarStoreSlugs?: string[];
   /** Internal-only flag marking an advertiser as PPC. Never shown publicly. */
   isPPC?: boolean;
   /**

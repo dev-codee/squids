@@ -189,3 +189,19 @@ export async function recordReview(
 }
 
 export { merchantMarketId };
+
+/**
+ * The merchant-market for a merchant id in one market.
+ *
+ * Used where a page holds an advertiser id and needs the market's own currency,
+ * delivery facts and permissions. Returns null when no record exists — which
+ * the caller must render as unknown, never as a default.
+ */
+export async function getMerchantMarketForMerchant(
+  merchantId: number,
+  market: string,
+): Promise<MerchantMarket | null> {
+  const db = await getDb();
+  const col = db.collection<MerchantMarketDoc>(COLLECTION);
+  return strip(await col.findOne({ merchantId, market: market.toUpperCase() }));
+}

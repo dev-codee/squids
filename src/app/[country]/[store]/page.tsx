@@ -297,6 +297,14 @@ export default async function StoreMainPage({
           <aside className="space-y-6 lg:col-span-4">
             <StoreEssentials store={store} country={params.country} />
             <StoreSidebar store={store} aiContent={aiContent} country={params.country} />
+            {/* Similar stores always render; "recently viewed" only has
+                anything to show once a visitor has opened a second store. */}
+            <RelatedStores
+              stores={store.relatedStores}
+              country={params.country}
+              title={dict.storeV2.relatedTitle}
+              variant="sidebar"
+            />
             <RecentlyViewedStores
               current={{
                 slug: store.slug,
@@ -320,12 +328,6 @@ export default async function StoreMainPage({
               <FaqAccordion faqs={store.faqs} storeName={store.name} />
             )}
           </div>
-
-          <RelatedStores
-            stores={store.relatedStores}
-            country={params.country}
-            title={dict.storeV2.relatedTitle}
-          />
 
           <LastVerifiedSection verifications={verifications} storeName={store.name} />
         </div>

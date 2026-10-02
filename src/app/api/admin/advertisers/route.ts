@@ -89,6 +89,9 @@ export async function POST(request: NextRequest) {
       bannerUrl: body.bannerUrl ? String(body.bannerUrl).trim() : undefined,
       categories: Array.isArray(body.categories) ? body.categories : undefined,
       avgSavings: body.avgSavings ? String(body.avgSavings).trim() : undefined,
+      similarStoreSlugs: Array.isArray(body.similarStoreSlugs)
+        ? body.similarStoreSlugs.map((s: unknown) => String(s).trim().toLowerCase()).filter(Boolean)
+        : undefined,
       rating: body.rating !== undefined ? Number(body.rating) : undefined,
       isFlagship: body.isFlagship === true,
       countryCodes: Array.isArray(body.countryCodes) ? body.countryCodes : [],
@@ -151,6 +154,11 @@ export async function PUT(request: NextRequest) {
     if (body.bannerUrl !== undefined) updateData.bannerUrl = body.bannerUrl ? String(body.bannerUrl).trim() : undefined;
     if (body.categories !== undefined) updateData.categories = Array.isArray(body.categories) ? body.categories : undefined;
     if (body.avgSavings !== undefined) updateData.avgSavings = body.avgSavings ? String(body.avgSavings).trim() : undefined;
+    if (body.similarStoreSlugs !== undefined) {
+      updateData.similarStoreSlugs = Array.isArray(body.similarStoreSlugs)
+        ? body.similarStoreSlugs.map((s: unknown) => String(s).trim().toLowerCase()).filter(Boolean)
+        : [];
+    }
     if (body.rating !== undefined) updateData.rating = body.rating !== null ? Number(body.rating) : undefined;
     if (body.isFlagship !== undefined) updateData.isFlagship = Boolean(body.isFlagship);
     if (body.countryCodes !== undefined) updateData.countryCodes = Array.isArray(body.countryCodes) ? body.countryCodes : [];

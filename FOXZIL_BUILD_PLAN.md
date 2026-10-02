@@ -757,11 +757,44 @@ product page to read `offers`, is Phase C — doing it before the backfill has r
 and an operator has granted rights would 404 every store and empty every
 comparison.
 
-### Phase C — the calculation
-13. §9 — eligible delivered total calculator, unit-tested on the PDF's worked example
-14. §8 — identifier-first matching + manual review queue
-15. §6 — real delivered totals, variant controls, checked time on the product page
-16. §3 — brand/type/size filters and store-deal filters, now that fields exist
+### Phase C — the calculation — 🟡 13–15 done (2026-10-02), 16 outstanding
+13. [x] §9 — eligible delivered total calculator, unit-tested on the PDF's worked example
+14. [x] §8 — identifier-first matching + manual review queue
+15. [x] §6 — real delivered totals, variant controls, checked time on the product page
+16. [ ] §3 — brand/type/size filters and store-deal filters, now that fields exist
+
+**What shipped.** `src/lib/model/deliveredTotal.ts` is the formula as a pure
+function: qualifying basket − eligible discount + delivery + mandatory fees +
+additional tax not already included, every component a `Known<number>`.
+Eligibility is three-valued, not two — a requirement we can disprove blocks the
+promotion, a requirement we simply cannot see makes it *conditional*, and only
+an eligible, calculable promotion ever moves the number. Cashback is carried
+separately and never deducted from what is payable at checkout. A basket
+discount is allocated pro rata across lines rather than applied in full to each.
+
+`src/lib/model/matching.ts` makes matching identifier-first and holds the rule
+that a title match is never an exact match, whatever else is true. Unproven
+pairs go to `match_reviews` (one document per pair, `$setOnInsert` on the status
+so a re-ingest cannot reset a decision) and surface at `/dashboard/match-reviews`
+with both records' identity fields side by side and the brief's four actions.
+An approval must name its reviewer, refused in the API and again in the model.
+
+The product page computes a real breakdown per retailer, ranks by **known**
+delivered total, lists rows whose costs are incomplete below that ranking rather
+than inside it, and makes the lowest-total claim only with two independent
+retailers matched on identifiers. Quantity and postcode are a GET form, so every
+state is a crawlable URL. Variants come from brand+model identity, never from
+title fragments.
+
+**Verified:** `npm test` — 103 unit tests, 41 of them new. The brief's worked
+example (p.14) is asserted end to end: B at A$31 ranks first, A at A$32 second,
+C excluded with an unknown total, and the lowest *item* price (C, A$28) losing
+to the lowest delivered total. `tsc --noEmit` and `next build` clean.
+
+**Not verified:** nothing has been run against a database. The delivered totals
+a page actually shows depend on `merchant_markets` and `delivery_rules` being
+populated and sourced — until they are, every total reads "unknown", which is
+the designed behaviour but means the UI path has not been seen with real values.
 
 ### Phase D — retention and operations
 17. §10 — price observations + history chart

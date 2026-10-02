@@ -5,7 +5,10 @@ import {
   getProductById,
   getMatchingProducts,
   getRelatedProducts,
+  getProductVariants,
+  variantLabel,
 } from "@/lib/db/products";
+import { deliveredTotalsFor } from "@/lib/db/delivered-totals";
 import { getAdvertiserByIdFromDb } from "@/lib/db/advertisers";
 import { getCategories } from "@/lib/db/categories";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
@@ -15,6 +18,17 @@ import PriceAlertCard from "@/components/product/PriceAlertCard";
 import CompareProductCard from "@/components/category/CompareProductCard";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
+
+/** Comparison context the shopper can set. Both are optional and crawl-safe. */
+function parseQuantity(raw: string | undefined): number {
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 && n <= 99 ? n : 1;
+}
+
+function parsePostcode(raw: string | undefined): string | null {
+  const value = (raw ?? "").trim();
+  return /^[A-Za-z0-9 -]{2,10}$/.test(value) ? value : null;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -63,8 +77,10 @@ export async function generateMetadata({
 
 export default async function ProductComparisonPage({
   params,
+  searchParams,
 }: {
   params: { country: string; id: string };
+  searchParams?: { qty?: string; postcode?: string };
 }) {
   const id = parseId(params.id);
   if (id === null) notFound();
@@ -80,31 +96,63 @@ export default async function ProductComparisonPage({
 
   const t = dict.productV2;
 
-  const [matches, related, categories] = await Promise.all([
-    getMatchingProducts(product).catch(() => [product]),
+  const quantity = parseQuantity(searchParams?.qty);
+  const postcode = parsePostcode(searchParams?.postcode);
+
+  const [matches, related, categories, variants] = await Promise.all([
+    getMatchingProducts(product).catch(() => ({
+      rows: [{ product, result: null }],
+      canClaimComparison: false,
+      reviewCount: 0,
+    })),
     getRelatedProducts(product, 4).catch(() => []),
     getCategories().catch(() => []),
+    getProductVariants(product).catch(() => []),
   ]);
+
+  const rows = "rows" in matches ? matches.rows : [];
+  const region = getRegionConfig(country);
+
+  // Real cost components, per retailer, for this quantity and destination.
+  const totals = await deliveredTotalsFor({
+    products: rows.map((row) => row.product),
+    market: country,
+    defaultCurrency: region.currency,
+    shopper: { postcode, quantity },
+  }).catch(() => new Map());
 
   // Resolve each matching record's advertiser so the table names a real
   // retailer rather than an opaque id.
-  const offers: RetailerOffer[] = await Promise.all(
-    matches.map(async (match) => {
-      const advertiser = await getAdvertiserByIdFromDb(match.advertiserId).catch(
-        () => null,
-      );
-      return {
-        productId: match.id,
-        retailerName: advertiser?.name ?? `#${match.advertiserId}`,
-        itemPrice: match.salePrice,
-        inStock: match.inStock,
-        trackingUrl: match.trackingUrl,
-        // Only this page's own record has certain identity. Everything else was
-        // grouped on normalised title, with no identifier to confirm it.
-        matchBasis: match.id === product.id ? ("source" as const) : ("title" as const),
-      };
-    }),
-  );
+  const offers: RetailerOffer[] = (
+    await Promise.all(
+      rows.map(async (row) => {
+        const entry = totals.get(row.product.id);
+        if (!entry) return null;
+        const advertiser = await getAdvertiserByIdFromDb(row.product.advertiserId).catch(
+          () => null,
+        );
+        const basis: RetailerOffer["matchBasis"] =
+          row.product.id === product.id
+            ? "source"
+            : row.result?.basis === "identifier"
+              ? "identifier"
+              : row.result?.basis === "manual"
+                ? "manual"
+                : "title";
+        return {
+          productId: row.product.id,
+          retailerName: advertiser?.name ?? `#${row.product.advertiserId}`,
+          inStock: row.product.inStock,
+          trackingUrl: row.product.trackingUrl,
+          matchBasis: basis,
+          breakdown: entry.breakdown,
+          currency: entry.currency,
+        } satisfies RetailerOffer;
+      }),
+    )
+  ).filter((offer): offer is RetailerOffer => offer !== null);
+
+  const knownTotals = offers.filter((offer) => offer.breakdown.total.known).length;
 
   // Link the breadcrumb to a real category page when one exists for this name.
   const categoryEntry = product.category
@@ -130,10 +178,28 @@ export default async function ProductComparisonPage({
     ],
   };
 
+  // The identity block, straight from the product record. A field nobody has
+  // sourced reads "Not recorded" rather than being quietly omitted — the gap is
+  // the point, because it is what keeps this row off an exact-match claim.
   const specs = [
-    { label: t.specSize, value: t.notRecorded },
-    { label: t.specPack, value: t.notRecorded },
-    { label: t.specCondition, value: t.notRecorded },
+    { label: t.specBrand, value: product.brand ?? t.notRecorded },
+    { label: t.specModel, value: product.mpn ?? t.notRecorded },
+    { label: t.specGtin, value: product.gtin ?? t.notRecorded },
+    { label: t.specSize, value: product.size ?? t.notRecorded },
+    { label: t.specColour, value: product.colour ?? product.flavour ?? t.notRecorded },
+    {
+      label: t.specPack,
+      value:
+        typeof product.packCount === "number" ? String(product.packCount) : t.notRecorded,
+    },
+    {
+      label: t.specCondition,
+      value:
+        product.condition && product.condition !== "unknown"
+          ? product.condition
+          : t.notRecorded,
+    },
+    { label: t.specRegionalSpec, value: product.regionalSpec ?? t.notRecorded },
     { label: t.specIdentifier, value: `#${product.id}` },
   ];
 
@@ -235,6 +301,72 @@ export default async function ProductComparisonPage({
           </div>
         </div>
 
+        {/* Comparison context: quantity and destination.
+
+            A plain GET form, so the controls work without JavaScript and every
+            state is a real URL. The totals below are recalculated server-side
+            for whatever is submitted. */}
+        <form
+          method="get"
+          className="mt-6 flex flex-wrap items-end gap-3 rounded-card border border-line bg-white px-4 py-3.5"
+        >
+          <label className="text-xs font-semibold text-ink-soft">
+            <span className="block">{t.quantity}</span>
+            <input
+              type="number"
+              name="qty"
+              min={1}
+              max={99}
+              defaultValue={quantity}
+              className="mt-1 w-20 rounded-[9px] border border-line-strong px-3 py-1.5 text-sm font-normal text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            />
+          </label>
+          <label className="text-xs font-semibold text-ink-soft">
+            <span className="block">{t.postcode}</span>
+            <input
+              type="text"
+              name="postcode"
+              inputMode="text"
+              maxLength={10}
+              defaultValue={postcode ?? ""}
+              placeholder={t.postcodePlaceholder}
+              className="mt-1 w-40 rounded-[9px] border border-line-strong px-3 py-1.5 text-sm font-normal text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-[9px] bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
+          >
+            {t.applyContext}
+          </button>
+          <p className="w-full text-xs text-ink-muted">{t.contextNote}</p>
+        </form>
+
+        {/* Variant switcher. Only rendered when variants are actually recorded —
+            a switcher built from title guesses would compare different items. */}
+        {variants.length > 0 && (
+          <section className="mt-4 rounded-card border border-line bg-white px-4 py-3.5">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              {t.variantTitle}
+            </h2>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="rounded-[9px] border border-brand bg-brand-soft px-3 py-1.5 text-xs font-semibold text-brand">
+                {variantLabel(product)}
+              </span>
+              {variants.map((variant) => (
+                <Link
+                  key={variant.id}
+                  href={`/${lc}/product/${variant.id}`}
+                  className="rounded-[9px] border border-line-strong px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-brand-border hover:text-brand"
+                >
+                  {variantLabel(variant)}
+                </Link>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-ink-muted">{t.variantNote}</p>
+          </section>
+        )}
+
         {/* Offer table */}
         <section className="mt-8">
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
@@ -243,11 +375,11 @@ export default async function ProductComparisonPage({
               <p className="mt-0.5 text-sm text-ink-muted">
                 {t.offersSummary
                   .replace("{retailers}", String(offers.length))
-                  .replace("{totals}", "0")}
+                  .replace("{totals}", String(knownTotals))}
               </p>
             </div>
             <span className="text-xs font-medium text-ink-muted">
-              {t.sortBy}: {t.sortItemPrice}
+              {t.sortBy}: {t.colTotal}
             </span>
           </div>
 
@@ -262,7 +394,10 @@ export default async function ProductComparisonPage({
                   {t.oneOfferOnly}
                 </p>
               )}
-              <OfferTable offers={offers} />
+              <OfferTable
+                offers={offers}
+                canClaimComparison={"canClaimComparison" in matches ? matches.canClaimComparison : false}
+              />
             </>
           )}
         </section>

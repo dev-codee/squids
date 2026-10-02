@@ -25,6 +25,7 @@ const EMPTY_FORM = {
   description: "",
   bannerUrl: "",
   categories: "",
+  similarStoreSlugs: "",
   avgSavings: "",
   rating: "",
   isFlagship: false,
@@ -52,6 +53,7 @@ function advertiserToForm(a: Advertiser): typeof EMPTY_FORM {
     description: a.description || "",
     bannerUrl: a.bannerUrl || "",
     categories: a.categories?.join(", ") || "",
+    similarStoreSlugs: a.similarStoreSlugs?.join(", ") || "",
     avgSavings: a.avgSavings || "",
     rating: a.rating !== undefined ? String(a.rating) : "",
     isFlagship: a.isFlagship || false,
@@ -183,6 +185,12 @@ export default function AdvertiserModal({
         ...formData,
         categories: formData.categories
           ? formData.categories.split(",").map((c) => c.trim()).filter(Boolean)
+          : [],
+        similarStoreSlugs: formData.similarStoreSlugs
+          ? formData.similarStoreSlugs
+              .split(",")
+              .map((slug) => slug.trim().toLowerCase())
+              .filter(Boolean)
           : [],
         rating: formData.rating ? Number(formData.rating) : undefined,
         isFlagship: formData.isFlagship,
@@ -457,6 +465,26 @@ export default function AdvertiserModal({
                   placeholder="e.g. 4.8"
                   className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                 />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-700">
+                  Similar stores (store slugs, comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={formData.similarStoreSlugs}
+                  onChange={(e) =>
+                    setFormData({ ...formData, similarStoreSlugs: e.target.value })
+                  }
+                  placeholder="e.g. bluetti, aliexpress, temu"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Pinned first, in this order, on the store page&apos;s &ldquo;Similar
+                  stores&rdquo; panel. Anything left over is filled automatically from
+                  stores sharing a category, so the row always shows at least four.
+                </p>
               </div>
 
               <div>
