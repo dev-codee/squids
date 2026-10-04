@@ -11,6 +11,7 @@ export interface Category {
   id?: string;
   name: string;
   slug: string;
+  parentSlug?: string | null;
   icon: string;
   description?: string;
   isFeatured?: boolean;
@@ -307,6 +308,7 @@ export async function createCategory(data: Partial<Category>): Promise<Category>
     slug,
     icon: data.icon || "",
     description: data.description || "",
+    parentSlug: data.parentSlug ? slugifyCategoryName(data.parentSlug) : null,
     isFeatured: Boolean(data.isFeatured),
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 99,
     storeCount: 0,
@@ -320,6 +322,19 @@ export async function createCategory(data: Partial<Category>): Promise<Category>
     id: res.insertedId.toString(),
     ...doc,
   };
+}
+
+/**
+ * Get subcategories for a given parent category slug.
+ */
+export async function getSubcategories(parentSlug: string): Promise<Category[]> {
+  const db = await getDb();
+  const col = db.collection<CategoryDoc>(COLLECTION);
+  const docs = await col
+    .find({ parentSlug: parentSlug.trim().toLowerCase() })
+    .sort({ sortOrder: 1, name: 1 })
+    .toArray();
+  return docs.map(mapDoc);
 }
 
 /**
@@ -342,6 +357,7 @@ export async function updateCategory(
 
   if (update.name !== undefined) updateData.name = update.name.trim();
   if (update.slug !== undefined) updateData.slug = slugifyCategoryName(update.slug);
+  if (update.parentSlug !== undefined) updateData.parentSlug = update.parentSlug ? slugifyCategoryName(update.parentSlug) : null;
   if (update.icon !== undefined) updateData.icon = update.icon.trim();
   if (update.description !== undefined) updateData.description = update.description;
   if (update.isFeatured !== undefined) updateData.isFeatured = Boolean(update.isFeatured);

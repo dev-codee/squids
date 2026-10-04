@@ -218,7 +218,7 @@ export default async function StoreMainPage({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-8">
             <header>
-              <h1 className="text-2xl font-bold tracking-tight text-ink">
+              <h1 className="text-[26px] font-extrabold tracking-tight text-ink sm:text-3xl lg:text-[40px] leading-tight">
                 {pageTitle ||
                   dict.store.promoCodeTitle
                     .replace("{store}", store.name)

@@ -53,6 +53,7 @@ export interface CouponItem {
   cashbackRate?: string;
   studentVerificationReq?: string;
   affiliateUrl?: string;
+  evidenceStatus?: "checkout-tested" | "merchant-listed" | "community-reported";
 }
 
 export interface DealItem {
@@ -176,6 +177,10 @@ export interface StoreData {
   seoDescription?: string | null;
   /** Maximum discount percentage (e.g. "50%"). */
   maxDiscount?: string | null;
+  /** Responsible editor and actual review timestamp (§4). */
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  syncedAt?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -247,7 +252,10 @@ function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): Coupo
     discount: deal.discountText || "",
     type: deal.subtype || "code",
     description: dealDisplayDescription(deal, locale),
-    verified: false,
+    verified: Boolean(deal.checkedAt || deal.promotion?.evidenceStatus === "checkout-tested"),
+    evidenceStatus:
+      deal.promotion?.evidenceStatus ??
+      (deal.checkedAt ? "checkout-tested" : "merchant-listed"),
     expiryDate: sanitizeEndDate(deal.endDate),
     updatedAt: toIsoDate(deal.syncedAt),
     isExclusive: deal.isExclusive,
@@ -607,6 +615,9 @@ async function loadStoreDataUncached(
     seoTitle: seoContent.seoTitle,
     seoDescription: seoContent.seoDescription,
     maxDiscount: seoContent.maxDiscount,
+    reviewedBy: (advertiser as any).reviewedBy ?? null,
+    reviewedAt: (advertiser as any).reviewedAt ?? null,
+    syncedAt: (advertiser as any).syncedAt ?? null,
   };
 }
 

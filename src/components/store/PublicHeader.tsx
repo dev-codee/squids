@@ -9,6 +9,14 @@ import { REGION_CODES, REGION_COOKIE, REGION_COOKIE_MAX_AGE } from "@/lib/region
 import { useDictionary } from "@/i18n/DictionaryProvider";
 import type { Advertiser } from "@/lib/awin";
 import { storeSlug } from "@/lib/networks";
+import { useSavedItems } from "@/lib/savedItems";
+import type {
+  UnifiedSearchResult,
+  UnifiedSearchProductItem,
+  UnifiedSearchStoreItem,
+  UnifiedSearchCategoryItem,
+} from "@/app/api/search/unified/route";
+import { trackSearchSubmit } from "@/lib/gtm";
 
 export default function PublicHeader({ country = "" }: { country?: string }) {
   const dict = useDictionary();
@@ -17,6 +25,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { items: savedItems } = useSavedItems();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
@@ -26,8 +35,8 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
   // so live-filtering only fires in response to real input.
   const userTypedRef = useRef(false);
 
-  // Live autocomplete: matching advertisers shown in a dropdown as you type.
-  const [suggestions, setSuggestions] = useState<Advertiser[]>([]);
+  // Live autocomplete: matching stores, products, and categories
+  const [unifiedResults, setUnifiedResults] = useState<UnifiedSearchResult | null>(null);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -39,12 +48,12 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
     setSearchQuery(urlSearch);
   }, [urlSearch]);
 
-  // Fetch advertiser suggestions as the user types (debounced).
+  // Fetch unified search suggestions as the user types (debounced).
   useEffect(() => {
     if (!userTypedRef.current) return;
     const q = searchQuery.trim();
     if (q.length < 2) {
-      setSuggestions([]);
+      setUnifiedResults(null);
       setSuggestOpen(false);
       setSuggestLoading(false);
       return;
@@ -54,19 +63,13 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
     setSuggestOpen(true);
     suggestDebounceRef.current = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({
-          search: q,
-          country: cc,
-          relationship: "joined",
-          requireDeals: "true",
-          pageSize: "8",
-          page: "1",
-        });
-        const res = await fetch(`/api/advertisers?${params.toString()}`);
+        const res = await fetch(
+          `/api/search/unified?q=${encodeURIComponent(q)}&country=${encodeURIComponent(cc)}&limit=4`,
+        );
         const json = await res.json();
-        setSuggestions(Array.isArray(json?.advertisers) ? json.advertisers : []);
+        setUnifiedResults(json || null);
       } catch {
-        setSuggestions([]);
+        setUnifiedResults(null);
       } finally {
         setSuggestLoading(false);
       }
@@ -121,14 +124,34 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     setSuggestOpen(false);
     const q = searchQuery.trim();
-    router.push(q ? `/${lc}?search=${encodeURIComponent(q)}` : `/${lc}`);
+    if (q) {
+      trackSearchSubmit(q, "all");
+      router.push(`/${lc}?search=${encodeURIComponent(q)}`);
+    } else {
+      router.push(`/${lc}`);
+    }
   };
 
-  const selectSuggestion = (advertiser: Advertiser) => {
+  const selectStore = (store: UnifiedSearchStoreItem) => {
     setSuggestOpen(false);
     userTypedRef.current = false;
-    setSearchQuery(advertiser.name);
-    router.push(`/${lc}/${storeSlug(advertiser.name)}`);
+    setSearchQuery(store.name);
+    trackSearchSubmit(store.name, "store", 1);
+    router.push(`/${lc}/${store.slug}`);
+  };
+
+  const selectProduct = (product: UnifiedSearchProductItem) => {
+    setSuggestOpen(false);
+    userTypedRef.current = false;
+    trackSearchSubmit(product.title, "product", 1);
+    router.push(`/${lc}/product/${product.id}`);
+  };
+
+  const selectCategory = (cat: UnifiedSearchCategoryItem) => {
+    setSuggestOpen(false);
+    userTypedRef.current = false;
+    trackSearchSubmit(cat.name, "category", 1);
+    router.push(`/${lc}/category/${cat.slug}`);
   };
 
   const selectCountry = (code: string) => {
@@ -175,7 +198,10 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
                   setSearchQuery(e.target.value);
                 }}
                 onFocus={() => {
-                  if (suggestions.length > 0) setSuggestOpen(true);
+                  if (unifiedResults) setSuggestOpen(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setSuggestOpen(false);
                 }}
                 autoComplete="off"
                 placeholder={dict.header.searchPlaceholder}
@@ -193,59 +219,179 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
               </button>
             </form>
 
-            {/* Live advertiser suggestions dropdown */}
+            {/* Live unified suggestions dropdown */}
             {suggestOpen && searchQuery.trim().length >= 2 && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-card border border-line bg-white shadow-card-hover">
-                {suggestLoading && suggestions.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-ink-muted">Searching…</div>
-                ) : suggestions.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-ink-muted">No stores found.</div>
+              <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-96 overflow-y-auto rounded-card border border-line bg-white shadow-card-hover divide-y divide-line">
+                {suggestLoading && !unifiedResults ? (
+                  <div className="px-4 py-3 text-sm text-ink-muted">Searching catalog…</div>
+                ) : !unifiedResults ||
+                  (unifiedResults.stores.length === 0 &&
+                    unifiedResults.products.length === 0 &&
+                    unifiedResults.categories.length === 0) ? (
+                  <div className="px-4 py-3 text-sm text-ink-muted">
+                    No matching stores, products, or categories found.
+                  </div>
                 ) : (
-                  <ul className="max-h-80 overflow-y-auto py-1">
-                    {suggestions.map((a) => (
-                      <li key={a.id}>
-                        <button
-                          type="button"
-                          onClick={() => selectSuggestion(a)}
-                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-brand-soft"
-                        >
-                          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-[9px] border border-line bg-canvas">
-                            {a.logoUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={a.logoUrl}
-                                alt={`${a.name} logo`}
-                                className="h-full w-full object-contain"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <span className="text-sm font-semibold text-ink-muted">
-                                {a.name.charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-medium text-ink">
-                              {a.name}
-                            </span>
-                            {a.dealCount !== undefined && a.dealCount > 0 && (
-                              <span className="text-xs text-ink-muted">
-                                {a.dealCount} {a.dealCount === 1 ? "offer" : "offers"}
-                              </span>
-                            )}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    {/* Products */}
+                    {unifiedResults.products.length > 0 && (
+                      <div className="py-2">
+                        <span className="block px-4 py-1 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+                          Products
+                        </span>
+                        <ul>
+                          {unifiedResults.products.map((p) => (
+                            <li key={p.id}>
+                              <button
+                                type="button"
+                                onClick={() => selectProduct(p)}
+                                className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-brand-soft"
+                              >
+                                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-[7px] border border-line bg-canvas">
+                                  {p.imageUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={p.imageUrl}
+                                      alt={p.title}
+                                      className="h-full w-full object-contain"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <span className="text-xs font-bold text-ink-muted">
+                                      {p.title.charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-xs font-semibold text-ink">
+                                    {p.title}
+                                  </span>
+                                  <span className="block text-[11px] text-ink-muted truncate">
+                                    {[p.brand, p.size, p.category].filter(Boolean).join(" · ")}
+                                  </span>
+                                </span>
+                                {typeof p.salePrice === "number" && p.salePrice > 0 && (
+                                  <span className="text-xs font-mono font-bold text-ink flex-shrink-0">
+                                    ${p.salePrice.toFixed(2)}
+                                  </span>
+                                )}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Stores */}
+                    {unifiedResults.stores.length > 0 && (
+                      <div className="py-2">
+                        <span className="block px-4 py-1 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+                          Stores & Retailers
+                        </span>
+                        <ul>
+                          {unifiedResults.stores.map((s) => (
+                            <li key={s.id}>
+                              <button
+                                type="button"
+                                onClick={() => selectStore(s)}
+                                className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-brand-soft"
+                              >
+                                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-[7px] border border-line bg-canvas">
+                                  {s.logoUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={s.logoUrl}
+                                      alt={s.name}
+                                      className="h-full w-full object-contain"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <span className="text-xs font-bold text-ink-muted">
+                                      {s.name.charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-xs font-semibold text-ink">
+                                    {s.name}
+                                  </span>
+                                  {s.dealCount !== undefined && s.dealCount > 0 && (
+                                    <span className="text-[11px] text-ink-muted">
+                                      {s.dealCount} active offers
+                                    </span>
+                                  )}
+                                </span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Categories */}
+                    {unifiedResults.categories.length > 0 && (
+                      <div className="py-2">
+                        <span className="block px-4 py-1 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+                          Categories
+                        </span>
+                        <div className="flex flex-wrap gap-1.5 px-4 py-1">
+                          {unifiedResults.categories.map((c) => (
+                            <button
+                              key={c.slug}
+                              type="button"
+                              onClick={() => selectCategory(c)}
+                              className="rounded-full border border-line px-2.5 py-1 text-[11px] font-semibold text-ink-soft transition hover:border-brand hover:text-brand hover:bg-brand-soft"
+                            >
+                              {c.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer: Search all */}
+                    <button
+                      type="button"
+                      onClick={handleSearchSubmit}
+                      className="w-full bg-canvas px-4 py-2.5 text-left text-xs font-semibold text-brand transition hover:bg-brand-soft"
+                    >
+                      Search all results for &ldquo;{searchQuery}&rdquo; →
+                    </button>
+                  </>
                 )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Right side: Country dropdown & Sign in */}
-        <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
+        {/* Right side: Saved items, Country dropdown & Sign in */}
+        <div className="flex items-center gap-2.5 sm:gap-4 flex-shrink-0">
+          {/* Saved items bookmark */}
+          <Link
+            href={`/${lc}/saved`}
+            className="relative inline-flex items-center justify-center rounded-[9px] border border-line p-2 text-ink-soft transition-colors hover:border-brand hover:text-brand hover:bg-canvas"
+            title="Saved products"
+            aria-label="Saved products"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+            </svg>
+            {savedItems.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-white shadow-xs">
+                {savedItems.length}
+              </span>
+            )}
+          </Link>
+
           {/* Country flag dropdown */}
           <div className="relative" ref={countryRef}>
             <button

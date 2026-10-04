@@ -11,6 +11,7 @@ import {
 import { deliveredTotalsFor } from "@/lib/db/delivered-totals";
 import { getAdvertiserByIdFromDb } from "@/lib/db/advertisers";
 import { getCategories } from "@/lib/db/categories";
+import { getPriceHistory } from "@/lib/db/price-observations";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
 import OfferTable, { type RetailerOffer } from "@/components/product/OfferTable";
 import PriceHistoryPanel from "@/components/product/PriceHistoryPanel";
@@ -80,7 +81,7 @@ export default async function ProductComparisonPage({
   searchParams,
 }: {
   params: { country: string; id: string };
-  searchParams?: { qty?: string; postcode?: string };
+  searchParams?: { qty?: string; postcode?: string; alert?: string };
 }) {
   const id = parseId(params.id);
   if (id === null) notFound();
@@ -99,7 +100,7 @@ export default async function ProductComparisonPage({
   const quantity = parseQuantity(searchParams?.qty);
   const postcode = parsePostcode(searchParams?.postcode);
 
-  const [matches, related, categories, variants] = await Promise.all([
+  const [matches, related, categories, variants, priceHistory] = await Promise.all([
     getMatchingProducts(product).catch(() => ({
       rows: [{ product, result: null }],
       canClaimComparison: false,
@@ -108,6 +109,7 @@ export default async function ProductComparisonPage({
     getRelatedProducts(product, 4).catch(() => []),
     getCategories().catch(() => []),
     getProductVariants(product).catch(() => []),
+    getPriceHistory(product.id, country).catch(() => []),
   ]);
 
   const rows = "rows" in matches ? matches.rows : [];
@@ -154,6 +156,12 @@ export default async function ProductComparisonPage({
 
   const knownTotals = offers.filter((offer) => offer.breakdown.total.known).length;
 
+  const lowestPrice = offers.reduce<number | null>((min, o) => {
+    const p = o.breakdown.itemPrice.known ? o.breakdown.itemPrice.value : null;
+    if (p === null) return min;
+    return min === null ? p : Math.min(min, p);
+  }, product.salePrice ?? null);
+
   // Link the breadcrumb to a real category page when one exists for this name.
   const categoryEntry = product.category
     ? categories.find(
@@ -163,18 +171,92 @@ export default async function ProductComparisonPage({
 
   const siteUrl = getSiteUrl();
   const productUrl = `${siteUrl}/${lc}/product/${id}`;
+
+  // §14 & §8: Schema.org Product & AggregateOffer structured data.
+  // In accordance with Google Rich Results guidelines and §8 requirements:
+  // ONLY verified identifier-matched rows ("source", "identifier", "manual") are included.
+  // Fuzzy title-only candidates are strictly excluded from structured data claims.
+  const verifiedOffers = offers.filter(
+    (o) =>
+      o.matchBasis === "source" ||
+      o.matchBasis === "identifier" ||
+      o.matchBasis === "manual",
+  );
+
+  const priceValues = verifiedOffers
+    .map((o) =>
+      o.breakdown.total.known
+        ? o.breakdown.total.value
+        : o.breakdown.itemPrice.known
+          ? o.breakdown.itemPrice.value
+          : null,
+    )
+    .filter((v): v is number => typeof v === "number" && v > 0);
+
+  const lowPrice = priceValues.length > 0 ? Math.min(...priceValues) : undefined;
+  const highPrice = priceValues.length > 0 ? Math.max(...priceValues) : undefined;
+
+  const productJsonLd: Record<string, any> = {
+    "@type": "Product",
+    "@id": `${productUrl}#product`,
+    name: product.title,
+    url: productUrl,
+    image: product.imageUrl ? [product.imageUrl] : undefined,
+    description: `${product.title} — compare verified retailer prices and delivery charges on Foxzil.`,
+    sku: String(product.id),
+    mpn: product.mpn || undefined,
+    gtin13: product.gtin && product.gtin.length === 13 ? product.gtin : undefined,
+    gtin: product.gtin || undefined,
+    brand: product.brand ? { "@type": "Brand", name: product.brand } : undefined,
+  };
+
+  if (lowPrice !== undefined && highPrice !== undefined && verifiedOffers.length > 0) {
+    productJsonLd.offers = {
+      "@type": "AggregateOffer",
+      priceCurrency: region.currency,
+      lowPrice: lowPrice,
+      highPrice: highPrice,
+      offerCount: verifiedOffers.length,
+      offers: verifiedOffers.map((o) => {
+        const price = o.breakdown.total.known
+          ? o.breakdown.total.value
+          : o.breakdown.itemPrice.known
+            ? o.breakdown.itemPrice.value
+            : undefined;
+        return {
+          "@type": "Offer",
+          price: price,
+          priceCurrency: o.currency,
+          availability: o.inStock
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
+          seller: {
+            "@type": "Organization",
+            name: o.retailerName,
+          },
+          url: o.trackingUrl || undefined,
+        };
+      }),
+    };
+  }
+
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: dict.header.home, item: `${siteUrl}/${lc}` },
+    "@graph": [
       {
-        "@type": "ListItem",
-        position: 2,
-        name: dict.categories.allCategories,
-        item: `${siteUrl}/${lc}/categories`,
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: dict.header.home, item: `${siteUrl}/${lc}` },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: dict.categories.allCategories,
+            item: `${siteUrl}/${lc}/categories`,
+          },
+          { "@type": "ListItem", position: 3, name: product.title, item: productUrl },
+        ],
       },
-      { "@type": "ListItem", position: 3, name: product.title, item: productUrl },
+      productJsonLd,
     ],
   };
 
@@ -229,6 +311,15 @@ export default async function ProductComparisonPage({
           ]}
         />
 
+        {searchParams?.alert === "confirmed" && (
+          <div className="mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-4 text-emerald-800" role="alert">
+            <p className="text-sm font-semibold">Price alert confirmed!</p>
+            <p className="mt-0.5 text-xs text-emerald-700">
+              We will notify you by email as soon as this product drops to or below your target price.
+            </p>
+          </div>
+        )}
+
         {/* Identity block */}
         <div className="mt-2 grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="flex items-center justify-center rounded-card border border-line bg-white p-8">
@@ -247,7 +338,7 @@ export default async function ProductComparisonPage({
           </div>
 
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            <h1 className="text-[28px] font-extrabold tracking-tight text-ink sm:text-4xl lg:text-[42px] leading-tight">
               {product.title}
             </h1>
             <p className="mt-1.5 text-sm text-ink-soft">
@@ -404,8 +495,12 @@ export default async function ProductComparisonPage({
 
         {/* History and alerts */}
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-          <PriceHistoryPanel />
-          <PriceAlertCard />
+          <PriceHistoryPanel observations={priceHistory} currency={region.currency} />
+          <PriceAlertCard
+            productId={product.id}
+            productTitle={product.title}
+            currentPrice={lowestPrice}
+          />
         </div>
 
         {/* Product information */}
@@ -413,7 +508,7 @@ export default async function ProductComparisonPage({
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3.5">
             <h2 className="text-base font-bold text-ink">{t.productInformation}</h2>
             <Link
-              href={`/${lc}/about`}
+              href={`/${lc}/report-issue?type=wrong_match&product=${encodeURIComponent(String(product.id))}`}
               className="text-xs font-semibold text-brand hover:underline"
             >
               {t.reportMatch}

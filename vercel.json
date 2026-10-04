@@ -36,6 +36,14 @@
     {
       "path": "/api/cron/ppc-outreach?task=sweep",
       "schedule": "30 7 * * *"
+    },
+    {
+      "path": "/api/cron/notify-product-alerts",
+      "schedule": "30 * * * *"
+    },
+    {
+      "path": "/api/cron/recalculate-staleness",
+      "schedule": "0 4 * * *"
     }
   ]
 }

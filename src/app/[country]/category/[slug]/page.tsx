@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getCategoryBySlug } from "@/lib/db/categories";
+import { getCategoryBySlug, getSubcategories } from "@/lib/db/categories";
 import { getAdvertisersFromDb } from "@/lib/db/advertisers";
 import { getDealsFromDb } from "@/lib/db/deals";
-import { getProductsFromDb, type ProductSort } from "@/lib/db/products";
+import { getProductsFromDb, getProductFacets, type ProductSort } from "@/lib/db/products";
 import type { Product } from "@/lib/products";
 import { countryName } from "@/lib/countries";
 import AdvertiserCard from "@/components/AdvertiserCard";
@@ -51,6 +51,13 @@ function readParams(searchParams: Record<string, string | string[] | undefined>)
     inStockOnly: str("stock") === "1",
     minPrice: num("min"),
     maxPrice: num("max"),
+    brand: str("brand"),
+    size: str("size"),
+    condition: str("condition"),
+    discountType: str("dtype") as "code" | "deal" | "student" | "cashback" | "free-delivery" | undefined,
+    customerType: str("cust") as "new" | "existing" | "any" | undefined,
+    evidenceStatus: str("evidence") as "checkout-tested" | "merchant-listed" | "community-reported" | undefined,
+    store: str("store"),
   };
 }
 
@@ -94,9 +101,27 @@ export async function generateMetadata({
 
   // The unfiltered category is the canonical page. Sort/filter/page combinations
   // are navigable but must not spawn duplicate crawl paths of their own.
-  const { tab, page, sort, inStockOnly, minPrice, maxPrice } = readParams(searchParams);
+  const {
+    tab,
+    page,
+    sort,
+    inStockOnly,
+    minPrice,
+    maxPrice,
+    brand,
+    size,
+    condition,
+    discountType,
+    customerType,
+    evidenceStatus,
+    store,
+  } = readParams(searchParams);
   const isRefined =
-    sort !== "relevance" || inStockOnly || minPrice !== undefined || maxPrice !== undefined;
+    sort !== "relevance" ||
+    inStockOnly ||
+    minPrice !== undefined ||
+    maxPrice !== undefined ||
+    Boolean(brand || size || condition || discountType || customerType || evidenceStatus || store);
 
   return {
     title: dict.meta.categoryTitle
@@ -135,7 +160,21 @@ export default async function CategoryDetailPage({
   if (!category) notFound();
 
   const t = dict.categoryV2;
-  const { tab, page, sort, inStockOnly, minPrice, maxPrice } = readParams(searchParams);
+  const {
+    tab,
+    page,
+    sort,
+    inStockOnly,
+    minPrice,
+    maxPrice,
+    brand,
+    size,
+    condition,
+    discountType,
+    customerType,
+    evidenceStatus,
+    store,
+  } = readParams(searchParams);
   const basePath = `/${lc}/category/${slug}`;
 
   /** Rebuild the current URL with one or more params changed. */
@@ -147,6 +186,13 @@ export default async function CategoryDetailPage({
       stock: inStockOnly ? "1" : undefined,
       min: minPrice !== undefined ? String(minPrice) : undefined,
       max: maxPrice !== undefined ? String(maxPrice) : undefined,
+      brand: brand || undefined,
+      size: size || undefined,
+      condition: condition || undefined,
+      dtype: discountType || undefined,
+      cust: customerType || undefined,
+      evidence: evidenceStatus || undefined,
+      store: store || undefined,
       page: page > 1 ? String(page) : undefined,
       ...Object.fromEntries(
         Object.entries(changes).map(([k, v]) => [k, v === null ? undefined : String(v)]),
@@ -159,7 +205,7 @@ export default async function CategoryDetailPage({
     return qs ? `${basePath}?${qs}` : basePath;
   };
 
-  const [productsResult, advertisersResult, dealsResult] = await Promise.all([
+  const [productsResult, productFacets, subcategories, advertisersResult, dealsResult] = await Promise.all([
     // Products are optional content — an empty or unreachable collection just
     // leaves the compare tab empty rather than failing the page.
     getProductsFromDb({
@@ -169,6 +215,9 @@ export default async function CategoryDetailPage({
       inStockOnly,
       minPrice,
       maxPrice,
+      brand,
+      size,
+      condition,
       sort,
     }).catch(() => ({
       products: [] as Product[],
@@ -177,12 +226,18 @@ export default async function CategoryDetailPage({
       total: 0,
       totalPages: 1,
     })),
+    getProductFacets(category.name).catch(() => ({ brands: [], sizes: [], conditions: [] })),
+    getSubcategories(slug).catch(() => []),
     getAdvertisersFromDb({ country, category: category.name, pageSize: 12 }),
     getDealsFromDb({
       country,
       search: category.name,
       page: tab === "deals" ? page : 1,
       pageSize: DEAL_PAGE_SIZE,
+      discountType,
+      customerType,
+      evidenceStatus,
+      store,
     }),
   ]);
 
@@ -206,7 +261,11 @@ export default async function CategoryDetailPage({
     ],
   };
 
-  const hasFilters = inStockOnly || minPrice !== undefined || maxPrice !== undefined;
+  const hasFilters =
+    inStockOnly ||
+    minPrice !== undefined ||
+    maxPrice !== undefined ||
+    Boolean(brand || size || condition || discountType || customerType || evidenceStatus || store);
   const countLabel = (n: number, one: string, many: string) =>
     n === 1 ? one : many.replace("{count}", String(n));
 
@@ -233,7 +292,7 @@ export default async function CategoryDetailPage({
 
         {/* Title and buying context */}
         <header className="mt-2">
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+          <h1 className="text-[28px] font-extrabold tracking-tight text-ink sm:text-4xl lg:text-[44px]">
             {t.pageTitle.replace("{category}", translatedCategoryName)}
           </h1>
           <p className="mt-2 max-w-2xl text-base text-ink-soft">{t.pageSubtitle}</p>
@@ -241,6 +300,25 @@ export default async function CategoryDetailPage({
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-soft">
               {category.description}
             </p>
+          )}
+
+          {/* Subcategories */}
+          {subcategories.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                {t.subcategoriesTitle || "Subcategories"}:
+              </span>
+              {subcategories.map((sub) => (
+                <Link
+                  key={sub.slug}
+                  href={`/${lc}/category/${sub.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs font-medium text-ink shadow-sm transition hover:border-brand hover:text-brand"
+                >
+                  {sub.icon && <span>{sub.icon}</span>}
+                  <span>{sub.name}</span>
+                </Link>
+              ))}
+            </div>
           )}
         </header>
 
@@ -270,12 +348,8 @@ export default async function CategoryDetailPage({
         </div>
 
         {/* Listing */}
-        <div
-          className={`mt-6 gap-6 ${
-            tab === "products" ? "grid lg:grid-cols-[240px_minmax(0,1fr)]" : "block"
-          }`}
-        >
-          {tab === "products" && <CategoryFilters />}
+        <div className="mt-6 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <CategoryFilters tab={tab} facets={productFacets} />
 
           <div>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -399,7 +473,7 @@ export default async function CategoryDetailPage({
             <p className="mt-0.5 text-sm text-ink-soft">{t.howWeCompareBody}</p>
           </div>
           <Link
-            href={`/${lc}/about`}
+            href={`/${lc}/methodology`}
             className="flex-shrink-0 text-sm font-semibold text-brand hover:underline"
           >
             {t.viewMethod} <span aria-hidden>→</span>

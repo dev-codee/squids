@@ -35,13 +35,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   });
 
-  // 3. Regional utility pages (stores, deals, categories)
+  // 3. Regional utility & authority pages
   REGION_CODES.forEach((code: string) => {
     const c = code.toLowerCase();
     entries.push(
       { url: `${siteUrl}/${c}/stores`, changeFrequency: "weekly", priority: 0.7 },
       { url: `${siteUrl}/${c}/deals`, changeFrequency: "daily", priority: 0.8 },
       { url: `${siteUrl}/${c}/categories`, changeFrequency: "weekly", priority: 0.7 },
+      { url: `${siteUrl}/${c}/methodology`, changeFrequency: "monthly", priority: 0.7 },
+      { url: `${siteUrl}/${c}/research/delivered-cost-study`, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${siteUrl}/${c}/report-issue`, changeFrequency: "monthly", priority: 0.5 },
+      { url: `${siteUrl}/${c}/saved`, changeFrequency: "monthly", priority: 0.4 },
     );
   });
 

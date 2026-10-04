@@ -31,7 +31,7 @@ export default function HomeValueBand({ country }: { country: string }) {
                 {t.bandBody}
               </p>
               <Link
-                href={`/${lc}/about`}
+                href={`/${lc}/methodology`}
                 className="mt-6 inline-block rounded-[9px] bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
               >
                 {t.bandCta}

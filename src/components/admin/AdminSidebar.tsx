@@ -118,6 +118,56 @@ const groups: NavGroup[] = [
           </>,
         ),
       },
+      {
+        label: "Offers & Costs",
+        href: "/dashboard/offers",
+        icon: icon(
+          <>
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+          </>,
+        ),
+      },
+      {
+        label: "Feed Health",
+        href: "/dashboard/feed-health",
+        icon: icon(
+          <>
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          </>,
+        ),
+      },
+      {
+        label: "Alerts Desk",
+        href: "/dashboard/alerts",
+        icon: icon(
+          <>
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </>,
+        ),
+      },
+      {
+        label: "Commercial Reports",
+        href: "/dashboard/commercial-reports",
+        icon: icon(
+          <>
+            <line x1="18" y1="20" x2="18" y2="10" />
+            <line x1="12" y1="20" x2="12" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="14" />
+          </>,
+        ),
+      },
+      {
+        label: "Corrections Desk",
+        href: "/dashboard/corrections",
+        icon: icon(
+          <>
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </>,
+        ),
+      },
     ],
   },
   {

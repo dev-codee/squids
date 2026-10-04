@@ -31,6 +31,15 @@ export interface ProductQuery {
   minPrice?: number;
   maxPrice?: number;
   sort?: ProductSort;
+  brand?: string;
+  size?: string;
+  condition?: string;
+}
+
+export interface ProductFacets {
+  brands: { name: string; count: number }[];
+  sizes: { name: string; count: number }[];
+  conditions: { name: string; count: number }[];
 }
 
 /** Escape a user/DB-supplied string for safe use inside a RegExp. */
@@ -60,6 +69,15 @@ export async function getProductsFromDb(query: ProductQuery): Promise<PagedProdu
   }
   if (query.inStockOnly) {
     filter.inStock = true;
+  }
+  if (query.brand?.trim()) {
+    filter.brand = { $regex: `^${escapeRegex(query.brand.trim())}$`, $options: "i" };
+  }
+  if (query.size?.trim()) {
+    filter.size = { $regex: `^${escapeRegex(query.size.trim())}$`, $options: "i" };
+  }
+  if (query.condition?.trim()) {
+    filter.condition = query.condition.trim();
   }
   const priceBounds: Record<string, number> = {};
   if (typeof query.minPrice === "number" && Number.isFinite(query.minPrice)) {
@@ -98,6 +116,47 @@ export async function getProductsFromDb(query: ProductQuery): Promise<PagedProdu
     pageSize,
     total,
     totalPages,
+  };
+}
+
+export async function getProductFacets(category?: string): Promise<ProductFacets> {
+  const db = await getDb();
+  const col = db.collection<Product>(COLLECTION);
+
+  const match: Record<string, unknown> = {};
+  if (category?.trim()) {
+    const name = category.trim();
+    const head = name.split(/[&/,]/)[0].trim();
+    const terms = Array.from(new Set([name, head, name.replace(/[^a-z0-9]+/gi, "-")]))
+      .filter(Boolean)
+      .map(escapeRegex);
+    match.category = { $regex: terms.join("|"), $options: "i" };
+  }
+
+  const [brandDocs, sizeDocs, conditionDocs] = await Promise.all([
+    col.aggregate<{ _id: string; count: number }>([
+      { $match: { ...match, brand: { $nin: [null, ""] } } },
+      { $group: { _id: "$brand", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 15 },
+    ]).toArray(),
+    col.aggregate<{ _id: string; count: number }>([
+      { $match: { ...match, size: { $nin: [null, ""] } } },
+      { $group: { _id: "$size", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 15 },
+    ]).toArray(),
+    col.aggregate<{ _id: string; count: number }>([
+      { $match: { ...match, condition: { $nin: [null, ""] } } },
+      { $group: { _id: "$condition", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]).toArray(),
+  ]);
+
+  return {
+    brands: brandDocs.map((d) => ({ name: d._id, count: d.count })),
+    sizes: sizeDocs.map((d) => ({ name: d._id, count: d.count })),
+    conditions: conditionDocs.map((d) => ({ name: d._id, count: d.count })),
   };
 }
 

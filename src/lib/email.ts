@@ -163,6 +163,64 @@ export function newOffersDigestEmail(opts: {
   };
 }
 
+export function confirmProductAlertEmail(opts: {
+  confirmUrl: string;
+  unsubscribeUrl: string;
+  productTitle: string;
+  targetPrice: string;
+}): { subject: string; html: string } {
+  const { confirmUrl, unsubscribeUrl, productTitle, targetPrice } = opts;
+  return {
+    subject: `Confirm price alert for ${productTitle}`,
+    html: emailShell(
+      `
+        <h1 style="font-size: 18px; margin: 0 0 12px;">Confirm your price alert</h1>
+        <p style="font-size: 14px; line-height: 1.6;">
+          You asked for an alert when <strong>${productTitle}</strong> reaches <strong>${targetPrice}</strong> or lower.
+          Click below to confirm your alert — you won't receive emails until you confirm.
+        </p>
+        <p style="margin: 24px 0;">
+          <a href="${confirmUrl}" style="background: #bf481c; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block;">
+            Confirm price alert
+          </a>
+        </p>
+        <p style="font-size: 12px; color: #9ca3af;">If you didn't request this alert, you can safely ignore this email.</p>
+      `,
+      unsubscribeUrl,
+      confirmUrl,
+    ),
+  };
+}
+
+export function priceDropAlertEmail(opts: {
+  productTitle: string;
+  currentPrice: string;
+  targetPrice: string;
+  productUrl: string;
+  unsubscribeUrl: string;
+}): { subject: string; html: string } {
+  const { productTitle, currentPrice, targetPrice, productUrl, unsubscribeUrl } = opts;
+  return {
+    subject: `Price drop: ${productTitle} is now ${currentPrice}`,
+    html: emailShell(
+      `
+        <h1 style="font-size: 18px; margin: 0 0 12px; color: #bf481c;">Target price reached!</h1>
+        <p style="font-size: 14px; line-height: 1.6;">
+          <strong>${productTitle}</strong> has dropped to <strong>${currentPrice}</strong>, meeting your target of ${targetPrice}.
+        </p>
+        <p style="margin: 24px 0;">
+          <a href="${productUrl}" style="background: #bf481c; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block;">
+            Compare offers & buy
+          </a>
+        </p>
+        <p style="font-size: 12px; color: #9ca3af;">Prices and stock are revalidated at send time but may change rapidly at the retailer.</p>
+      `,
+      unsubscribeUrl,
+      productUrl,
+    ),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Threaded send (PPC permission outreach)
 // ---------------------------------------------------------------------------

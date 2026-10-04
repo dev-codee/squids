@@ -185,6 +185,61 @@ function buildFilter(query: DealQuery & { network?: string }): Record<string, un
     });
   }
 
+  if (query.store?.trim()) {
+    const storeRegex = { $regex: query.store.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
+    conditions.push({ "advertiser.name": storeRegex });
+  }
+
+  if (query.discountType) {
+    if (query.discountType === "code") {
+      conditions.push({
+        $or: [
+          { type: "voucher" },
+          { subtype: "code" },
+          { code: { $exists: true, $ne: null, $nin: ["", null] } },
+        ],
+      });
+    } else if (query.discountType === "deal") {
+      conditions.push({
+        $or: [
+          { type: "deal" },
+          { code: null },
+          { code: "" },
+        ],
+      });
+    } else if (query.discountType === "student") {
+      conditions.push({
+        $or: [
+          { subtype: "student" },
+          { studentVerificationReq: { $exists: true, $ne: null } },
+        ],
+      });
+    } else if (query.discountType === "cashback") {
+      conditions.push({
+        $or: [
+          { subtype: "cashback" },
+          { cashbackRate: { $exists: true, $ne: null } },
+          { "promotion.benefit.kind": "cashback" },
+        ],
+      });
+    } else if (query.discountType === "free-delivery") {
+      conditions.push({
+        $or: [
+          { "promotion.benefit.kind": "free-delivery" },
+          { discountText: { $regex: /free\s+(shipping|delivery)/i } },
+        ],
+      });
+    }
+  }
+
+  if (query.customerType && query.customerType !== "any") {
+    conditions.push({ "promotion.conditions.customerType": query.customerType });
+  }
+
+  if (query.evidenceStatus) {
+    conditions.push({ "promotion.evidenceStatus": query.evidenceStatus });
+  }
+
   if (conditions.length === 0) return {};
   if (conditions.length === 1) return conditions[0];
   return { $and: conditions };

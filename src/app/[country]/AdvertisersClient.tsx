@@ -15,6 +15,7 @@ import HomeSection from "@/components/home/HomeSection";
 import HomeProducts from "@/components/home/HomeProducts";
 import HomeStoreDeals from "@/components/home/HomeStoreDeals";
 import HomeValueBand from "@/components/home/HomeValueBand";
+import HomeEvidenceStudy from "@/components/home/HomeEvidenceStudy";
 import HomeTools from "@/components/home/HomeTools";
 import HomePopularShops from "@/components/home/HomePopularShops";
 import HomeCategories, { type HomeCategoryTile } from "@/components/home/HomeCategories";
@@ -277,6 +278,7 @@ export default function AdvertisersClient({
       />
       <HomePopularShops shops={popularShops} country={country} />
       <HomeStoreDeals deals={recentDeals} country={country} />
+      <HomeEvidenceStudy country={country} />
       <HomeValueBand country={country} />
       <HomeTools country={country} />
       <HomeFaqs faqs={homeSettings?.faqs ?? []} />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { CouponItem } from "@/lib/storeData";
 import { useDictionary } from "@/i18n/DictionaryProvider";
@@ -129,10 +130,17 @@ export default function HorizontalCouponCard({
     { label: t.expiry, value: expiryText },
     {
       label: t.verification,
-      value: coupon.verified
-        ? `${dict.cards.verified}${coupon.updatedAt ? ` · ${new Date(coupon.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}`
-        : t.readMerchantTerms,
-      href: coupon.verified ? undefined : merchantUrl || undefined,
+      value:
+        coupon.evidenceStatus === "checkout-tested"
+          ? `Checkout-Tested${coupon.updatedAt ? ` · ${new Date(coupon.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}`
+          : coupon.evidenceStatus === "merchant-listed"
+            ? `Merchant-Listed (Feed Sourced)`
+            : coupon.evidenceStatus === "community-reported"
+              ? `Community-Reported (Unverified)`
+              : coupon.verified
+                ? `${dict.cards.verified}${coupon.updatedAt ? ` · ${new Date(coupon.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}`
+                : t.readMerchantTerms,
+      href: coupon.evidenceStatus || coupon.verified ? undefined : merchantUrl || undefined,
     },
   ];
 
@@ -171,11 +179,23 @@ export default function HorizontalCouponCard({
             )}
 
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              {coupon.verified && (
+              {coupon.evidenceStatus === "checkout-tested" ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
+                  ✓ Checkout-Tested
+                </span>
+              ) : coupon.evidenceStatus === "merchant-listed" ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                  Merchant-Listed
+                </span>
+              ) : coupon.evidenceStatus === "community-reported" ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                  Community-Reported
+                </span>
+              ) : coupon.verified ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                   ✓ {dict.cards.verified}
                 </span>
-              )}
+              ) : null}
               {coupon.isExclusive && (
                 <span className="inline-flex items-center rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand">
                   {dict.cards.exclusive}
@@ -234,30 +254,41 @@ export default function HorizontalCouponCard({
           </button>
 
           {termsOpen && (
-            <dl className="animate-fade-in border-t border-line bg-canvas-sunk px-4 py-3 text-sm sm:px-5">
-              {termsRows.map((row) => (
-                <div
-                  key={row.label}
-                  className="flex flex-wrap justify-between gap-2 border-b border-line py-2 last:border-0"
+            <div className="animate-fade-in border-t border-line bg-canvas-sunk px-4 py-3 sm:px-5">
+              <dl className="text-sm">
+                {termsRows.map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex flex-wrap justify-between gap-2 border-b border-line py-2 last:border-0"
+                  >
+                    <dt className="font-medium text-ink-soft">{row.label}</dt>
+                    <dd className="text-right text-ink">
+                      {row.href ? (
+                        <a
+                          href={row.href}
+                          target="_blank"
+                          rel="nofollow noopener noreferrer sponsored"
+                          className="text-brand underline-offset-2 hover:underline"
+                        >
+                          {row.value}
+                        </a>
+                      ) : (
+                        row.value
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <div className="mt-2 flex justify-end border-t border-line/60 pt-2">
+                <Link
+                  href={`/${computedMarket.toLowerCase()}/report-issue?type=expired_deal&deal=${encodeURIComponent(coupon.id)}`}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-muted transition-colors hover:text-brand hover:underline"
+                  title="Report expired or invalid offer"
                 >
-                  <dt className="font-medium text-ink-soft">{row.label}</dt>
-                  <dd className="text-right text-ink">
-                    {row.href ? (
-                      <a
-                        href={row.href}
-                        target="_blank"
-                        rel="nofollow noopener noreferrer sponsored"
-                        className="text-brand underline-offset-2 hover:underline"
-                      >
-                        {row.value}
-                      </a>
-                    ) : (
-                      row.value
-                    )}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+                  <span>⚑</span> Report expired or inaccurate offer
+                </Link>
+              </div>
+            </div>
           )}
         </div>
       </article>

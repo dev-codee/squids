@@ -21,7 +21,7 @@ export default function HomeTools({ country }: { country: string }) {
     {
       title: t.toolSave,
       body: t.toolSaveDesc,
-      href: null as string | null,
+      href: `/${lc}/saved`,
       icon: <BookmarkIcon />,
     },
     {

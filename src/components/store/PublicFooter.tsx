@@ -15,8 +15,11 @@ export default function PublicFooter({
   const links = [
     { label: dict.footer.home, href: `/${lc}` },
     { label: dict.footer.about, href: `/${lc}/about` },
+    { label: dict.footer.methodology || "Methodology", href: `/${lc}/methodology` },
+    { label: "Research", href: `/${lc}/research/delivered-cost-study` },
     { label: dict.header.stores, href: `/${lc}/stores` },
     { label: dict.header.categories, href: `/${lc}/categories` },
+    { label: dict.footer.corrections || "Report Issue", href: `/${lc}/report-issue` },
     { label: dict.footer.privacy, href: `/${lc}/privacy` },
   ];
 

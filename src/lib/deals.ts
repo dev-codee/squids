@@ -466,6 +466,10 @@ export interface DealQuery {
    * tooling that genuinely needs the full set opts in explicitly.
    */
   includeExpired?: boolean;
+  store?: string;
+  discountType?: "code" | "deal" | "student" | "cashback" | "free-delivery";
+  customerType?: "new" | "existing" | "any";
+  evidenceStatus?: "checkout-tested" | "merchant-listed" | "community-reported";
 }
 
 /**

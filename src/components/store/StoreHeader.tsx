@@ -88,6 +88,22 @@ export default function StoreHeader({ store, country: countryProp }: StoreHeader
                       <span aria-hidden>↗</span>
                     </a>
                   )}
+                  {store.reviewedBy && store.reviewedAt ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-emerald-800">
+                      ✓ Reviewed by {store.reviewedBy} on {new Date(store.reviewedAt).toLocaleDateString()}
+                    </span>
+                  ) : store.syncedAt ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 text-ink-muted">
+                      Feed synced {new Date(store.syncedAt).toLocaleDateString()}
+                    </span>
+                  ) : null}
+                  <Link
+                    href={`/${country}/report-issue?type=expired_deal&store=${encodeURIComponent(store.slug)}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 text-ink-muted transition-colors hover:border-brand-border hover:text-brand"
+                    title="Report outdated coupon or incorrect store details"
+                  >
+                    <span>⚑</span> Report issue
+                  </Link>
                 </div>
               </div>
             </div>
