@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { CouponItem } from "@/lib/storeData";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 import HorizontalCouponCard from "./HorizontalCouponCard";
 
 type FilterKey = "all" | "code" | "no-code" | "exclusive";
@@ -22,7 +23,7 @@ const SORTS: { key: SortKey; label: string }[] = [
 
 /** Extracts the leading number from strings like "20% OFF" or "$15 OFF" for sorting. */
 function discountValue(discount: string): number {
-  const match = discount.match(/(\d+(\.\d+)?)/);
+  const match = discount.match(/(\d+(\.\d+)?)\s*%/);
   return match ? parseFloat(match[1]) : 0;
 }
 
@@ -50,6 +51,7 @@ export default function OfferList({
   merchantUrl,
   itemLabel = "offers",
 }: OfferListProps) {
+  const t = useDictionary().offerUi;
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sort, setSort] = useState<SortKey>("recent");
 
@@ -82,6 +84,7 @@ export default function OfferList({
               <button
                 key={f.key}
                 type="button"
+                aria-pressed={filter === f.key}
                 onClick={() => setFilter(f.key)}
                 className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                   filter === f.key
@@ -89,12 +92,12 @@ export default function OfferList({
                     : "border-line bg-white text-ink-soft hover:border-line-strong hover:text-ink"
                 }`}
               >
-                {f.label}
+                {t[f.key === "no-code" ? "noCode" : f.key]}
               </button>
             ))}
           </div>
           <label className="flex items-center gap-2 text-xs text-ink-muted">
-            Sort by
+            {t.sort}
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
@@ -102,7 +105,7 @@ export default function OfferList({
             >
               {SORTS.map((s) => (
                 <option key={s.key} value={s.key}>
-                  {s.label}
+                  {t[s.key]}
                 </option>
               ))}
             </select>
@@ -112,7 +115,7 @@ export default function OfferList({
 
       {visible.length === 0 ? (
         <div className="rounded-card border border-dashed border-line-strong bg-white p-8 text-center text-sm text-ink-muted">
-          No {itemLabel} match this filter.
+          {t.empty}
         </div>
       ) : (
         <div className="flex flex-col gap-3">

@@ -1,5 +1,7 @@
 "use client";
 
+import { useDialogFocus } from "@/components/common/useDialogFocus";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 import { useState } from "react";
 
 interface FollowStoreButtonProps {
@@ -31,12 +33,15 @@ const FREQUENCY_OPTIONS: { value: Frequency; label: string; hint: string }[] = [
  * posts to /api/subscriptions, and shows a confirmation-pending state.
  */
 export default function FollowStoreButton({ store, country, compact, label }: FollowStoreButtonProps) {
+  const ui = useDictionary().offerUi;
+  const text = (value: string) => value.replace("{store}", store.name).replace("{email}", email);
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("instant");
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useDialogFocus(open, () => setOpen(false));
   const [result, setResult] = useState<"pending" | "active" | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -51,12 +56,12 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data?.error || "Something went wrong. Please try again.");
+        setError(ui.error);
         return;
       }
       setResult(data.needsConfirmation ? "pending" : "active");
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(ui.error);
     } finally {
       setSubmitting(false);
     }
@@ -81,12 +86,12 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
             d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
           />
         </svg>
-        {label ?? (compact ? "Follow for alerts" : `Follow ${store.name} for offer alerts`)}
+        {label ?? (compact ? ui.followShort : text(ui.follow))}
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={text(ui.follow)} tabIndex={-1} className="max-h-[90dvh] overflow-y-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             {result ? (
               <div className="text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4">
@@ -95,12 +100,12 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                   </svg>
                 </div>
                 <h3 className="text-lg font-bold text-ink">
-                  {result === "pending" ? "Check your inbox" : "You're all set"}
+                  {result === "pending" ? ui.inbox : ui.ready}
                 </h3>
                 <p className="mt-1 text-sm text-ink-soft">
                   {result === "pending"
-                    ? `We sent a confirmation link to ${email}. Click it to start getting alerts for ${store.name}.`
-                    : `You'll get ${frequency} alerts for new offers from ${store.name}.`}
+                    ? text(ui.pending)
+                    : text(ui.active)}
                 </p>
                 <button
                   onClick={() => {
@@ -109,18 +114,18 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                   }}
                   className="mt-6 w-full rounded-xl bg-canvas-sunk px-4 py-2.5 text-sm font-semibold text-ink-soft hover:bg-canvas-sunk"
                 >
-                  Close
+                  {ui.close}
                 </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit}>
-                <h3 className="text-lg font-bold text-ink">Follow {store.name}</h3>
+                <h3 className="text-lg font-bold text-ink">{text(ui.follow)}</h3>
                 <p className="mt-1 text-sm text-ink-soft">
-                  Get an email when {store.name} adds a new offer or coupon.
+                  {text(ui.followIntro)}
                 </p>
 
                 <label className="block mt-4 text-sm font-medium text-ink-soft">
-                  Email address
+                  {ui.email}
                   <input
                     type="email"
                     required
@@ -132,7 +137,7 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                 </label>
 
                 <fieldset className="mt-4">
-                  <legend className="text-sm font-medium text-ink-soft">How often?</legend>
+                  <legend className="text-sm font-medium text-ink-soft">{ui.frequency}</legend>
                   <div className="mt-2 space-y-2">
                     {FREQUENCY_OPTIONS.map((opt) => (
                       <label
@@ -148,8 +153,8 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                           className="mt-0.5 accent-brand"
                         />
                         <span>
-                          <span className="block text-sm font-medium text-ink">{opt.label}</span>
-                          <span className="block text-xs text-ink-soft">{opt.hint}</span>
+                          <span className="block text-sm font-medium text-ink">{ui[opt.value]}</span>
+                          <span className="block text-xs text-ink-soft">{ui[`${opt.value}Hint`]}</span>
                         </span>
                       </label>
                     ))}
@@ -165,8 +170,7 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                     className="mt-0.5 accent-brand"
                   />
                   <span>
-                    I agree to receive email alerts about new offers from {store.name}. I can
-                    unsubscribe anytime — every email includes a one-click unsubscribe link.
+                    {text(ui.consent)}
                   </span>
                 </label>
 
@@ -178,14 +182,14 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
                     onClick={() => setOpen(false)}
                     className="flex-1 rounded-xl border border-line-strong px-4 py-2.5 text-sm font-semibold text-ink-soft hover:bg-canvas"
                   >
-                    Cancel
+                    {ui.cancel}
                   </button>
                   <button
                     type="submit"
                     disabled={submitting || !consent}
                     className="flex-1 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {submitting ? "Following…" : "Follow store"}
+                    {submitting ? ui.following : ui.followStore}
                   </button>
                 </div>
               </form>

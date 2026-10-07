@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { loadStoreData } from "@/lib/storeData";
 import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
@@ -23,14 +23,10 @@ export async function generateMetadata({
   const siteUrl = getSiteUrl();
   const canonicalUrl = `${siteUrl}/${params.country.toLowerCase()}/${store.slug}/deals`;
 
-  const hreflangLanguages: Record<string, string> = {};
-  for (const code of REGION_CODES) {
-    const r = getRegionConfig(code);
-    hreflangLanguages[r.locale] = `${siteUrl}/${code.toLowerCase()}/${store.slug}/deals`;
-  }
-  hreflangLanguages["x-default"] = `${siteUrl}/us/${store.slug}/deals`;
+  const hreflangLanguages = { [getRegionConfig(params.country).locale]: canonicalUrl };
 
   return {
+    robots: { index: store.activeDealsCount > 0, follow: true },
     title: dict.meta.dealsTitle.replace("{store}", store.name),
     description: dict.meta.dealsDescription.replace("{store}", store.name),
     alternates: {
@@ -56,7 +52,7 @@ export default async function StoreDealsPage({
   if (!store) notFound();
 
   if (rawSlug !== store.slug) {
-    redirect(`/${params.country}/${store.slug}/deals`);
+    permanentRedirect(`/${params.country}/${store.slug}/deals`);
   }
 
   const todaysDeals = store.promotions.filter((d) => d.type === "todays");

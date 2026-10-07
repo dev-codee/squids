@@ -1,0 +1,24 @@
+# Screenshot guide implementation — 7 October 2026
+
+This supersedes the completion claims in FOXZIL_BUILD_PLAN.md where they conflict with the screenshot audit. No merchant, offer, product, price or research records were hardcoded or changed in the database.
+
+## Implemented in application code
+
+- Shared market-scoped publication gate: active and started offers, real expiry handling, distinct totals, explicit country eligibility, network plus merchant ID and normalized name identity. Missing eligibility, quarantined records and generated brand/welcome placeholders are withheld.
+- One canonical merchant per market snapshot for homepage counts, store resolution, directory, search, related stores and sitemap. The store loader reads every eligible offer page rather than truncating at 100.
+- Server-rendered directory and crawlable pagination; unique directory pages use page-specific canonicals. Saved pages are noindex and absent from sitemap. Unsupported aliases/markets and empty merchants return 404; recognized suffix aliases redirect permanently.
+- Homepage copy describes store discovery and store email alerts. Unsupported research figures, product identifiers and fabricated sample prices were removed. Research route has a no-data state and is noindex.
+- Store copy and metadata derive from current eligible offers; generic verification promises were removed. Checkout status requires recorded test source, checker and date; import timestamps never act as checkout proof.
+- Offer cards expose sourced terms, structured minimum spend, customer eligibility, exclusions, real expiry and source URL; unknown values remain unknown. Shipping labels depend on sourced structured fees/thresholds/destinations and otherwise use a neutral delivery label.
+- Separate official policy/support URL fields; missing URLs are unavailable rather than shopping links. Affiliate shopping is labelled. Reviewed category assignments are required for category/related modules rather than generic feed tags.
+- French offer filters, sorting, follow dialogs, source status and report actions translated. Coupon and follow dialogs support focus management, Tab trapping, Escape and focus restoration; clipboard failures preserve a readable code.
+- Outbound endpoint validates offer market and identity, scopes composite offer IDs, and rejects missing/ambiguous destinations. Public API failures cannot bypass eligibility using a raw feed fallback.
+- Store subscriptions validate merchant identity and retain country. Alerts use country/network/store identity, keep failed-send cursors for retry, and use local offer links. Confirmation failures do not report success. Feed upserts avoid overlapping MongoDB update paths and record fetch time separately from edit time.
+
+## Source data still needed
+
+The read-only database check found no product records. It also found several guide merchants marked inactive, market suffixes in legacy deal names, and source dates needing review. Publication rules intentionally withhold inactive/unreviewed data; code must not invent active status, policies, categories, prices, test outcomes or eligibility to fill modules.
+
+Operators can supply `reviewedCategories` (protected advertiser PUT stamps review time), `officialUrl`, distinct `policyUrls`, and reviewed content confirmation. Protected offer enrichment accepts source terms/URL, `reviewedRegionCodes`, structured `promotion` conditions/evidence and `delivery` rules. Reviewed offer country overrides survive feed refreshes. Legacy subscriptions without a country are withheld pending a genuine market selection.
+
+No live import, database repair, deployment, email send, paid-promotion permission check or revenue settlement reconciliation was performed. Those require real source records and an authorized end-to-end environment. Mobile/browser visual evidence and real email delivery cannot be inferred from compilation or model tests.

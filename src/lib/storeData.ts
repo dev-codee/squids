@@ -18,7 +18,7 @@ import {
   getRelatedAdvertisers,
   getShowcaseAdvertisersFromDb,
 } from "@/lib/db/advertisers";
-import { ensureAdvertiserSeo } from "@/lib/ai/storeSeo";
+import { generateStoreSeoContent } from "@/lib/ai/storeSeo";
 import type { StorePageContent } from "@/lib/ai/storeContent";
 import { getDealsFromDb, ensureDealAiContent } from "@/lib/db/deals";
 
@@ -54,6 +54,12 @@ export interface CouponItem {
   studentVerificationReq?: string;
   affiliateUrl?: string;
   evidenceStatus?: "checkout-tested" | "merchant-listed" | "community-reported";
+  checkedAt?: string | null;
+  conditions?: import("./model/promotion").PromotionConditions | null;
+  currency?: string | null;
+  terms?: string | null;
+  sourceUrl?: string | null;
+  delivery?: import("./model/delivery").DeliveryRule | null;
 }
 
 export interface DealItem {
@@ -149,6 +155,8 @@ export interface StoreData {
   avgSavings: string | null;
   description: string;
   websiteUrl: string;
+  officialUrl?: string | null;
+  policyUrls?: { delivery?: string; returns?: string; payment?: string; support?: string; policies?: string };
   categories: string[];
   /** Coupons — voucher offers with a code. */
   coupons: CouponItem[];
@@ -246,18 +254,24 @@ function resolveAffiliateLink(
 function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): CouponItem {
   const affUrl = resolveAffiliateLink(deal.network, deal.advertiser.id, deal.trackingUrl || fallbackUrl);
   return {
-    id: String(deal.id),
+    id: `${deal.network}:${deal.id}`,
     title: dealDisplayTitle(deal, locale),
     code: deal.code,
     discount: deal.discountText || "",
     type: deal.subtype || "code",
     description: dealDisplayDescription(deal, locale),
-    verified: Boolean(deal.checkedAt || deal.promotion?.evidenceStatus === "checkout-tested"),
+    verified: Boolean(deal.promotion?.evidenceStatus === "checkout-tested" && deal.promotion.evidenceCheckedAt && deal.promotion.evidenceCheckedBy && deal.promotion.evidenceSourceUrl),
     evidenceStatus:
-      deal.promotion?.evidenceStatus ??
-      (deal.checkedAt ? "checkout-tested" : "merchant-listed"),
+      deal.promotion?.evidenceStatus === "checkout-tested" && deal.promotion.evidenceCheckedAt && deal.promotion.evidenceCheckedBy && deal.promotion.evidenceSourceUrl
+        ? "checkout-tested" : deal.promotion?.evidenceStatus === "community-reported" ? "community-reported" : "merchant-listed",
+    checkedAt: toIsoDate(deal.promotion?.evidenceCheckedAt),
+    conditions: deal.promotion?.conditions,
+    currency: deal.promotion?.benefit.currency,
+    terms: deal.terms,
+    sourceUrl: safeOfficialUrl(deal.promotion?.evidenceSourceUrl || deal.sourceUrl),
+    delivery: deal.delivery,
     expiryDate: sanitizeEndDate(deal.endDate),
-    updatedAt: toIsoDate(deal.syncedAt),
+    updatedAt: toIsoDate(deal.sourceUpdatedAt || deal.fetchedAt || deal.syncedAt),
     isExclusive: deal.isExclusive,
     cashbackRate: deal.cashbackRate || undefined,
     studentVerificationReq: deal.studentVerificationReq || undefined,
@@ -282,7 +296,7 @@ function dealFromDeal(
   const affUrl = resolveAffiliateLink(deal.network, deal.advertiser.id, deal.trackingUrl || fallbackUrl);
 
   return {
-    id: String(deal.id),
+    id: `${deal.network}:${deal.id}`,
     title: dealDisplayTitle(deal, locale),
     description: dealDisplayDescription(deal, locale),
     discount: deal.discountText || "",
@@ -297,7 +311,7 @@ function dealFromDeal(
     type: placement,
     imageUrl: deal.imageUrl || undefined,
     expiryDate: sanitizeEndDate(deal.endDate),
-    updatedAt: toIsoDate(deal.syncedAt),
+    updatedAt: toIsoDate(deal.sourceUpdatedAt || deal.fetchedAt || deal.syncedAt),
     badge,
     isExclusive: Boolean(deal.isExclusive),
     stockPercentage: deal.stockPercentage ?? undefined,
@@ -319,16 +333,7 @@ async function loadStoreDataUncached(
   slug: string,
   country?: string,
 ): Promise<StoreData | null> {
-  let advertiser: Advertiser | null = null;
-  try {
-    // Region-scoped: resolve the slug to the advertiser matching this URL's
-    // country, so same-named stores across networks don't collide (e.g. the AU
-    // myBrainCo with 13 deals vs. a same-named US record with only a brand deal).
-    advertiser = await getAdvertiserBySlug(slug, country);
-  } catch (error) {
-    // If MongoDB connection fails, log it and return null (which renders a 404)
-    console.warn("MongoDB error in getAdvertiserBySlug:", error);
-  }
+  const advertiser = await getAdvertiserBySlug(slug, country);
 
   if (!advertiser) return null;
 
@@ -351,7 +356,7 @@ async function loadStoreDataUncached(
     bannerUrl: advertiser.bannerUrl || null,
     avgSavings: advertiser.avgSavings || null,
     description: advertiser.description || "",
-    categories: advertiser.categories || [],
+    categories: advertiser.reviewedCategories ?? (advertiser.categoriesReviewedAt ? advertiser.categories ?? [] : []),
   };
 
   const finalSlug = storeMeta.slug;
@@ -366,52 +371,17 @@ async function loadStoreDataUncached(
     }
   }
 
-  // Pull every deal for this advertiser (bounded per store).
-  const dealsResult = await safeQuery(
-    () => getDealsFromDb({ advertiserId: advertiser!.id, status: "all", type: "all", page: 1, pageSize: 100 }),
-    { deals: [], page: 1, pageSize: 100, total: 0, totalPages: 1 } as any
-  );
-  let allDeals: Deal[] = dealsResult?.deals ?? [];
-
-  // First-view AI copy: generate shopper-facing title/description for deals that
-  // lack it for this locale, then cache in the DB so tokens are only spent once.
-  // A no-op when ANTHROPIC_API_KEY is unset (ensureDealAiContent returns as-is).
-  const hasLocaleCopy = (d: Deal) => {
-    const t = (d.aiTitleByLang?.[locale] || (locale === "en" ? d.aiTitle : ""))?.trim();
-    const desc = (d.aiDescriptionByLang?.[locale] || (locale === "en" ? d.aiDescription : ""))?.trim();
-    if (!t || !desc) return false;
-    // If title and description are identical, refresh to proper distinct copy
-    if (t.toLowerCase() === desc.toLowerCase()) return false;
-    return true;
-  };
-
-  const missingLocaleCopy = allDeals.filter((d) => !hasLocaleCopy(d));
-
-  // On first visit generate title/description for every deal that lacks it,
-  // using bounded concurrency (5 at a time) so we don't hammer the DB or AI.
-  // generateDealContent never throws — it falls back to the deterministic
-  // copywriter — so ensureDealAiContent always saves a result to MongoDB.
-  // Next.js automatically shows loading.tsx (skeleton) while this block awaits;
-  // on subsequent visits missingLocaleCopy is empty and this is a no-op.
-  if (missingLocaleCopy.length > 0) {
-    const CHUNK = 5;
-    const generated: Deal[] = [];
-    for (let i = 0; i < missingLocaleCopy.length; i += CHUNK) {
-      const chunk = missingLocaleCopy.slice(i, i + CHUNK);
-      const results = await Promise.all(
-        chunk.map((d) =>
-          ensureDealAiContent(d, { locale }).catch(() => d),
-        ),
-      );
-      generated.push(...results);
-    }
-    const byKey = new Map(
-      generated.map((d) => [`${d.network ?? "awin"}:${d.id}`, d]),
-    );
-    allDeals = allDeals.map(
-      (d) => byKey.get(`${d.network ?? "awin"}:${d.id}`) ?? d,
-    );
-  }
+  const allDeals: Deal[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const result = await getDealsFromDb({ advertiserId: advertiser.id, network: advertiser.network, country, status: "all", type: "all", page, pageSize: 100 });
+    if (!result) break;
+    allDeals.push(...result.deals);
+    totalPages = result.totalPages;
+    page++;
+  } while (page <= totalPages);
+  if (!allDeals.length) return null;
 
   // Ordering within every section: exclusive offers pinned to the very top,
   // then the most recently edited first. `syncedAt` is the last-edited stamp
@@ -427,17 +397,7 @@ async function loadStoreDataUncached(
     return editedTime(b) - editedTime(a);
   };
 
-  // Deduplicate across network feeds: drop deals with same (title, discount) from
-  // the same advertiser — keeps the first occurrence (already sorted exclusive-first).
-  const deduped = (() => {
-    const seen = new Set<string>();
-    return allDeals.filter((d) => {
-      const key = `${d.type}:${(d.title || "").toLowerCase().trim()}:${(d.discountText || "").toLowerCase().trim()}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  })();
+  const deduped = allDeals;
 
   // Coupons: vouchers that have an actual non-empty code.
   const coupons = deduped
@@ -458,7 +418,7 @@ async function loadStoreDataUncached(
     .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode, region, rates, locale));
 
   const productsResult = await safeQuery(
-    () => getProductsFromDb({ advertiserId: advertiser!.id, page: 1, pageSize: 50 }),
+    () => getProductsFromDb({ advertiserId: advertiser!.id, network: advertiser!.network, country, page: 1, pageSize: 50 }),
     { products: [], page: 1, pageSize: 50, total: 0, totalPages: 1 }
   );
   
@@ -556,6 +516,8 @@ async function loadStoreDataUncached(
   const add = (list: readonly Advertiser[]) => {
     for (const a of list) {
       if (picked.length >= MAX_SIMILAR) return;
+      const categories = a.reviewedCategories ?? (a.categoriesReviewedAt ? a.categories ?? [] : []);
+      if (!categories.some((c) => storeMeta.categories.includes(c))) continue;
       const slug = slugifyAdvertiserName(a.name);
       if (!slug || seenSlugs.has(slug)) continue;
       seenSlugs.add(slug);
@@ -566,21 +528,13 @@ async function loadStoreDataUncached(
   add(manualAdvertisers);
   add(relatedAdvertisers);
 
-  if (picked.length < MIN_SIMILAR) {
-    const showcase = await safeQuery(
-      () => getShowcaseAdvertisersFromDb({ country, pageSize: MAX_SIMILAR * 2 }),
-      null,
-    );
-    add(showcase?.advertisers ?? []);
-  }
-
   const relatedStores: RelatedStoreItem[] = picked.map((a) => ({
     slug: slugifyAdvertiserName(a.name),
     name: a.name,
     logoUrl: a.logoUrl,
   }));
 
-  const seoContent = await ensureAdvertiserSeo(advertiser, allDeals);
+  const seoContent = generateStoreSeoContent(advertiser.name, allDeals, locale);
 
   return {
     slug: finalSlug,
@@ -598,6 +552,8 @@ async function loadStoreDataUncached(
     avgSavings: storeMeta.avgSavings,
     description: storeMeta.description,
     websiteUrl,
+    officialUrl: safeOfficialUrl(advertiser.officialUrl),
+    policyUrls: Object.fromEntries(Object.entries(advertiser.policyUrls ?? {}).flatMap(([key, value]) => { const url = safeOfficialUrl(value); return url ? [[key, url]] : []; })),
     categories: storeMeta.categories,
     coupons,
     deals,
@@ -636,58 +592,18 @@ export const loadStoreData = cache(loadStoreDataUncached);
  * stream this in behind a Suspense boundary. Cached in the DB after the first
  * generation, so later visits return instantly without re-spending tokens.
  */
-export const loadStoreAiContent = cache(
-  async (
-    slug: string,
-    country?: string,
-  ): Promise<StorePageContent | null> => {
-    let advertiser: Advertiser | null = null;
-    try {
-      advertiser = await getAdvertiserBySlug(slug, country);
-    } catch {
-      return null;
-    }
-    if (!advertiser) return null;
-    if (advertiser.name) advertiser.name = cleanAdvertiserName(advertiser.name);
+export const loadStoreAiContent = cache(async (slug: string, country?: string): Promise<StorePageContent | null> => {
+  const advertiser = await getAdvertiserBySlug(slug, country);
+  if (!advertiser?.contentReviewedAt) return null;
+  const locale = localeForCountry(country || "US");
+  return advertiser.aiStorePageByLang?.[locale] ?? (locale === "en" ? advertiser.aiStorePage ?? null : null);
+});
 
-    const region = getRegionConfig(country);
-    const locale = localeForCountry(country || "US");
-
-    // Cached path: already generated for this locale → return from the DB (no deals query needed).
-    const cachedPage =
-      advertiser.aiStorePageByLang?.[locale] ??
-      (locale === "en" ? advertiser.aiStorePage : null);
-    if (cachedPage) return cachedPage;
-
-    let deals: Deal[] = [];
-    try {
-      const res = await getDealsFromDb({
-        advertiserId: advertiser.id,
-        status: "all",
-        type: "all",
-        page: 1,
-        pageSize: 100,
-      });
-      deals = res?.deals ?? [];
-    } catch {
-      /* generate from advertiser metadata alone if deals can't be loaded */
-    }
-
-    const updated = await ensureAdvertiserStorePage(
-      advertiser,
-      deals,
-      {
-        country: region.country,
-        currency: region.currency,
-        locale,
-        language: languageNameForLocale(locale),
-      },
-      { locale },
-    );
-    return (
-      updated.aiStorePageByLang?.[locale] ??
-      (locale === "en" ? updated.aiStorePage : null) ??
-      null
-    );
-  }
-);
+function safeOfficialUrl(value?: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || /(?:awin1|admitad|anrdoezrs|commissionfactory|go\.linkwi)/i.test(url.hostname)) return null;
+    return url.href;
+  } catch { return null; }
+}

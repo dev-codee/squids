@@ -243,19 +243,14 @@ async function getCategoriesForCountryUncached(
     categories.map(async (cat) => {
       try {
         const perCountry = await countAdvertisersByCategory(country, cat.name);
-        // When per-country is zero (most advertisers are tagged with a specific
-        // country like GB so US/FR visitors see 0), fall back to a live global
-        // count so the homepage category cards always show a meaningful number.
-        const storeCount = perCountry > 0
-          ? perCountry
-          : await countAdvertisersGloballyByCategory(cat.name);
+        const storeCount = perCountry;
         return { ...cat, storeCount };
       } catch (err) {
         console.error(
           `[db/categories] Error counting stores for "${cat.name}" in ${country}:`,
           err,
         );
-        return cat;
+        return { ...cat, storeCount: 0 };
       }
     }),
   );

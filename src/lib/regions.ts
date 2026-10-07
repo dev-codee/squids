@@ -28,7 +28,7 @@ export const REGION_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
 /** True when `code` is a syntactically valid 2-letter region code. */
 export function isValidRegionCode(code: string | null | undefined): code is string {
-  return typeof code === "string" && CODE_RE.test(code);
+  return typeof code === "string" && CODE_RE.test(code) && Object.prototype.hasOwnProperty.call(REGIONS, code.toUpperCase());
 }
 
 /** Fallback when a region isn't in the table below. */
@@ -56,39 +56,39 @@ const REGIONS: Record<string, Omit<RegionConfig, "country">> = {
   FR: { currency: "EUR", locale: "fr-FR" },
   ES: { currency: "EUR", locale: "es-ES" },
   IT: { currency: "EUR", locale: "it-IT" },
-  NL: { currency: "EUR", locale: "nl-NL" },
-  BE: { currency: "EUR", locale: "nl-BE" },
-  PT: { currency: "EUR", locale: "pt-PT" },
+  NL: { currency: "EUR", locale: "en-NL" },
+  BE: { currency: "EUR", locale: "en-BE" },
+  PT: { currency: "EUR", locale: "en-PT" },
   // Nordics
-  SE: { currency: "SEK", locale: "sv-SE" },
+  SE: { currency: "SEK", locale: "en-SE" },
   NO: { currency: "NOK", locale: "nb-NO" },
-  DK: { currency: "DKK", locale: "da-DK" },
-  FI: { currency: "EUR", locale: "fi-FI" },
+  DK: { currency: "DKK", locale: "en-DK" },
+  FI: { currency: "EUR", locale: "en-FI" },
   // Rest of Europe
-  PL: { currency: "PLN", locale: "pl-PL" },
+  PL: { currency: "PLN", locale: "en-PL" },
   // South Asia
   PK: { currency: "PKR", locale: "en-PK" },
   IN: { currency: "INR", locale: "en-IN" },
-  BD: { currency: "BDT", locale: "bn-BD" },
+  BD: { currency: "BDT", locale: "en-BD" },
   // Middle East
-  AE: { currency: "AED", locale: "ar-AE" },
-  SA: { currency: "SAR", locale: "ar-SA" },
-  TR: { currency: "TRY", locale: "tr-TR" },
+  AE: { currency: "AED", locale: "en-AE" },
+  SA: { currency: "SAR", locale: "en-SA" },
+  TR: { currency: "TRY", locale: "en-TR" },
   // Asia-Pacific
   AU: { currency: "AUD", locale: "en-AU" },
   NZ: { currency: "NZD", locale: "en-NZ" },
   SG: { currency: "SGD", locale: "en-SG" },
-  JP: { currency: "JPY", locale: "ja-JP" },
-  CN: { currency: "CNY", locale: "zh-CN" },
-  HK: { currency: "HKD", locale: "zh-HK" },
+  JP: { currency: "JPY", locale: "en-JP" },
+  CN: { currency: "CNY", locale: "en-CN" },
+  HK: { currency: "HKD", locale: "en-HK" },
   // Latin America
-  BR: { currency: "BRL", locale: "pt-BR" },
+  BR: { currency: "BRL", locale: "en-BR" },
   AR: { currency: "ARS", locale: "es-AR" },
   CO: { currency: "COP", locale: "es-CO" },
   // Africa
   ZA: { currency: "ZAR", locale: "en-ZA" },
   NG: { currency: "NGN", locale: "en-NG" },
-  EG: { currency: "EGP", locale: "ar-EG" },
+  EG: { currency: "EGP", locale: "en-EG" },
 };
 
 /** Every configured region code (uppercase) — used for hreflang alternates. */

@@ -3,6 +3,9 @@ import { getDb } from "@/lib/mongodb";
 import { recordOutboundClick } from "@/lib/db/clicks";
 import { appendNetworkSubId, resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 import { ATTRIBUTION_COOKIE_NAME, VisitorAttribution } from "@/lib/attribution";
+import { publicOfferFilter } from "@/lib/model/publication";
+import { publicMerchantStages } from "@/lib/db/deals";
+import { isValidRegionCode } from "@/lib/regions";
 import { getAdvertiserBySlug } from "@/lib/db/advertisers";
 
 export const dynamic = "force-dynamic";
@@ -12,47 +15,40 @@ export async function GET(request: NextRequest) {
   const dealId = searchParams.get("dealId");
   const slug = searchParams.get("slug") || "";
   const market = (searchParams.get("market") || "AU").toUpperCase();
-  const rawUrl = searchParams.get("url") || "";
-
-  // 1. Resolve destination URL and advertiser info
-  let destinationUrl = rawUrl;
+  if (!isValidRegionCode(market)) return NextResponse.json({ error: "Unsupported market." }, { status: 400 });
+  let destinationUrl = "";
   let advertiserId: number | undefined;
   let storeName = slug;
-  let network = "commission-factory";
-
+  let network = "";
   const db = await getDb();
-
   if (dealId) {
-    const numId = Number(dealId);
-    const dealDoc = await db.collection("deals").findOne(
-      Number.isFinite(numId) ? { $or: [{ id: numId }, { id: dealId }] } : { id: dealId }
-    );
-    if (dealDoc) {
-      destinationUrl = dealDoc.trackingUrl || destinationUrl;
-      advertiserId = dealDoc.advertiser?.id;
-      storeName = dealDoc.advertiser?.name || storeName;
-      network = dealDoc.network || network;
-    }
-  }
-
-  if (!advertiserId && slug) {
+    const split = dealId.lastIndexOf(":");
+    const rawId = split >= 0 ? dealId.slice(split + 1) : dealId;
+    const offerNetwork = split >= 0 ? dealId.slice(0, split) : searchParams.get("network");
+    const numId = Number(rawId);
+    const identity = { id: Number.isFinite(numId) ? { $in: [numId, rawId] } : rawId, ...(offerNetwork ? { network: offerNetwork } : {}) };
+    const docs = await db.collection("deals").aggregate([
+      { $match: { $and: [identity, publicOfferFilter(market)] } }, ...publicMerchantStages(market), { $limit: 2 },
+    ]).toArray();
+    if (docs.length !== 1) return NextResponse.json({ error: "Offer unavailable in this market." }, { status: 404 });
+    const deal = docs[0];
+    destinationUrl = deal.trackingUrl || "";
+    advertiserId = deal.advertiser.id;
+    storeName = deal.advertiser.name;
+    network = deal.network;
+  } else if (slug) {
     const adv = await getAdvertiserBySlug(slug, market);
-    if (adv) {
-      advertiserId = adv.id;
-      storeName = adv.name || storeName;
-      network = adv.network || network;
-      if (!destinationUrl) {
-        destinationUrl = adv.url || "";
-      }
-    }
+    if (!adv) return NextResponse.json({ error: "Store unavailable in this market." }, { status: 404 });
+    advertiserId = adv.id;
+    storeName = adv.name;
+    network = adv.network;
+    destinationUrl = adv.url || "";
   }
-
-  if (!destinationUrl) {
-    destinationUrl = `https://www.${slug.toLowerCase() || "foxzil"}.com`;
-  }
-
-  // Ensure official publisher affiliate tracking link
   destinationUrl = resolveAffiliateTrackingUrl(network, advertiserId, destinationUrl);
+  try {
+    const destination = new URL(destinationUrl);
+    if (!["https:", "http:"].includes(destination.protocol)) throw new Error("Invalid scheme");
+  } catch { return NextResponse.json({ error: "Shopping destination unavailable." }, { status: 404 }); }
 
   // 2. Read attribution (gclid, gbraid, etc.) from cookie or query params
   let gclid = searchParams.get("gclid") || undefined;
@@ -80,7 +76,7 @@ export async function GET(request: NextRequest) {
         utm_campaign = utm_campaign || parsed.utm_campaign;
       }
     } catch (err) {
-      console.warn("[api/outbound] Failed to parse attribution cookie:", err, "raw value:", attrCookie);
+      console.warn("[api/outbound] Failed to parse attribution cookie:", err);
     }
   }
 
@@ -127,7 +123,6 @@ export async function GET(request: NextRequest) {
       url: trackedUrl,
       clickId,
       gclid,
-      cookiesReceived: request.cookies.getAll().map((c) => ({ name: c.name, value: c.value })),
     });
   }
 

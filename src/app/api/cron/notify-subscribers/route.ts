@@ -55,17 +55,19 @@ async function notifyTier(tier: AlertFrequency): Promise<{ subscribers: number; 
     for (const store of subscriber.stores) {
       const forStore = dealsBySlug.get(store.slug) ?? [];
       for (const deal of forStore) {
-        if (deal.firstSeenAt > since) matches.push(deal);
+        if (store.country && deal.network === store.network && deal.advertiserId === store.advertiserId &&
+          deal.regionCodes.some((code) => [store.country, "WW", "GLOBAL", "INT", "00"].includes(code.toUpperCase())) && deal.firstSeenAt > since) matches.push(deal);
       }
     }
 
     if (matches.length === 0) continue;
 
-    const offers = matches.slice(0, MAX_OFFERS_PER_EMAIL).map((d) => ({
+    const batch = matches.slice(0, MAX_OFFERS_PER_EMAIL);
+    const offers = batch.slice(0, MAX_OFFERS_PER_EMAIL).map((d) => ({
       storeName: d.advertiserName,
       title: d.title,
       discountText: d.discountText,
-      url: `${siteUrl}/us/${d.advertiserSlug}`,
+      url: `${siteUrl}/${subscriber.stores.find((s) => s.network === d.network && s.advertiserId === d.advertiserId)?.country?.toLowerCase()}/${d.advertiserSlug}`,
     }));
 
     const unsubscribeUrl = `${siteUrl}/api/subscriptions/unsubscribe?token=${subscriber.token}`;
@@ -73,11 +75,11 @@ async function notifyTier(tier: AlertFrequency): Promise<{ subscribers: number; 
     const { subject, html } = newOffersDigestEmail({ offers, unsubscribeUrl, manageUrl });
 
     const sent = await sendMail({ to: subscriber.email, subject, html });
-    if (sent) emailsSent++;
+    if (!sent) continue;
+    emailsSent++;
 
-    // Advance the cursor regardless of send success — a transient SMTP
-    // failure shouldn't cause the same offers to be retried indefinitely.
-    await markNotified(subscriber.email, new Date());
+    // Failed sends retain their cursor so the next scheduled run can retry.
+    await markNotified(subscriber.email, new Date(Math.max(...batch.map((deal) => deal.firstSeenAt.getTime()))));
   }
 
   return { subscribers: subscribers.length, emailsSent };

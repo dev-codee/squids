@@ -26,6 +26,7 @@ export interface FollowedStore {
   network: string;
   advertiserId: string;
   name: string;
+  country?: string;
   addedAt: Date;
 }
 

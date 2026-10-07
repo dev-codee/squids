@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialogFocus } from "@/components/common/useDialogFocus";
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import type { CouponItem } from "@/lib/storeData";
@@ -26,6 +27,7 @@ export default function CouponCard({
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const dialogRef = useDialogFocus(showModal, () => setShowModal(false));
   const [revealed, setRevealed] = useState(false);
 
   // Derive market & merchantId with fallbacks to route params or store name
@@ -61,8 +63,7 @@ export default function CouponCard({
 
   const copyCode = (buttonLocation: string = "coupon_card") => {
     if (!coupon.code) return;
-    navigator.clipboard
-      .writeText(coupon.code)
+    Promise.resolve().then(() => navigator.clipboard.writeText(coupon.code!))
       .then(() => {
         setCopyFailed(false);
         setCopied(true);
@@ -240,7 +241,7 @@ export default function CouponCard({
       {/* Code Reveal Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl text-center">
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={dict.cards.copyCode} tabIndex={-1} className="max-h-[90dvh] overflow-y-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4">
               <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

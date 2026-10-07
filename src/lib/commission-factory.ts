@@ -106,13 +106,13 @@ export function normaliseCfMerchant(m: CFMerchant): Advertiser {
     logoUrl: m.AvatarUrl || null,
     status: m.Status?.toLowerCase() === "active" ? "active" : "inactive",
     relationship,
-    region: "AU", // CF is primarily AU, though it has global merchants. Defaulting to AU if not provided in base endpoint.
-    countryCode: "AU",
-    currencyCode: m.CurrencyCode || "AUD",
+    region: null,
+    countryCode: null,
+    currencyCode: m.CurrencyCode || null,
     commission: null, // CF base merchant list doesn't readily expose a simplified commission string without the rates endpoint.
     url: trackingUrl,
     description: m.Description || undefined,
-    countryCodes: ["AU"],
+    countryCodes: [],
   };
 }
 
@@ -158,7 +158,7 @@ export function normaliseCfCoupon(c: CFCoupon): Deal {
     endDate: c.EndDate || null,
     status: "active",
     trackingUrl,
-    regionCodes: ["AU"], // Defaulting to AU.
+    regionCodes: [], // Source endpoint does not establish country eligibility.
     isExclusive: false,
     discountText: null,
   };
@@ -229,7 +229,7 @@ export function normaliseCfPromotion(p: CFPromotion): Deal {
     endDate: p.EndDate || null,
     status: "active",
     trackingUrl,
-    regionCodes: ["AU"], // Defaulting to AU.
+    regionCodes: [], // Source endpoint does not establish country eligibility.
     isExclusive: false,
     discountText: null,
   };

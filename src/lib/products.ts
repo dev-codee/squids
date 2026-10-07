@@ -16,6 +16,8 @@ import type { ProductIdentity } from "@/lib/model/productIdentity";
 export interface Product extends ProductIdentity {
   id: number;
   advertiserId: number;
+  network?: string;
+  regionCodes?: string[];
   title: string;
   category: string | null;
   imageUrl: string | null;

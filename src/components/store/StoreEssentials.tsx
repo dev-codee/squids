@@ -21,14 +21,14 @@ export default function StoreEssentials({
 }) {
   const dict = useDictionary();
   const t = dict.storeV2;
-  const url = store.websiteUrl;
+
 
   const rows = [
-    { label: t.deliveryCharges, icon: <TruckIcon /> },
-    { label: t.returnsRefunds, icon: <ReturnIcon /> },
-    { label: t.paymentOptions, icon: <CardIcon /> },
-    { label: t.support, icon: <LifeIcon /> },
-    { label: t.merchantPolicies, icon: <DocIcon /> },
+    { url: store.policyUrls?.delivery, label: t.deliveryCharges, icon: <TruckIcon /> },
+    { url: store.policyUrls?.returns, label: t.returnsRefunds, icon: <ReturnIcon /> },
+    { url: store.policyUrls?.payment, label: t.paymentOptions, icon: <CardIcon /> },
+    { url: store.policyUrls?.support, label: t.support, icon: <LifeIcon /> },
+    { url: store.policyUrls?.policies, label: t.merchantPolicies, icon: <DocIcon /> },
   ];
 
   return (
@@ -40,11 +40,11 @@ export default function StoreEssentials({
         <ul className="divide-y divide-line">
           {rows.map((row) => (
             <li key={row.label}>
-              {url ? (
+              {row.url ? (
                 <a
-                  href={url}
+                  href={row.url}
                   target="_blank"
-                  rel="nofollow noopener noreferrer sponsored"
+                  rel="noopener noreferrer"
                   className="flex items-center gap-3 px-4 py-3 text-sm text-ink-soft transition-colors hover:bg-canvas hover:text-brand"
                 >
                   <span className="flex-shrink-0 text-ink-muted" aria-hidden>

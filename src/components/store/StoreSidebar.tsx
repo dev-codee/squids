@@ -126,7 +126,7 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
           <div className="flex justify-between border-b border-line pb-2">
             <span className="text-ink-soft">{dict.sidebar.lastUpdated}</span>
             <span className="font-semibold">
-              {new Date().toLocaleDateString("en-GB")}
+              {store.syncedAt ? new Date(store.syncedAt).toLocaleDateString() : dict.storeV2.notAvailable}
             </span>
           </div>
         </div>
@@ -153,12 +153,12 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
       )}
 
       {/* Contact */}
-      <div className="bg-white border border-line p-5 rounded">
+      {store.policyUrls?.support && <div className="bg-white border border-line p-5 rounded">
         <h3 className="font-bold text-ink mb-3">{dict.sidebar.contact.replace("{store}", store.name)}</h3>
         <a
-          href={store.websiteUrl}
+          href={store.policyUrls?.support}
           target="_blank"
-          rel="nofollow noopener noreferrer sponsored"
+          rel="noopener noreferrer"
           className="flex items-center gap-2 text-sm text-blue-600 hover:underline break-all"
         >
           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,7 +166,7 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
           </svg>
           {store.name}
         </a>
-      </div>
+      </div>}
 
       {/* Categories Filter Pills */}
       {store.categories.length > 0 && (

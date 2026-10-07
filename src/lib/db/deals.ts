@@ -18,6 +18,8 @@ import type { Deal, DealQuery, PagedDeals } from "@/lib/deals";
 import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE, dealDisplayTitle } from "@/lib/deals";
 import { CACHE_TAGS, PUBLIC_REVALIDATE, revalidatePublic } from "@/lib/cache";
 import { NOT_EXPIRED } from "@/lib/expiry";
+import { publicOfferFilter, distinctOfferStages, merchantNameExpression } from "@/lib/model/publication";
+import { buildAdvertiserFilter, getPublicAdvertisers } from "@/lib/db/advertisers";
 import { slugifyAdvertiserName } from "@/lib/db/advertisers";
 
 const COLLECTION = "deals";
@@ -41,21 +43,21 @@ export function normalizeDealDoc(doc: any): Deal {
 export const getDealsFromDb = unstable_cache(
   getDealsFromDbUncached,
   ["public:deals-list"],
-  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.deals] },
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.deals, CACHE_TAGS.advertisers] },
 );
 
 /** Cached newest-deals list for the homepage showcase. */
 export const getRecentDeals = unstable_cache(
   getRecentDealsUncached,
   ["public:recent-deals"],
-  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.deals] },
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.deals, CACHE_TAGS.advertisers] },
 );
 
 /** Cached "popular shops" grid for the homepage. */
 export const getPopularShops = unstable_cache(
   getPopularShopsUncached,
   ["public:popular-shops"],
-  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.deals] },
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.deals, CACHE_TAGS.advertisers] },
 );
 
 interface DealDoc extends Deal {
@@ -83,29 +85,16 @@ export async function upsertDeals(
   await col.createIndex({ network: 1, "advertiser.id": 1 });
 
   const now = new Date();
-  const ops = deals.map((d) => ({
-    updateOne: {
+  const ops = deals.map((d) => {
+    const { status, endDate, startDate, discountText, regionCodes, syncedAt, fetchedAt, sourceUpdatedAt, terms, sourceUrl, ...insertOnly } = d;
+    return { updateOne: {
       filter: { network: d.network ?? "awin", id: d.id },
       update: {
-        // Always refresh volatile network fields so expired/changed deals stay current.
-        $set: {
-          status: d.status,
-          endDate: d.endDate ?? null,
-          startDate: d.startDate ?? null,
-          discountText: d.discountText ?? null,
-          regionCodes: d.regionCodes ?? [],
-          syncedAt: now,
-        },
-        // Preserve admin-edited fields (title, code, description, trackingUrl) on
-        // subsequent syncs — only written on the very first insertion. `firstSeenAt`
-        // is what drives follow-store alerts (see src/lib/db/subscribers.ts) — unlike
-        // `syncedAt` above, it must NOT be touched on updates, or every deal would
-        // look "new" forever.
-        $setOnInsert: { ...d, network: d.network ?? "awin", syncedAt: now, firstSeenAt: now },
-      },
-      upsert: true,
-    },
-  }));
+        $set: { status, endDate: endDate ?? null, startDate: startDate ?? null, discountText: discountText ?? null, regionCodes: regionCodes ?? [], fetchedAt: now.toISOString(), sourceUpdatedAt: sourceUpdatedAt ?? null, terms: terms ?? null, sourceUrl: sourceUrl ?? null },
+        $setOnInsert: { ...insertOnly, advertiser: { ...d.advertiser, name: cleanAdvertiserName(d.advertiser.name) }, network: d.network ?? "awin", syncedAt: now, firstSeenAt: now },
+      }, upsert: true,
+    } };
+  });
 
   if (ops.length === 0) return { upserted: 0, modified: 0 };
 
@@ -130,7 +119,7 @@ function buildFilter(query: DealQuery & { network?: string }): Record<string, un
   // Counts are derived from the same filtered set, so a count can never claim
   // more offers than the page actually shows.
   if (!query.includeExpired) {
-    conditions.push(NOT_EXPIRED);
+    conditions.push(publicOfferFilter(query.country));
   }
 
   if (query.network) {
@@ -138,7 +127,7 @@ function buildFilter(query: DealQuery & { network?: string }): Record<string, un
   }
 
   if (query.search?.trim()) {
-    const searchRegex = { $regex: query.search.trim(), $options: "i" };
+    const searchRegex = { $regex: query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
     conditions.push({
       $or: [
         { title: searchRegex },
@@ -166,23 +155,6 @@ function buildFilter(query: DealQuery & { network?: string }): Record<string, un
 
   if (query.type && query.type !== "all") {
     conditions.push({ type: query.type });
-  }
-
-  if (query.country?.trim()) {
-    const cc = query.country.trim().toUpperCase();
-    // Show a deal on a country page only when:
-    //   (a) it explicitly targets this country, OR
-    //   (b) it carries an explicit worldwide / cross-border code, OR
-    //   (c) regionCodes is absent/empty (legacy fallback — future syncs will
-    //       correct this via the volatile-field $set in upsertDeals).
-    conditions.push({
-      $or: [
-        { regionCodes: cc },
-        { regionCodes: { $in: ["WW", "GLOBAL", "INT", "00"] } },
-        { regionCodes: { $size: 0 } },
-        { regionCodes: { $exists: false } },
-      ],
-    });
   }
 
   if (query.store?.trim()) {
@@ -223,12 +195,7 @@ function buildFilter(query: DealQuery & { network?: string }): Record<string, un
         ],
       });
     } else if (query.discountType === "free-delivery") {
-      conditions.push({
-        $or: [
-          { "promotion.benefit.kind": "free-delivery" },
-          { discountText: { $regex: /free\s+(shipping|delivery)/i } },
-        ],
-      });
+      conditions.push({ "delivery.charge.known": true, "delivery.charge.value": 0, "delivery.sourceUrl": { $type: "string" } });
     }
   }
 
@@ -269,18 +236,13 @@ async function getDealsFromDbUncached(
     Math.max(1, query.pageSize || DEFAULT_DEALS_PAGE_SIZE),
     MAX_DEALS_PAGE_SIZE,
   );
-  const total = await col.countDocuments(filter);
+  const stages = [ { $match: filter }, ...publicMerchantStages(query.country, query.category), ...distinctOfferStages() ];
+  const counts = await col.aggregate([...stages, { $count: "n" }]).toArray();
+  const total = counts[0]?.n ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const page = Math.min(Math.max(1, query.page || 1), totalPages);
   const skip = (page - 1) * pageSize;
-
-  const docs = await col
-    // Keep `syncedAt` (last-edited timestamp) so callers can sort by recency.
-    .find(filter, { projection: { _id: 0 } })
-    .sort({ "advertiser.name": 1, title: 1 })
-    .skip(skip)
-    .limit(pageSize)
-    .toArray();
+  const docs = await col.aggregate([...stages, { $sort: { "advertiser.name": 1, title: 1, id: 1 } }, { $skip: skip }, { $limit: pageSize }, { $project: { _id: 0 } }]).toArray();
 
   return {
     deals: docs.map((d) => normalizeDealDoc(d)),
@@ -307,11 +269,13 @@ async function getRecentDealsUncached(
     isAutoWelcome: { $ne: true },
   };
 
-  const docs = await col
-    .find(filter, { projection: { _id: 0, syncedAt: 0 } })
-    .sort({ syncedAt: -1 })
-    .limit(Math.max(1, limit))
-    .toArray();
+  const docs = await col.aggregate([
+    { $match: filter }, ...publicMerchantStages(country), ...distinctOfferStages(),
+    { $sort: { fetchedAt: -1, id: -1 } },
+    { $group: { _id: { network: "$network", merchant: "$advertiser.id" }, doc: { $first: "$$ROOT" } } },
+    { $replaceRoot: { newRoot: "$doc" } }, { $sort: { fetchedAt: -1, id: -1 } },
+    { $limit: Math.max(1, limit) }, { $project: { _id: 0 } },
+  ]).toArray();
 
   return docs.map((d) => normalizeDealDoc(d));
 }
@@ -335,71 +299,10 @@ async function getPopularShopsUncached(opts?: {
   country?: string;
 }): Promise<PopularShopData[]> {
   const { minDeals = 1, limit = 8, country } = opts ?? {};
-  const db = await getDb();
-  const col = db.collection<DealDoc>(COLLECTION);
-
-  const rows = await col
-    .aggregate([
-      { $match: buildFilter({ country, status: "active" } as DealQuery) },
-      {
-        $group: {
-          _id: { id: "$advertiser.id", network: "$network" },
-          dealName: { $first: "$advertiser.name" },
-          dealLogoUrl: { $first: "$advertiser.logoUrl" },
-          dealCount: { $sum: 1 },
-        },
-      },
-      { $sort: { dealCount: -1 } },
-      { $limit: Math.max(1, limit * 3) },
-      {
-        $lookup: {
-          from: "advertisers",
-          let: { advId: "$_id.id", advNet: "$_id.network" },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ["$id", "$$advId"] },
-                    { $eq: ["$network", "$$advNet"] },
-                  ],
-                },
-              },
-            },
-            { $limit: 1 },
-          ],
-          as: "advDoc",
-        },
-      },
-    ])
-    .toArray();
-
-  const results: PopularShopData[] = [];
-  const seenNames = new Set<string>();
-
-  for (const r of rows) {
-    const adv = r.advDoc?.[0];
-    const rawName = adv?.name || r.dealName || "";
-    const cleanName = cleanAdvertiserName(rawName);
-    const key = cleanName.toLowerCase().trim();
-
-    if (!key || seenNames.has(key)) continue;
-    seenNames.add(key);
-
-    const logoUrl = adv?.logoUrl || r.dealLogoUrl || null;
-
-    results.push({
-      id: r._id.id,
-      network: r._id.network,
-      name: cleanName,
-      logoUrl,
-      dealCount: r.dealCount,
-    });
-
-    if (results.length >= limit) break;
-  }
-
-  return results;
+  const result = await getPublicAdvertisers({ country, requireDeals: true, pageSize: 100 });
+  return result.advertisers.filter((a) => (a.dealCount ?? 0) >= minDeals)
+    .sort((a, b) => (b.dealCount ?? 0) - (a.dealCount ?? 0)).slice(0, limit)
+    .map((a) => ({ id: a.id, network: a.network, name: a.name, logoUrl: a.logoUrl, dealCount: a.dealCount ?? 0 }));
 }
 
 /**
@@ -1121,11 +1024,13 @@ export interface NewDealForAlert {
   id: string;
   network: string;
   advertiserSlug: string;
+  advertiserId: string;
   advertiserName: string;
   title: string;
   discountText: string | null;
   trackingUrl: string | null;
   firstSeenAt: Date;
+  regionCodes: string[];
 }
 
 /**
@@ -1138,16 +1043,10 @@ export async function getNewDealsSince(since: Date): Promise<NewDealForAlert[]> 
   const db = await getDb();
   const col = db.collection<DealDoc & { firstSeenAt?: Date }>(COLLECTION);
 
-  const docs = await col
-    .find({
-      firstSeenAt: { $gt: since },
-      status: { $ne: "expired" },
-      isAutoWelcome: { $ne: true },
-      isBrandDeal: { $ne: true },
-    })
-    .sort({ firstSeenAt: 1 })
-    .limit(2000)
-    .toArray();
+  const docs = await col.aggregate([
+    { $match: { $and: [publicOfferFilter(), { firstSeenAt: { $gt: since } }] } },
+    ...publicMerchantStages(), ...distinctOfferStages(), { $sort: { firstSeenAt: 1 } }, { $limit: 2000 },
+  ]).toArray();
 
   return docs
     .filter((d) => d.advertiser?.name)
@@ -1157,11 +1056,28 @@ export async function getNewDealsSince(since: Date): Promise<NewDealForAlert[]> 
         id: String(d.id),
         network: d.network ?? "awin",
         advertiserSlug: slugifyAdvertiserName(advertiserName),
+        advertiserId: String(d.advertiser.id),
         advertiserName,
         title: dealDisplayTitle(d as unknown as Deal),
         discountText: d.discountText ?? null,
         trackingUrl: resolveAffiliateTrackingUrl(d.network, d.advertiser?.id, d.trackingUrl),
         firstSeenAt: d.firstSeenAt as Date,
+        regionCodes: d.regionCodes ?? [],
       };
     });
+}
+
+/** Quarantine by withholding mismatched advertiser joins from every public read. */
+export function publicMerchantStages(country?: string, category?: string): Record<string, unknown>[] {
+  return [
+    { $lookup: { from: "advertisers", let: { merchantId: { $toString: "$advertiser.id" }, merchantNetwork: "$network", merchantName: merchantNameExpression("$advertiser.name") }, pipeline: [
+      { $match: { $and: [buildAdvertiserFilter({ country, category }), { status: "active", relationship: "joined" }] } },
+      { $match: { $expr: { $and: [
+        { $eq: [{ $toString: "$id" }, "$$merchantId"] }, { $eq: ["$network", "$$merchantNetwork"] },
+        { $eq: [merchantNameExpression("$name"), "$$merchantName"] },
+      ] } } }, { $limit: 1 },
+    ], as: "publicMerchant" } },
+    { $match: { "publicMerchant.0": { $exists: true } } },
+    { $unset: "publicMerchant" },
+  ];
 }

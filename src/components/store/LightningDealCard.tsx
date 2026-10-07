@@ -1,4 +1,5 @@
 "use client";
+import { useParams } from "next/navigation";
 
 import { useEffect, useState } from "react";
 import type { DealItem } from "@/lib/storeData";
@@ -9,8 +10,9 @@ interface LightningDealCardProps {
 }
 
 export default function LightningDealCard({ deal }: LightningDealCardProps) {
+  const params = useParams();
   const dict = useDictionary();
-  const [timeLeft, setTimeLeft] = useState<number>(deal.endsInSeconds || 14400);
+  const [timeLeft, setTimeLeft] = useState<number>(deal.endsInSeconds ?? 0);
 
   useEffect(() => {
     if (!timeLeft) return;
@@ -131,7 +133,7 @@ export default function LightningDealCard({ deal }: LightningDealCardProps) {
 
       {/* Buy/Get Deal Button */}
       <a
-        href={deal.affiliateUrl}
+        href={`/api/outbound?dealId=${encodeURIComponent(deal.id)}&market=${encodeURIComponent(String(params?.country || "US"))}`}
         target="_blank"
         rel="nofollow noopener noreferrer sponsored"
         className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-2.5 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-brand-hover active:scale-95"

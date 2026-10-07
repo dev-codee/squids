@@ -39,6 +39,14 @@ function toTrimmedOrNull(v: unknown): string | null {
  */
 function parseEnrichment(body: Record<string, unknown>): Partial<Deal> {
   const out: Partial<Deal> = {};
+  if ("terms" in body) out.terms = toTrimmedOrNull(body.terms);
+  if ("sourceUrl" in body) out.sourceUrl = toTrimmedOrNull(body.sourceUrl);
+  if ("reviewedRegionCodes" in body && Array.isArray(body.reviewedRegionCodes)) {
+    out.reviewedRegionCodes = body.reviewedRegionCodes.filter((c): c is string => typeof c === "string" && /^[A-Za-z]{2}$/.test(c)).map((c) => c.toUpperCase());
+  }
+  if ("promotion" in body) out.promotion = body.promotion && typeof body.promotion === "object" ? body.promotion as Deal["promotion"] : null;
+  if ("delivery" in body) out.delivery = body.delivery && typeof body.delivery === "object" ? body.delivery as Deal["delivery"] : null;
+
 
   if ("discountText" in body) out.discountText = toTrimmedOrNull(body.discountText);
   if ("imageUrl" in body) out.imageUrl = toTrimmedOrNull(body.imageUrl);

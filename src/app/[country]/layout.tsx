@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { isValidRegionCode } from "@/lib/regions";
 import PublicHeader from "@/components/store/PublicHeader";
 import PublicFooter from "@/components/store/PublicFooter";
 import CookieConsentBanner from "@/components/common/CookieConsentBanner";
@@ -23,6 +25,7 @@ export async function generateMetadata({
 }: {
   params: { country: string };
 }): Promise<Metadata> {
+  if (!isValidRegionCode(params.country)) notFound();
   const region = getRegionConfig(params.country);
   const site = getSiteUrl();
   const path = `/${region.country.toLowerCase()}`;
@@ -41,10 +44,7 @@ export async function generateMetadata({
   ).map((c) => getRegionConfig(c).locale.replace("-", "_"));
 
   return {
-    alternates: {
-      canonical: `${site}${path}`,
-      languages,
-    },
+
     openGraph: {
       type: "website",
       siteName: "Foxzil",
@@ -68,6 +68,7 @@ export default async function StoreLayout({
   children: React.ReactNode;
   params: { country: string };
 }) {
+  if (!isValidRegionCode(params.country)) notFound();
   const region = getRegionConfig(params.country);
   const [dictionary, rates] = await Promise.all([
     getDictionary(params.country),

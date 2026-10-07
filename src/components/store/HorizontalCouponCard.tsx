@@ -1,5 +1,7 @@
 "use client";
 
+import { useDialogFocus } from "@/components/common/useDialogFocus";
+import { deliveryKind } from "@/lib/model/offerPresentation";
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -33,10 +35,12 @@ export default function HorizontalCouponCard({
 }: HorizontalCouponCardProps) {
   const dict = useDictionary();
   const t = dict.storeV2;
+  const ui = dict.offerUi;
   const params = useParams();
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const dialogRef = useDialogFocus(showModal, () => setShowModal(false));
   const [revealed, setRevealed] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
 
@@ -70,8 +74,7 @@ export default function HorizontalCouponCard({
 
   const copyCode = (buttonLocation = "coupon_card") => {
     if (!coupon.code) return;
-    navigator.clipboard
-      .writeText(coupon.code)
+    Promise.resolve().then(() => navigator.clipboard.writeText(coupon.code!))
       .then(() => {
         setCopyFailed(false);
         setCopied(true);
@@ -98,7 +101,9 @@ export default function HorizontalCouponCard({
   };
 
   // Eligibility badge shown in the card's left rail.
-  const badge = coupon.code
+  const shipping = deliveryKind(coupon.delivery, computedMarket);
+  const isDelivery = !!coupon.delivery || /deliver|shipping|livraison|versand|spedizion|env[ií]o/i.test(`${coupon.title} ${coupon.discount}`);
+  const badge = isDelivery ? (shipping === "free" ? ui.freeDelivery : shipping === "conditional" ? ui.conditionalDelivery : ui.delivery) : coupon.code
     ? coupon.type === "student"
       ? dict.cards.studentPerk
       : coupon.type === "cashback"
@@ -107,41 +112,21 @@ export default function HorizontalCouponCard({
     : dict.common.deal;
 
   const expiryText = coupon.expiryDate
-    ? new Date(coupon.expiryDate).toLocaleDateString("en-GB", {
+    ? new Date(coupon.expiryDate).toLocaleDateString(computedMarket === "FR" ? "fr-FR" : "en-GB", {
         day: "numeric",
         month: "short",
         year: "numeric",
       })
-    : dict.cards.active;
+    : t.expiryUnknown;
 
-  // Terms rows. Only expiry and verification are things we actually hold; the
-  // rest link out to the merchant's live terms instead of being invented.
+  const c = coupon.conditions;
   const termsRows: { label: string; value: string; href?: string }[] = [
-    {
-      label: t.minimumSpend,
-      value: t.readMerchantTerms,
-      href: merchantUrl || undefined,
-    },
-    {
-      label: t.exclusions,
-      value: t.readMerchantTerms,
-      href: merchantUrl || undefined,
-    },
+    { label: t.minimumSpend, value: c?.minSpend?.known ? `${c.minSpend.value}${coupon.currency ? ` ${coupon.currency}` : ""}` : ui.unknown },
+    { label: t.customerEligibility, value: c?.customerType === "new" ? ui.newCustomer : c?.customerType === "existing" ? ui.existingCustomer : c?.customerType === "any" ? ui.anyCustomer : ui.unknown },
+    { label: t.exclusions, value: c?.exclusions?.length ? c.exclusions.join("; ") : ui.unknown },
     { label: t.expiry, value: expiryText },
-    {
-      label: t.verification,
-      value:
-        coupon.evidenceStatus === "checkout-tested"
-          ? `Checkout-Tested${coupon.updatedAt ? ` · ${new Date(coupon.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}`
-          : coupon.evidenceStatus === "merchant-listed"
-            ? `Merchant-Listed (Feed Sourced)`
-            : coupon.evidenceStatus === "community-reported"
-              ? `Community-Reported (Unverified)`
-              : coupon.verified
-                ? `${dict.cards.verified}${coupon.updatedAt ? ` · ${new Date(coupon.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}`
-                : t.readMerchantTerms,
-      href: coupon.evidenceStatus || coupon.verified ? undefined : merchantUrl || undefined,
-    },
+    { label: t.verification, value: coupon.evidenceStatus === "checkout-tested" ? `${ui.checkoutTested} · ${new Date(coupon.checkedAt!).toLocaleDateString(computedMarket === "FR" ? "fr-FR" : "en-GB")}` : coupon.evidenceStatus === "community-reported" ? ui.communityReported : ui.merchantListed },
+    ...(coupon.sourceUrl ? [{ label: ui.source, value: ui.sourceTerms, href: coupon.sourceUrl }] : []),
   ];
 
   return (
@@ -156,7 +141,7 @@ export default function HorizontalCouponCard({
               <span className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">
                 {badge}
               </span>
-              {coupon.discount && (
+              {coupon.discount && !isDelivery && (
                 <span className="text-xl font-extrabold leading-none text-brand">
                   {coupon.discount}
                 </span>
@@ -181,15 +166,15 @@ export default function HorizontalCouponCard({
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {coupon.evidenceStatus === "checkout-tested" ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
-                  ✓ Checkout-Tested
+                  ✓ {ui.checkoutTested}
                 </span>
               ) : coupon.evidenceStatus === "merchant-listed" ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                  Merchant-Listed
+                  {ui.merchantListed}
                 </span>
               ) : coupon.evidenceStatus === "community-reported" ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
-                  Community-Reported
+                  {ui.communityReported}
                 </span>
               ) : coupon.verified ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
@@ -205,7 +190,7 @@ export default function HorizontalCouponCard({
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${EXPIRY_BADGE_CLASSES[expiryBadge.tone]}`}
                 >
-                  {expiryBadge.label}
+                  {computedMarket === "FR" ? "Expiration proche" : expiryBadge.label}
                 </span>
               )}
             </div>
@@ -255,6 +240,8 @@ export default function HorizontalCouponCard({
 
           {termsOpen && (
             <div className="animate-fade-in border-t border-line bg-canvas-sunk px-4 py-3 sm:px-5">
+              {coupon.terms && <p className="mb-3 text-sm text-ink">{coupon.terms}</p>}
+              {coupon.delivery && <p className="mb-3 text-sm text-ink">{ui.delivery}: {coupon.delivery.charge?.known ? `${coupon.delivery.charge.value} ${coupon.delivery.currency}` : ui.unknown}{coupon.delivery.freeThreshold?.known ? ` · ${t.minimumSpend}: ${coupon.delivery.freeThreshold.value} ${coupon.delivery.currency}` : ""} · {coupon.delivery.zone.market} {coupon.delivery.restrictions?.join("; ")}</p>}
               <dl className="text-sm">
                 {termsRows.map((row) => (
                   <div
@@ -283,9 +270,9 @@ export default function HorizontalCouponCard({
                 <Link
                   href={`/${computedMarket.toLowerCase()}/report-issue?type=expired_deal&deal=${encodeURIComponent(coupon.id)}`}
                   className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-muted transition-colors hover:text-brand hover:underline"
-                  title="Report expired or invalid offer"
+                  title={ui.report}
                 >
-                  <span>⚑</span> Report expired or inaccurate offer
+                  <span>⚑</span> {ui.report}
                 </Link>
               </div>
             </div>
@@ -296,7 +283,7 @@ export default function HorizontalCouponCard({
       {/* Code reveal modal */}
       {showModal && (
         <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-card bg-white p-6 text-center shadow-card-hover">
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={dict.cards.copyCode} tabIndex={-1} className="max-h-[90dvh] overflow-y-auto w-full max-w-md rounded-card bg-white p-6 text-center shadow-card-hover">
             {/* The heading must not claim a copy that did not happen. */}
             <h3 className="text-xl font-bold text-ink">
               {copied ? dict.cards.promoCodeCopied : dict.cards.copyCode}

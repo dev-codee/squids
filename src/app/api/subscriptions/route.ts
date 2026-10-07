@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { followStore, type AlertFrequency } from "@/lib/db/subscribers";
 import { sendMail, confirmSubscriptionEmail } from "@/lib/email";
+import { getAdvertiserBySlug } from "@/lib/db/advertisers";
 import { getSiteUrl } from "@/lib/regions";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const merchant = await getAdvertiserBySlug(String(store.slug), country);
+    if (!merchant || merchant.network !== store.network || String(merchant.id) !== String(store.advertiserId)) return NextResponse.json({ error: "Store unavailable in this market." }, { status: 400 });
     const { subscriber, needsConfirmation } = await followStore({
       email,
       frequency,
@@ -57,7 +60,8 @@ export async function POST(request: NextRequest) {
         slug: String(store.slug),
         network: String(store.network || "awin"),
         advertiserId: String(store.advertiserId || ""),
-        name: String(store.name).slice(0, 200),
+        name: merchant.name,
+        country: country.toUpperCase(),
       },
     });
 
@@ -72,7 +76,8 @@ export async function POST(request: NextRequest) {
         manageUrl,
         storeNames: subscriber.stores.map((s) => s.name),
       });
-      await sendMail({ to: subscriber.email, subject, html });
+      const sent = await sendMail({ to: subscriber.email, subject, html });
+      if (!sent) throw new Error("Confirmation email could not be sent");
     }
 
     return NextResponse.json({ ok: true, needsConfirmation });

@@ -50,17 +50,17 @@ export async function generateMetadata({
   if (id === null) return {};
 
   const product = await getProductById(id).catch(() => null);
-  if (!product) return {};
+  if (!product?.regionCodes?.includes(params.country.toUpperCase())) return {};
 
   const siteUrl = getSiteUrl();
   const path = `/${params.country.toLowerCase()}/product/${id}`;
 
   const hreflang: Record<string, string> = {};
-  for (const code of REGION_CODES) {
+  for (const code of REGION_CODES.filter((code) => product.regionCodes?.includes(code))) {
     const r = getRegionConfig(code);
     hreflang[r.locale] = `${siteUrl}/${code.toLowerCase()}/product/${id}`;
   }
-  hreflang["x-default"] = `${siteUrl}/us/product/${id}`;
+
 
   return {
     title: product.title,
@@ -93,7 +93,7 @@ export default async function ProductComparisonPage({
     getProductById(id).catch(() => null),
     getDictionary(country),
   ]);
-  if (!product) notFound();
+  if (!product?.regionCodes?.includes(country)) notFound();
 
   const t = dict.productV2;
 
@@ -112,7 +112,7 @@ export default async function ProductComparisonPage({
     getPriceHistory(product.id, country).catch(() => []),
   ]);
 
-  const rows = "rows" in matches ? matches.rows : [];
+  const rows = "rows" in matches ? matches.rows.filter((row) => row.product.regionCodes?.includes(country)) : [];
   const region = getRegionConfig(country);
 
   // Real cost components, per retailer, for this quantity and destination.
@@ -130,7 +130,7 @@ export default async function ProductComparisonPage({
       rows.map(async (row) => {
         const entry = totals.get(row.product.id);
         if (!entry) return null;
-        const advertiser = await getAdvertiserByIdFromDb(row.product.advertiserId).catch(
+        const advertiser = await getAdvertiserByIdFromDb(row.product.advertiserId, row.product.network).catch(
           () => null,
         );
         const basis: RetailerOffer["matchBasis"] =

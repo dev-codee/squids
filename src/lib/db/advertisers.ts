@@ -11,6 +11,7 @@
 
 import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
+import { publicOfferFilter, distinctOfferStages, merchantNameExpression } from "@/lib/model/publication";
 import { NOT_EXPIRED } from "@/lib/expiry";
 import { normalizeCountryCode, foreignCountrySignals } from "@/lib/countries";
 import { cleanAdvertiserName, storeSlug } from "@/lib/networks";
@@ -38,6 +39,7 @@ export function normalizeAdvertiserDoc(doc: any): Advertiser {
     doc.name = cleanAdvertiserName(doc.name);
   }
   doc.url = resolveAffiliateTrackingUrl(doc.network, doc.id, doc.url);
+  doc.categories = doc.reviewedCategories ?? (doc.categoriesReviewedAt ? doc.categories ?? [] : []);
   return doc as Advertiser;
 }
 
@@ -83,7 +85,7 @@ export async function upsertAdvertisers(
 /**
  * Build MongoDB filter from the query parameters.
  */
-function buildFilter(query: AdvertiserQuery & { network?: string }): Record<string, unknown> {
+export function buildAdvertiserFilter(query: AdvertiserQuery & { network?: string }): Record<string, unknown> {
   const filter: Record<string, unknown> = {};
   // Accumulate independent clauses here so that multiple filters (e.g. country
   // AND category) all apply — a single `filter.$or` would let a later clause
@@ -95,7 +97,7 @@ function buildFilter(query: AdvertiserQuery & { network?: string }): Record<stri
   }
 
   if (query.search?.trim()) {
-    filter.name = { $regex: query.search.trim(), $options: "i" };
+    filter.name = { $regex: escapeRegExp(query.search.trim()), $options: "i" };
   }
   if (query.region) {
     filter.region = query.region;
@@ -143,8 +145,8 @@ function buildFilter(query: AdvertiserQuery & { network?: string }): Record<stri
     const catRegex = new RegExp(`^${cat.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
     and.push({
       $or: [
-        { categories: { $elemMatch: { $regex: catRegex } } },
-        { categories: cat },
+        { reviewedCategories: { $elemMatch: { $regex: catRegex } } },
+        { categoriesReviewedAt: { $exists: true, $ne: null }, categories: cat },
       ],
     });
   }
@@ -166,10 +168,8 @@ export async function countAdvertisersByCategory(
   country: string,
   categoryName: string,
 ): Promise<number> {
-  const db = await getDb();
-  const col = db.collection<AdvertiserDoc>(COLLECTION);
-  const filter = buildFilter({ country, category: categoryName } as AdvertiserQuery);
-  return col.countDocuments(filter);
+  const result = await getPublicAdvertisers({ country, category: categoryName, requireDeals: true, pageSize: 1 });
+  return result.total;
 }
 
 /**
@@ -182,7 +182,7 @@ export async function countAdvertisersGloballyByCategory(
 ): Promise<number> {
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
-  const filter = buildFilter({ category: categoryName } as AdvertiserQuery);
+  const filter = buildAdvertiserFilter({ category: categoryName } as AdvertiserQuery);
   return col.countDocuments(filter);
 }
 
@@ -240,7 +240,7 @@ async function getAdvertisersFromDbUncached(
   const count = await col.estimatedDocumentCount();
   if (count === 0) return null;
 
-  const filter = buildFilter(query);
+  const filter = buildAdvertiserFilter(query);
   // Facets require 4 full-collection distinct() scans; only the admin dashboard
   // consumes them. Skip on public listings (homepage/stores) to keep the query
   // well under the serverless response deadline.
@@ -389,66 +389,8 @@ async function getAdvertisersFromDbUncached(
 async function getShowcaseAdvertisersUncached(
   query: AdvertiserQuery & { network?: string },
 ): Promise<PagedAdvertisers | null> {
-  const db = await getDb();
-  const col = db.collection<AdvertiserDoc>(COLLECTION);
-
-  const count = await col.estimatedDocumentCount();
-  if (count === 0) return null;
-
-  const filter = buildFilter(query);
-  const limit = Math.min(Math.max(1, query.pageSize || 12), MAX_PAGE_SIZE);
-
-  const docs = await col
-    .aggregate([
-      { $match: filter },
-      { $sort: { isFlagship: -1, name: 1 } },
-      { $limit: limit },
-      {
-        // Count deals for ONLY these `limit` advertisers, not the whole set.
-        $lookup: {
-          from: "deals",
-          let: { advId: "$id", advNetwork: "$network", advIdStr: { $toString: "$id" } },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    {
-                      $or: [
-                        { $eq: ["$advertiser.id", "$$advId"] },
-                        { $eq: ["$advertiser.id", "$$advIdStr"] },
-                      ],
-                    },
-                    { $eq: ["$network", "$$advNetwork"] },
-                  ],
-                },
-              },
-            },
-            { $match: NOT_EXPIRED },
-            { $count: "n" },
-          ],
-          as: "dealAgg",
-        },
-      },
-      {
-        $addFields: {
-          dealCount: { $ifNull: [{ $arrayElemAt: ["$dealAgg.n", 0] }, 0] },
-        },
-      },
-      { $project: { _id: 0, syncedAt: 0, dealAgg: 0 } },
-    ])
-    .toArray();
-
-  const normalizedDocs = docs.map((doc) => normalizeAdvertiserDoc(doc));
-
-  return {
-    advertisers: normalizedDocs,
-    page: 1,
-    pageSize: limit,
-    total: normalizedDocs.length,
-    totalPages: 1,
-    facets: { regions: [], relationships: [], countries: [], categories: [] },
-  };
+  if (query.requireDeals) return getPublicAdvertisers(query);
+  return getPublicAdvertisers({ ...query, requireDeals: true });
 }
 
 /**
@@ -654,118 +596,7 @@ async function getAdvertiserBySlugUncached(
     normalized = normalized.slice(0, -3).replace(/(^-|-$)/g, "");
   }
 
-  const db = await getDb();
-  const col = db.collection<AdvertiserDoc>(COLLECTION);
-
-  // Anchor the start and each slug part, but allow an optional TRAILING suffix
-  // after the last part (e.g. "Beauty Amora AU", "Acme WW"). The suffix must
-  // begin at a non-alphanumeric boundary, so this matches stripped country/region
-  // tokens without over-matching mid-word extensions ("Amora" ≠ "Amorable").
-  // Slugs are built from cleanAdvertiserName(), which removes those tokens, so
-  // without this the cleaned slug could never resolve back to the raw DB name.
-  const pattern =
-    "^[^a-z0-9]*" +
-    normalized
-      .split("-")
-      .map((part) => escapeRegExp(part))
-      .join("[^a-z0-9]*") +
-    "(?:[^a-z0-9].*)?$";
-
-  let candidates = await col
-    .find(
-      { name: { $regex: pattern, $options: "i" } },
-      { projection: { _id: 0, syncedAt: 0 } },
-    )
-    .limit(25)
-    .toArray();
-
-  if (candidates.length === 0) {
-    const broader = await col
-      .find(
-        { name: { $regex: escapeRegExp(normalized), $options: "i" } },
-        { projection: { _id: 0, syncedAt: 0 } },
-      )
-      .limit(25)
-      .toArray();
-    candidates = broader;
-  }
-
-  if (candidates.length === 0) return null;
-
-  // Prefer exact slug matches; fall back to the loose regex hits if none match
-  // exactly (so partial/legacy names still resolve).
-  const exact = candidates.filter(
-    (a) => slugifyAdvertiserName((a as unknown as Advertiser).name) === normalized,
-  );
-  const pool = (exact.length > 0 ? exact : candidates) as unknown as Advertiser[];
-
-  if (pool.length === 1) {
-    return normalizeAdvertiserDoc(pool[0]);
-  }
-
-  // Count real (non-auto-generated) deals per candidate so we can prefer the
-  // record shoppers actually have offers for. Auto welcome/brand deals don't
-  // count — a store that only has those is effectively empty.
-  const dealsCol = db.collection(COLLECTION_DEALS);
-  const ids = pool.map((a) => a.id);
-  const dealRows = await dealsCol
-    .aggregate([
-      { $match: { "advertiser.id": { $in: [...ids, ...ids.map(String)] } } },
-      {
-        $group: {
-          _id: { network: "$network", advId: "$advertiser.id" },
-          total: { $sum: 1 },
-          real: {
-            $sum: {
-              $cond: [
-                {
-                  $and: [
-                    { $ne: ["$isAutoWelcome", true] },
-                    { $ne: ["$isBrandDeal", true] },
-                  ],
-                },
-                1,
-                0,
-              ],
-            },
-          },
-        },
-      },
-    ])
-    .toArray();
-
-  const countKey = (network: string | undefined, id: number | string) =>
-    `${network ?? "awin"}:${Number(id)}`;
-  const counts = new Map<string, { total: number; real: number }>();
-  for (const r of dealRows) {
-    counts.set(countKey(r._id.network, r._id.advId), {
-      total: r.total,
-      real: r.real,
-    });
-  }
-
-  // Region first (region-specific stores), then real deals, then any deals,
-  // then a joined relationship — all deterministic so results never flap.
-  const scored = pool
-    .map((a) => {
-      const c = counts.get(countKey(a.network, a.id)) ?? { total: 0, real: 0 };
-      return {
-        a,
-        region: advertiserRegionScore(a, country),
-        real: c.real,
-        total: c.total,
-        joined: a.relationship === "joined" ? 1 : 0,
-      };
-    })
-    .sort(
-      (x, y) =>
-        y.region - x.region ||
-        y.real - x.real ||
-        y.total - x.total ||
-        y.joined - x.joined,
-    );
-
-  return normalizeAdvertiserDoc(scored[0].a);
+  return getCanonicalPublicStore(normalized, country);
 }
 
 /**
@@ -779,28 +610,11 @@ async function getRelatedAdvertisersUncached(
   country?: string,
   limit = 6,
 ): Promise<Advertiser[]> {
-  const cats = categories.filter((c) => c && c.trim());
-  if (cats.length === 0) return [];
-
-  const db = await getDb();
-  const col = db.collection<AdvertiserDoc>(COLLECTION);
-
-  const countryFilter = buildFilter({ country } as AdvertiserQuery);
-  const catRegexes = cats.map((c) => new RegExp(`^${escapeRegExp(c.trim())}$`, "i"));
-
-  const filter: Record<string, unknown> = {
-    ...countryFilter,
-    categories: { $elemMatch: { $in: catRegexes } },
-    $nor: [{ id: exclude.id, network: exclude.network }],
-  };
-
-  const docs = await col
-    .find(filter, { projection: { _id: 0, syncedAt: 0 } })
-    .sort({ isFlagship: -1, name: 1 })
-    .limit(limit)
-    .toArray();
-
-  return docs.map((d) => normalizeAdvertiserDoc(d));
+  const cats = new Set(categories.map((c) => c.trim().toLowerCase()).filter(Boolean));
+  if (!cats.size) return [];
+  return (await getPublicStoreRecords(country?.toUpperCase())).filter((a) =>
+    !(String(a.id) === String(exclude.id) && a.network === exclude.network) &&
+    a.categories?.some((c) => cats.has(c.toLowerCase()))).slice(0, limit);
 }
 
 // ---------------------------------------------------------------------------
@@ -982,4 +796,53 @@ export async function deleteAdvertiser(
 
   const result = await col.deleteOne({ id });
   return result.deletedCount > 0;
+}
+
+/** Public stores are unique by canonical slug. The selected record and count are
+ * shared by directory, homepage, search and sitemap. Pagination follows deduplication. */
+const getPublicStoreRecords = unstable_cache(async (country?: string): Promise<Advertiser[]> => {
+  const db = await getDb();
+  const docs = await db.collection(COLLECTION).aggregate([
+    { $match: { $and: [buildAdvertiserFilter({ country }), { status: "active", relationship: "joined" }] } },
+    { $lookup: { from: "deals", let: { merchantId: { $toString: "$id" }, merchantNetwork: "$network", merchantName: merchantNameExpression("$name") }, pipeline: [
+      { $match: publicOfferFilter(country) },
+      { $match: { $expr: { $and: [
+        { $eq: [{ $toString: "$advertiser.id" }, "$$merchantId"] },
+        { $eq: ["$network", "$$merchantNetwork"] },
+        { $eq: [merchantNameExpression("$advertiser.name"), "$$merchantName"] },
+      ] } } },
+      ...distinctOfferStages(), { $count: "n" },
+    ], as: "offerCount" } },
+    { $set: { dealCount: { $ifNull: [{ $arrayElemAt: ["$offerCount.n", 0] }, 0] } } },
+    { $match: { dealCount: { $gt: 0 } } },
+    { $project: { _id: 0, offerCount: 0 } },
+  ]).toArray();
+  const unique = new Map<string, Advertiser>();
+  for (const doc of docs) {
+    const a = normalizeAdvertiserDoc(doc);
+    const slug = slugifyAdvertiserName(a.name);
+    if (!slug) continue;
+    const previous = unique.get(slug);
+    const score = advertiserRegionScore(a, country);
+    if (!previous || score > advertiserRegionScore(previous, country) ||
+      (score === advertiserRegionScore(previous, country) && (a.dealCount ?? 0) > (previous.dealCount ?? 0))) unique.set(slug, a);
+  }
+  return [...unique.values()].sort((a, b) => Number(!!b.isFlagship) - Number(!!a.isFlagship) || a.name.localeCompare(b.name) || String(a.network).localeCompare(String(b.network)) || String(a.id).localeCompare(String(b.id)));
+}, ["public:eligible-store-records:v2"], { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers, CACHE_TAGS.deals] });
+
+export async function getPublicAdvertisers(query: AdvertiserQuery & { network?: string }): Promise<PagedAdvertisers> {
+  const search = query.search?.trim().toLowerCase();
+  const category = query.category?.trim().toLowerCase();
+  const stores = (await getPublicStoreRecords(query.country?.toUpperCase())).filter((a) =>
+    (!search || a.name.toLowerCase().includes(search)) &&
+    (!category || a.categories?.some((c) => c.toLowerCase() === category)) &&
+    (!query.network || a.network === query.network));
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, query.pageSize || DEFAULT_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(stores.length / pageSize));
+  const page = Math.min(totalPages, Math.max(1, query.page || 1));
+  return { advertisers: stores.slice((page - 1) * pageSize, page * pageSize), total: stores.length, totalPages, page, pageSize, facets: { regions: [], relationships: [], countries: [], categories: [] } };
+}
+
+export async function getCanonicalPublicStore(slug: string, country?: string): Promise<Advertiser | null> {
+  return (await getPublicStoreRecords(country?.toUpperCase())).find((a) => slugifyAdvertiserName(a.name) === slug) ?? null;
 }

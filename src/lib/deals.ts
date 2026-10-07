@@ -78,6 +78,10 @@ export interface Deal {
   status: string;
   trackingUrl: string | null;
   regionCodes: string[];
+  reviewedRegionCodes?: string[];
+  terms?: string | null;
+  sourceUrl?: string | null;
+  delivery?: import("./model/delivery").DeliveryRule | null;
 
   // --- Admin-managed enrichment (all optional; absent = not set) -----------
   /** Short discount label e.g. "20% OFF", "$15 OFF", "8% CASHBACK". */
@@ -227,9 +231,9 @@ export function stripCouponCode(text: string, code?: string | null): string {
 export function dealDisplayTitle(deal: Deal, locale?: string): string {
   const normLocale = locale ? locale.toLowerCase().split("-")[0] : undefined;
   const raw =
-    (normLocale && deal.aiTitleByLang?.[normLocale]?.trim()) ||
-    deal.aiTitleByLang?.en?.trim() ||
-    deal.aiTitle?.trim() ||
+    (normLocale && ["APPROVED", "CORRECTED"].includes(deal.aiStatusByLang?.[normLocale] || "") && deal.aiTitleByLang?.[normLocale]?.trim()) ||
+    (["APPROVED", "CORRECTED"].includes(deal.aiStatusByLang?.en || "") && deal.aiTitleByLang?.en?.trim()) ||
+    (["APPROVED", "CORRECTED"].includes(deal.aiStatus || "") && deal.aiTitle?.trim()) ||
     deal.title;
   return stripCouponCode(raw, deal.code);
 }
@@ -238,9 +242,9 @@ export function dealDisplayTitle(deal: Deal, locale?: string): string {
 export function dealDisplayDescription(deal: Deal, locale?: string): string {
   const normLocale = locale ? locale.toLowerCase().split("-")[0] : undefined;
   const raw =
-    (normLocale && deal.aiDescriptionByLang?.[normLocale]?.trim()) ||
-    deal.aiDescriptionByLang?.en?.trim() ||
-    deal.aiDescription?.trim() ||
+    (normLocale && ["APPROVED", "CORRECTED"].includes(deal.aiStatusByLang?.[normLocale] || "") && deal.aiDescriptionByLang?.[normLocale]?.trim()) ||
+    (["APPROVED", "CORRECTED"].includes(deal.aiStatusByLang?.en || "") && deal.aiDescriptionByLang?.en?.trim()) ||
+    (["APPROVED", "CORRECTED"].includes(deal.aiStatus || "") && deal.aiDescription?.trim()) ||
     deal.description ||
     "";
   return stripCouponCode(raw, deal.code);
@@ -300,6 +304,8 @@ function normalisePromotion(p: AwinPromotion): Deal {
     network: "awin",
     title: p.title,
     description: p.description || null,
+    terms: p.terms || null,
+    sourceUrl: p.url || null,
     advertiser: {
       id: p.advertiser.id,
       name: p.advertiser.name,
@@ -453,6 +459,7 @@ export const DEFAULT_DEALS_PAGE_SIZE = 24;
 export const MAX_DEALS_PAGE_SIZE = 100;
 
 export interface DealQuery {
+  category?: string;
   search?: string;
   advertiserId?: number;
   status?: string;

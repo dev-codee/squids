@@ -78,6 +78,7 @@ export default async function CountryHomePage({
     // Products are optional content — an unreachable/empty collection simply
     // hides the comparison row rather than failing the page.
     getProductsFromDb({
+      country,
       pageSize: 6,
       search: tab === "products" ? search : undefined,
     })

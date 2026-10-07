@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     network: params.get("network") ?? undefined,
     page: Number.parseInt(params.get("page") ?? "1", 10) || 1,
     pageSize: Number.parseInt(params.get("pageSize") ?? "", 10) || undefined,
-    requireDeals: params.get("requireDeals") === "true",
+    requireDeals: true,
     // Only compute facets (4 full-collection scans) when the caller needs them
     // (admin dashboard). Public listings omit this to stay fast.
     withFacets: params.get("withFacets") === "true",
@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (query.requireDeals || isShowcase) return NextResponse.json({ error: "Store data is temporarily unavailable." }, { status: 503 });
     // Fallback: fetch from Awin API directly
     const all = await fetchProgrammesForRelationships();
     const result = queryAdvertisers(all, query);

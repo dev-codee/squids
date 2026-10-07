@@ -19,7 +19,8 @@ export function getSavedItems(): SavedItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((item) => item && Number.isFinite(item.id) && typeof item.title === "string") : [];
   } catch {
     return [];
   }
@@ -50,7 +51,7 @@ export function toggleSavedItem(item: Omit<SavedItem, "addedAt">): boolean {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     window.dispatchEvent(new Event("foxzil_saved_updated"));
   } catch {
-    // ignore local storage quota / private mode errors
+    return index >= 0; // Preserve the actual stored state when writing fails.
   }
 
   return isSaved;

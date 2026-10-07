@@ -53,17 +53,17 @@
     "dealsLabel": "offerte"
   },
   "homeV2": {
-    "heroTitleA": "Confronta il prezzo.",
-    "heroTitleB": "Controlla l'offerta.",
-    "heroSubtitle": "Trova lo stesso prodotto in più negozi, con condizioni di spedizione e coupon indicate chiaramente.",
+    "heroTitleA": "Trova le offerte.",
+    "heroTitleB": "Controlla le condizioni.",
+    "heroSubtitle": "Scopri codici sconto e offerte disponibili nel tuo paese. Controlla restrizioni e prezzo finale presso il negozio.",
     "tabProducts": "Prodotti",
     "tabStores": "Negozi",
     "searchProducts": "Cerca un prodotto esatto",
     "searchStores": "Cerca un negozio o un marchio",
     "searchAction": "Cerca",
-    "trustMatches": "Corrispondenze esatte",
-    "trustConditions": "Condizioni d'offerta chiare",
-    "trustTimestamps": "Prezzi con data e ora",
+    "trustMatches": "Offerte locali",
+    "trustConditions": "Condizioni delle offerte",
+    "trustTimestamps": "Fonte indicata",
     "productsTitle": "Confronta prima di acquistare",
     "viewAllProducts": "Vedi tutti i prodotti",
     "checkOffers": "Vedi le offerte attuali",
@@ -89,8 +89,8 @@
     "toolsTitle": "Strumenti per il tuo prossimo acquisto",
     "toolSave": "Salva un prodotto",
     "toolSaveDesc": "Tieni traccia dei prodotti che stai valutando e confronta le offerte più tardi.",
-    "toolAlert": "Imposta un avviso di prezzo",
-    "toolAlertDesc": "Ti avvisiamo quando il prezzo scende nei negozi che scegli.",
+    "toolAlert": "Segui i negozi per nuove offerte",
+    "toolAlertDesc": "Segui un negozio per ricevere nuove offerte via e-mail.",
     "comingSoon": "Prossimamente"
   },
   "stores": {
@@ -125,8 +125,8 @@
     "activePromotions": "{count} Promozioni Attive"
   },
   "categoryV2": {
-    "pageTitle": "{category}: prezzi e offerte dei negozi",
-    "pageSubtitle": "Confronta taglie e varianti identiche, poi controlla le offerte idonee.",
+    "pageTitle": "Offerte dei negozi per {category}",
+    "pageSubtitle": "Scopri negozi e offerte. I confronti richiedono dati di prodotti corrispondenti.",
     "tabProducts": "Confronta prodotti",
     "tabDeals": "Offerte dei negozi",
     "disclosure": "Potremmo ricevere una commissione quando acquisti tramite i nostri link.",
@@ -193,7 +193,8 @@
     "closeFilters": "Fatto",
     "savedItem": "Salva",
     "savedItemActive": "Salvato",
-    "subcategoriesTitle": "Sottocategorie popolari"
+    "subcategoriesTitle": "Sottocategorie popolari",
+    "noProductData": "Nessun confronto disponibile in questa categoria. Consulta le offerte dei negozi qui sotto."
   },
   "productV2": {
     "exactVariant": "Variante come indicata da ciascun rivenditore",
@@ -294,7 +295,7 @@
   },
   "store": {
     "promoCodeTitle": "Codice sconto {store} - {month} {year}",
-    "verifiedOffersTitle": "Codici sconto e offerte {store} verificati",
+    "verifiedOffersTitle": "Codici sconto e offerte di {store}",
     "topDealsTitle": "Migliori Offerte e Promozioni per {store}",
     "dealsTitle": "Offerte {store}",
     "promotionsTitle": "Promozioni {store}",
@@ -312,7 +313,7 @@
   "storeV2": {
     "offersAndPrices": "Offerte e prezzi dei prodotti",
     "checkOffer": "Controlla l'offerta. Confronta il prodotto. Acquista dal rivenditore.",
-    "officialWebsite": "Sito ufficiale",
+    "officialWebsite": "Acquista tramite link affiliato",
     "saveStore": "Salva negozio",
     "visitStore": "Visita il negozio",
     "commissionBanner": "Potremmo ricevere una commissione quando acquisti tramite i nostri link.",
@@ -358,7 +359,9 @@
     "notAvailable": "Non disponibile",
     "allOffers": "Tutte le offerte",
     "tabCoupons": "Coupon",
-    "tabPromotions": "Promozioni"
+    "tabPromotions": "Promozioni",
+    "expiryUnknown": "Scadenza non fornita",
+    "customerEligibility": "Requisiti del cliente"
   },
   "storeAi": {
     "bestTimeToShop": "Miglior periodo per acquistare su {store}",
@@ -539,5 +542,50 @@
     "dealsDescription": "Le ultime offerte, vendite flash e promozioni a tempo limitato di {store}.",
     "topDealsTitle": "Migliori coupon e offerte in {country} · FoxZil",
     "topDealsDescription": "Codici coupon, offerte e vendite lampo attivi oggi in tutti i negozi in {country}."
+  },
+  "offerUi": {
+    "all": "All",
+    "code": "Code required",
+    "noCode": "No code needed",
+    "exclusive": "Exclusive",
+    "recent": "Newest",
+    "expiring": "Expiring soon",
+    "discount": "Highest percentage discount",
+    "sort": "Sort by",
+    "empty": "No offers match this filter.",
+    "merchantListed": "Merchant-listed (feed source)",
+    "checkoutTested": "Checkout-tested",
+    "communityReported": "Community-reported (unverified)",
+    "unknown": "Not supplied",
+    "anyCustomer": "All customers",
+    "newCustomer": "New customers only",
+    "existingCustomer": "Existing customers only",
+    "source": "Offer source",
+    "sourceTerms": "Source terms",
+    "report": "Report an expired or inaccurate offer",
+    "delivery": "Delivery",
+    "freeDelivery": "Free delivery",
+    "conditionalDelivery": "Conditional delivery",
+    "follow": "Follow {store}",
+    "followShort": "Follow for offers",
+    "followIntro": "Get an email when {store} adds a new offer.",
+    "email": "Email address",
+    "frequency": "How often?",
+    "instant": "Instantly",
+    "daily": "Daily digest",
+    "weekly": "Weekly digest",
+    "instantHint": "When a new offer appears",
+    "dailyHint": "One email a day if there are new offers",
+    "weeklyHint": "One email a week if there are new offers",
+    "consent": "I agree to receive offer emails from {store}. Every email includes an unsubscribe link.",
+    "close": "Close",
+    "cancel": "Cancel",
+    "following": "Following…",
+    "followStore": "Follow store",
+    "error": "Something went wrong. Please try again.",
+    "inbox": "Check your inbox",
+    "ready": "You’re all set",
+    "pending": "We sent a confirmation link to {email}. Confirm it to receive offers from {store}.",
+    "active": "You will receive emails about new offers from {store}."
   }
 }

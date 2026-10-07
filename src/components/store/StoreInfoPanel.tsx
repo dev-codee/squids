@@ -11,13 +11,13 @@ import { useDictionary } from "@/i18n/DictionaryProvider";
 export default function StoreInfoPanel({ store }: { store: StoreData }) {
   const dict = useDictionary();
   const t = dict.storeV2;
-  const url = store.websiteUrl;
+  const url = store.officialUrl;
 
   const rows = [
-    { label: t.deliveryCharges, desc: t.infoDelivery.replace("{store}", store.name) },
-    { label: t.returnsRefunds, desc: t.infoReturns },
-    { label: t.paymentOptions, desc: t.infoPayments },
-    { label: t.aboutStore.replace("{store}", store.name), desc: t.infoAbout },
+    { url: store.policyUrls?.delivery, label: t.deliveryCharges, desc: t.infoDelivery.replace("{store}", store.name) },
+    { url: store.policyUrls?.returns, label: t.returnsRefunds, desc: t.infoReturns },
+    { url: store.policyUrls?.payment, label: t.paymentOptions, desc: t.infoPayments },
+    { url: store.officialUrl, label: t.aboutStore.replace("{store}", store.name), desc: t.infoAbout },
   ];
 
   return (
@@ -35,11 +35,11 @@ export default function StoreInfoPanel({ store }: { store: StoreData }) {
               <span className="block text-sm font-semibold text-ink">{row.label}</span>
               <span className="mt-0.5 block text-xs text-ink-soft">{row.desc}</span>
             </span>
-            {url ? (
+            {row.url ? (
               <a
-                href={url}
+                href={row.url}
                 target="_blank"
-                rel="nofollow noopener noreferrer sponsored"
+                rel="noopener noreferrer"
                 className="flex-shrink-0 text-xs font-semibold text-brand underline-offset-2 hover:underline"
               >
                 {t.readMerchantTerms} ↗

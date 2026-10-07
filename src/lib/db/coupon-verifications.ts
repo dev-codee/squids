@@ -7,6 +7,8 @@ export interface CouponVerification {
   couponId: string;
   couponCode: string | null;
   storeSlug: string;
+  market?: string;
+  network?: string;
   storeName: string;
   verifiedAt: Date;
   verifiedBy: string;
@@ -40,11 +42,13 @@ export async function getVerificationForCoupon(
 export async function getLatestVerificationsForStore(
   storeSlug: string,
   limit = 5,
+  market?: string,
+  network?: string,
 ): Promise<CouponVerification[]> {
   const db = await getDb();
   return db
     .collection<CouponVerification>(COLLECTION)
-    .find({ storeSlug, status: "working" })
+    .find({ storeSlug, status: "working", screenshotUrl: { $ne: null }, verifiedBy: { $ne: "" }, ...(market ? { market: market.toUpperCase() } : {}), ...(network ? { network } : {}) })
     .sort({ verifiedAt: -1 })
     .limit(limit)
     .toArray();

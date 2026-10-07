@@ -92,7 +92,7 @@ export default async function MethodologyPage({
                   >
                     Delivered Cost Index 2026: Item Price vs Checkout Reality →
                   </Link>
-                  {" "}— demonstrating why the cheapest listed item price failed to produce the lowest delivered total in 40% of audited retail orders.
+                  {" "}— research findings will be published when reviewed source observations are available. No empirical study findings are currently published.
                 </p>
               </div>
             </section>

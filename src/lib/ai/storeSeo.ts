@@ -20,16 +20,16 @@ export interface StoreSeoResult {
 }
 
 /**
- * Localized "Verified Coupon codes and offers for the" phrasing, keyed by the
+ * Localized "Coupon codes and offers for" phrasing, keyed by the
  * 2-letter language code. Used so the store title reads in the region's language
  * just like the rest of the store-page copy.
  */
 const STORE_TITLE_PHRASE: Record<string, string> = {
-  en: "Verified Coupon codes and offers for the",
-  de: "Verifizierte Gutscheincodes und Angebote für",
-  fr: "Codes promo vérifiés et offres pour",
-  es: "Códigos de descuento verificados y ofertas para",
-  it: "Codici sconto verificati e offerte per",
+  en: "Coupon codes and offers for",
+  de: "Gutscheincodes und Angebote für",
+  fr: "Codes promo et offres pour",
+  es: "Códigos de descuento y ofertas para",
+  it: "Codici sconto e offerte per",
 };
 
 /** Capitalize the first letter (localized month names are lowercase in fr/es/it). */
@@ -84,7 +84,7 @@ export function analyzeMaxDiscount(deals: Deal[]): {
 
   for (const deal of deals) {
     const textSources = [
-      deal.discountText,
+      deal.discountText ?? (deal as unknown as { discount?: string }).discount,
       deal.title,
       deal.description,
     ].filter(Boolean);
@@ -162,34 +162,34 @@ export function generateStoreSeoContent(
 
   if (lang === "de") {
     if (maxDiscountText) {
-      seoDescription = `Sparen Sie bis zu ${maxDiscountText} bei ${cleanName} mit verifizierten Gutscheincodes, Rabatten und Angeboten für ${currentMonth} ${currentYear}.`;
+      seoDescription = `Sparen Sie bis zu ${maxDiscountText} bei ${cleanName} mit Gutscheincodes, Rabatten und Angeboten für ${currentMonth} ${currentYear}.`;
     } else {
-      seoDescription = `Finden Sie verifizierte ${cleanName} Gutscheincodes, Rabatte und tägliche Angebote für ${currentMonth} ${currentYear}. Täglich aktualisiert.`;
+      seoDescription = `Finden Sie ${cleanName} Gutscheincodes, Rabatte und tägliche Angebote für ${currentMonth} ${currentYear}.`;
     }
   } else if (lang === "fr") {
     if (maxDiscountText) {
-      seoDescription = `Économisez jusqu'à ${maxDiscountText} chez ${cleanName} avec des codes promo vérifiés, des bons de réduction et des offres pour ${currentMonth} ${currentYear}.`;
+      seoDescription = `Économisez jusqu'à ${maxDiscountText} chez ${cleanName} avec des codes promo, des bons de réduction et des offres pour ${currentMonth} ${currentYear}.`;
     } else {
-      seoDescription = `Trouvez des codes promo vérifiés, des bons de réduction et des offres quotidiennes pour ${cleanName} (${currentMonth} ${currentYear}). Mis à jour quotidiennement.`;
+      seoDescription = `Trouvez des codes promo, des bons de réduction et des offres quotidiennes pour ${cleanName} (${currentMonth} ${currentYear}).`;
     }
   } else if (lang === "es") {
     if (maxDiscountText) {
-      seoDescription = `Ahorra hasta un ${maxDiscountText} en ${cleanName} con códigos de descuento verificados, cupones y ofertas para ${currentMonth} ${currentYear}.`;
+      seoDescription = `Ahorra hasta un ${maxDiscountText} en ${cleanName} con códigos de descuento, cupones y ofertas para ${currentMonth} ${currentYear}.`;
     } else {
-      seoDescription = `Encuentra códigos de descuento verificados, cupones y ofertas diarias para ${cleanName} (${currentMonth} ${currentYear}). Actualizado a diario.`;
+      seoDescription = `Encuentra códigos de descuento, cupones y ofertas diarias para ${cleanName} (${currentMonth} ${currentYear}).`;
     }
   } else if (lang === "it") {
     if (maxDiscountText) {
-      seoDescription = `Risparmia fino al ${maxDiscountText} su ${cleanName} con codici sconto verificati, coupon e offerte per ${currentMonth} ${currentYear}.`;
+      seoDescription = `Risparmia fino al ${maxDiscountText} su ${cleanName} con codici sconto, coupon e offerte per ${currentMonth} ${currentYear}.`;
     } else {
-      seoDescription = `Trova codici sconto verificati, coupon e offerte giornaliere per ${cleanName} (${currentMonth} ${currentYear}). Aggiornato quotidianamente.`;
+      seoDescription = `Trova codici sconto, coupon e offerte giornaliere per ${cleanName} (${currentMonth} ${currentYear}). Aggiornato quotidianamente.`;
     }
   } else {
     // English & default: ALWAYS use "Coupon Code" / "Coupon Codes" instead of "Promo Code"
     if (maxDiscountText) {
-      seoDescription = `Save up to ${maxDiscountText} off at ${cleanName} with verified coupon codes, discount vouchers, and deals for ${currentMonth} ${currentYear}.`;
+      seoDescription = `Save up to ${maxDiscountText} off at ${cleanName} with coupon codes, discount vouchers, and deals for ${currentMonth} ${currentYear}.`;
     } else {
-      seoDescription = `Find verified ${cleanName} coupon codes, discount vouchers, and daily deals for ${currentMonth} ${currentYear}. Updated daily.`;
+      seoDescription = `Find ${cleanName} coupon codes, discount vouchers, and daily deals for ${currentMonth} ${currentYear}.`;
     }
   }
 

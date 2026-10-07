@@ -8,7 +8,7 @@ import { getProductsFromDb, getProductFacets, type ProductSort } from "@/lib/db/
 import type { Product } from "@/lib/products";
 import { countryName } from "@/lib/countries";
 import AdvertiserCard from "@/components/AdvertiserCard";
-import CouponCard from "@/components/store/CouponCard";
+import CouponCard from "@/components/store/HorizontalCouponCard";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
 import CompareProductCard from "@/components/category/CompareProductCard";
 import CategoryFilters from "@/components/category/CategoryFilters";
@@ -84,20 +84,15 @@ export async function generateMetadata({
     (dict.categoryNames as Record<string, string>)[category.name] ?? category.name;
 
   const [advertisersResult, dealsResult] = await Promise.all([
-    getAdvertisersFromDb({ country, category: category.name, pageSize: 1 }),
-    getDealsFromDb({ country, search: category.name, pageSize: 1 }),
+    getAdvertisersFromDb({ country, category: category.name, pageSize: 1, requireDeals: true }),
+    getDealsFromDb({ country, category: category.name, pageSize: 1 }),
   ]);
   const isEmpty =
     (advertisersResult?.advertisers?.length ?? 0) === 0 &&
     (dealsResult?.deals?.length ?? 0) === 0;
 
   const basePath = `/${params.country.toLowerCase()}/category/${slug}`;
-  const hreflang: Record<string, string> = {};
-  for (const code of REGION_CODES) {
-    const r = getRegionConfig(code);
-    hreflang[r.locale] = `${siteUrl}/${code.toLowerCase()}/category/${slug}`;
-  }
-  hreflang["x-default"] = `${siteUrl}/us/category/${slug}`;
+  const hreflang = { [getRegionConfig(country).locale]: `${siteUrl}${basePath}` };
 
   // The unfiltered category is the canonical page. Sort/filter/page combinations
   // are navigable but must not spawn duplicate crawl paths of their own.
@@ -205,11 +200,12 @@ export default async function CategoryDetailPage({
     return qs ? `${basePath}?${qs}` : basePath;
   };
 
-  const [productsResult, productFacets, subcategories, advertisersResult, dealsResult] = await Promise.all([
+  const [productsResult, unfilteredProducts, productFacets, subcategories, advertisersResult, dealsResult] = await Promise.all([
     // Products are optional content — an empty or unreachable collection just
     // leaves the compare tab empty rather than failing the page.
     getProductsFromDb({
       category: category.name,
+      country,
       page: tab === "products" ? page : 1,
       pageSize: PRODUCT_PAGE_SIZE,
       inStockOnly,
@@ -226,12 +222,13 @@ export default async function CategoryDetailPage({
       total: 0,
       totalPages: 1,
     })),
+    getProductsFromDb({ category: category.name, country, pageSize: 1 }).catch(() => ({ total: 0 })),
     getProductFacets(category.name).catch(() => ({ brands: [], sizes: [], conditions: [] })),
     getSubcategories(slug).catch(() => []),
-    getAdvertisersFromDb({ country, category: category.name, pageSize: 12 }),
+    getAdvertisersFromDb({ country, category: category.name, pageSize: 12, requireDeals: true }),
     getDealsFromDb({
       country,
-      search: category.name,
+      category: category.name,
       page: tab === "deals" ? page : 1,
       pageSize: DEAL_PAGE_SIZE,
       discountType,
@@ -369,10 +366,11 @@ export default async function CategoryDetailPage({
             {tab === "products" ? (
               products.length === 0 ? (
                 <div className="rounded-card border border-dashed border-line-strong bg-white p-12 text-center">
-                  <p className="text-sm font-medium text-ink">{t.noProducts}</p>
-                  {hasFilters && (
+                  <p className="text-sm font-medium text-ink">{unfilteredProducts.total === 0 ? t.noProductData : t.noProducts}</p>
+                  {unfilteredProducts.total === 0 && <Link href={buildHref({ tab: "deals", page: null })} className="mt-4 inline-block text-sm text-brand underline">{t.tabDeals}</Link>}
+                  {hasFilters && unfilteredProducts.total > 0 && (
                     <Link
-                      href={buildHref({ stock: null, min: null, max: null, page: null })}
+                      href={buildHref({ stock: null, min: null, max: null, brand: null, size: null, condition: null, page: null })}
                       className="mt-3 inline-block text-sm font-semibold text-brand hover:underline"
                     >
                       {t.clearFilters}
@@ -404,15 +402,21 @@ export default async function CategoryDetailPage({
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {deals.map((deal) => (
                     <CouponCard
-                      key={deal.id}
+                      key={`${deal.network}:${deal.id}`}
                       coupon={{
-                        id: String(deal.id),
+                        id: `${deal.network}:${deal.id}`,
                         title: deal.title,
                         code: deal.code,
                         discount: deal.discountText || "",
                         type: deal.subtype || "code",
                         description: deal.description || "",
                         verified: false,
+                        conditions: deal.promotion?.conditions,
+                        sourceUrl: deal.promotion?.evidenceSourceUrl || deal.sourceUrl,
+                        terms: deal.terms,
+                        delivery: deal.delivery,
+                        currency: deal.promotion?.benefit.currency,
+                        evidenceStatus: "merchant-listed",
                         expiryDate: deal.endDate,
                         updatedAt: deal.syncedAt
                           ? new Date(deal.syncedAt).toISOString()
@@ -457,7 +461,7 @@ export default async function CategoryDetailPage({
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {advertisers.map((advertiser) => (
                 <AdvertiserCard
-                  key={advertiser.id}
+                  key={`${advertiser.network}:${advertiser.id}`}
                   advertiser={advertiser}
                   country={country}
                 />

@@ -140,6 +140,15 @@ export async function PUT(request: NextRequest) {
 
     const id = Number(body.id);
     const updateData: Partial<Advertiser> = {};
+    if (body.reviewedCategories !== undefined) {
+      if (!Array.isArray(body.reviewedCategories) || !body.reviewedCategories.every((c: unknown) => typeof c === "string")) return NextResponse.json({ error: "reviewedCategories must be a list of category names." }, { status: 400 });
+      updateData.reviewedCategories = body.reviewedCategories.map((c: string) => c.trim()).filter(Boolean);
+      updateData.categoriesReviewedAt = new Date().toISOString();
+    }
+    if (body.officialUrl !== undefined) updateData.officialUrl = body.officialUrl ? String(body.officialUrl) : null;
+    if (body.policyUrls !== undefined) updateData.policyUrls = body.policyUrls;
+    if (body.contentReviewed === true) updateData.contentReviewedAt = new Date().toISOString();
+
 
     if (body.name !== undefined) updateData.name = String(body.name).trim();
     if (body.logoUrl !== undefined) updateData.logoUrl = body.logoUrl ? String(body.logoUrl).trim() : null;

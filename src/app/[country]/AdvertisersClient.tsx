@@ -37,6 +37,7 @@ interface PageData {
 
 interface AdvertisersClientProps {
   country: string;
+  initialData?: PageData;
   initialSearch?: string;
   /** Which hero search tab the URL asked for ("products" via `?tab=products`). */
   initialTab?: HeroTab;
@@ -56,6 +57,7 @@ interface AdvertisersClientProps {
 
 export default function AdvertisersClient({
   country,
+  initialData,
   initialSearch = "",
   initialTab = "stores",
   homeSettings,
@@ -77,8 +79,8 @@ export default function AdvertisersClient({
   // stays out of the way in that mode.
   const productMode = isHome && initialTab === "products";
 
-  const [data, setData] = useState<PageData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<PageData | null>(initialData ?? null);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   // Sync search state if URL search query changes from Header
@@ -149,6 +151,7 @@ export default function AdvertisersClient({
       setLoading(false);
       return;
     }
+    if (!isHome) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setPage(1);
@@ -160,6 +163,13 @@ export default function AdvertisersClient({
   }, [search, selectedCategory, load, isHome, productMode]);
 
   function goToPage(next: number) {
+    if (!isHome) {
+      const ps = new URLSearchParams();
+      if (search) ps.set("search", search);
+      if (next > 1) ps.set("page", String(next));
+      window.location.assign(`/${country.toLowerCase()}/stores${ps.size ? `?${ps}` : ""}`);
+      return;
+    }
     setPage(next);
     load(search, selectedCategory, next);
     if (typeof window !== "undefined") {
@@ -194,6 +204,7 @@ export default function AdvertisersClient({
           {(search || selectedCategory) && (
             <button
               onClick={() => {
+                if (!isHome) { window.location.assign(`/${country.toLowerCase()}/stores`); return; }
                 setSearch("");
                 setSelectedCategory("");
               }}
@@ -207,7 +218,7 @@ export default function AdvertisersClient({
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {data.advertisers.map((a) => (
-              <AdvertiserCard key={a.id} advertiser={a} country={country} />
+              <AdvertiserCard key={`${a.network}:${a.id}`} advertiser={a} country={country} />
             ))}
           </div>
 
@@ -278,7 +289,6 @@ export default function AdvertisersClient({
       />
       <HomePopularShops shops={popularShops} country={country} />
       <HomeStoreDeals deals={recentDeals} country={country} />
-      <HomeEvidenceStudy country={country} />
       <HomeValueBand country={country} />
       <HomeTools country={country} />
       <HomeFaqs faqs={homeSettings?.faqs ?? []} />

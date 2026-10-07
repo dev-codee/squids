@@ -1,3 +1,4 @@
+import { getPublicAdvertisers, slugifyAdvertiserName } from "@/lib/db/advertisers";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { storeSlug } from "@/lib/networks";
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const query = (searchParams.get("q") || "").trim();
     const country = (searchParams.get("country") || "US").toUpperCase();
-    const limit = Math.min(10, Math.max(1, Number(searchParams.get("limit") || 5)));
+    const limit = Math.min(10, Math.max(1, parseInt(searchParams.get("limit") || "5", 10) || 5));
 
     if (query.length < 2) {
       return NextResponse.json({
@@ -59,21 +60,13 @@ export async function GET(req: Request) {
     const regex = new RegExp(escapeRegex(query), "i");
 
     const [storesDocs, productsDocs, categoriesDocs] = await Promise.all([
-      // 1. Stores
-      db
-        .collection("advertisers")
-        .find({
-          status: "active",
-          name: { $regex: regex },
-        })
-        .project({ _id: 0, id: 1, name: 1, logoUrl: 1, dealCount: 1 })
-        .limit(limit)
-        .toArray(),
+      getPublicAdvertisers({ country, search: query, requireDeals: true, pageSize: limit }).then((r) => r.advertisers),
 
       // 2. Products
       db
         .collection<Product>("products")
         .find({
+          regionCodes: country,
           $or: [
             { title: { $regex: regex } },
             { brand: { $regex: regex } },
@@ -107,7 +100,7 @@ export async function GET(req: Request) {
     const stores: UnifiedSearchStoreItem[] = storesDocs.map((s: any) => ({
       id: s.id,
       name: s.name,
-      slug: storeSlug(s.name) || String(s.id),
+      slug: slugifyAdvertiserName(s.name),
       logoUrl: s.logoUrl || null,
       dealCount: typeof s.dealCount === "number" ? s.dealCount : undefined,
     }));

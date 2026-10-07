@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { loadStoreData } from "@/lib/storeData";
 import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
@@ -24,14 +24,10 @@ export async function generateMetadata({
   const siteUrl = getSiteUrl();
   const canonicalUrl = `${siteUrl}/${params.country.toLowerCase()}/${store.slug}/coupons`;
 
-  const hreflangLanguages: Record<string, string> = {};
-  for (const code of REGION_CODES) {
-    const r = getRegionConfig(code);
-    hreflangLanguages[r.locale] = `${siteUrl}/${code.toLowerCase()}/${store.slug}/coupons`;
-  }
-  hreflangLanguages["x-default"] = `${siteUrl}/us/${store.slug}/coupons`;
+  const hreflangLanguages = { [getRegionConfig(params.country).locale]: canonicalUrl };
 
   return {
+    robots: { index: store.coupons.length > 0, follow: true },
     title: dict.meta.couponsTitle.replace("{store}", store.name),
     description: dict.meta.couponsDescription.replace("{store}", store.name),
     alternates: {
@@ -55,10 +51,10 @@ export default async function StoreCouponsPage({
     getDictionary(params.country),
   ]);
   if (!store) notFound();
-  const verifications = await getLatestVerificationsForStore(store.slug, 6);
+  const verifications = await getLatestVerificationsForStore(store.slug, 6, params.country, store.network);
 
   if (rawSlug !== store.slug) {
-    redirect(`/${params.country}/${store.slug}/coupons`);
+    permanentRedirect(`/${params.country}/${store.slug}/coupons`);
   }
 
   const verifiedCoupons = store.coupons.filter((c) => c.verified);

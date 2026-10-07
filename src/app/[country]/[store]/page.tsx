@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { loadStoreData, loadStoreAiContent } from "@/lib/storeData";
 import StoreSidebar from "@/components/store/StoreSidebar";
 import StoreHeader from "@/components/store/StoreHeader";
@@ -44,18 +44,8 @@ export async function generateMetadata({
   let title = localizedSeo.seoTitle;
   let description = localizedSeo.seoDescription;
 
-  if (locale === "en" && store.seoTitle) {
-    title = refreshStoreTitleDate(
-      store.seoTitle
-        .replace(/promo\s*codes?/gi, "Coupon Codes")
-        .replace(/promo\s*code/gi, "Coupon Code"),
-    );
-  }
-  if (locale === "en" && store.seoDescription) {
-    description = store.seoDescription
-      .replace(/promo\s*codes?/gi, "coupon codes")
-      .replace(/promo\s*code/gi, "coupon code");
-  }
+
+
 
   if (title) {
     title = title
@@ -72,12 +62,7 @@ export async function generateMetadata({
       .trim();
   }
 
-  const hreflangLanguages: Record<string, string> = {};
-  for (const code of REGION_CODES) {
-    const r = getRegionConfig(code);
-    hreflangLanguages[r.locale] = `${siteUrl}/${code.toLowerCase()}/${store.slug}`;
-  }
-  hreflangLanguages["x-default"] = `${siteUrl}/us/${store.slug}`;
+  const hreflangLanguages = { [getRegionConfig(params.country).locale]: canonicalUrl };
 
   return {
     title,
@@ -122,12 +107,12 @@ export default async function StoreMainPage({
 
   // Canonicalize store slug (e.g. /invideo-ww or /Amazon -> /invideo or /amazon)
   if (rawSlug !== store.slug) {
-    redirect(`/${params.country}/${store.slug}`);
+    permanentRedirect(`/${params.country}/${store.slug}`);
   }
 
   const [aiContent, verifications] = await Promise.all([
     loadStoreAiContent(store.slug, params.country),
-    getLatestVerificationsForStore(store.slug, 6),
+    getLatestVerificationsForStore(store.slug, 6, params.country, store.network),
   ]);
 
   const locale = localeForCountry(params.country);
@@ -143,18 +128,8 @@ export default async function StoreMainPage({
   let pageTitle = localizedSeo.seoTitle;
   let pageDesc = localizedSeo.seoDescription;
 
-  if (locale === "en" && store.seoTitle) {
-    pageTitle = refreshStoreTitleDate(
-      store.seoTitle
-        .replace(/promo\s*codes?/gi, "Coupon Codes")
-        .replace(/promo\s*code/gi, "Coupon Code"),
-    );
-  }
-  if (locale === "en" && store.seoDescription) {
-    pageDesc = store.seoDescription
-      .replace(/promo\s*codes?/gi, "coupon codes")
-      .replace(/promo\s*code/gi, "coupon code");
-  }
+
+
 
   if (pageTitle) {
     pageTitle = pageTitle
@@ -178,7 +153,7 @@ export default async function StoreMainPage({
       "@context": "https://schema.org",
       "@type": "Organization",
       name: store.name,
-      url: store.websiteUrl || storePageUrl,
+      url: store.officialUrl || undefined,
       logo: store.logoUrl || undefined,
       description: pageDesc || undefined,
     },
@@ -201,7 +176,7 @@ export default async function StoreMainPage({
     <div className="min-h-screen bg-canvas pb-16">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
       <StoreHeader store={store} country={params.country} />
 

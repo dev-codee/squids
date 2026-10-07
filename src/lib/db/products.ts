@@ -15,6 +15,8 @@ const COLLECTION = "products";
 export type ProductSort = "relevance" | "price-asc" | "price-desc";
 
 export interface ProductQuery {
+  country?: string;
+  network?: string;
   page?: number;
   pageSize?: number;
   search?: string;
@@ -52,6 +54,8 @@ export async function getProductsFromDb(query: ProductQuery): Promise<PagedProdu
   const col = db.collection<Product>(COLLECTION);
 
   const filter: Record<string, unknown> = {};
+  if (query.country) filter.regionCodes = query.country.toUpperCase();
+  if (query.network) filter.network = query.network;
 
   if (query.search?.trim()) {
     filter.title = { $regex: query.search.trim(), $options: "i" };

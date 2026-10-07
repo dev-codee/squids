@@ -44,6 +44,11 @@ export interface Advertiser {
   // Manual Store Meta overrides
   description?: string;
   categories?: string[];
+  reviewedCategories?: string[];
+  categoriesReviewedAt?: string | null;
+  contentReviewedAt?: string | null;
+  officialUrl?: string | null;
+  policyUrls?: { delivery?: string; returns?: string; payment?: string; support?: string; policies?: string };
   bannerUrl?: string;
   avgSavings?: string;
   rating?: number;
@@ -280,6 +285,11 @@ export interface AdvertiserFacets {
   /** Distinct ISO country codes present in the dataset (for the geo selector). */
   countries: string[];
   categories?: string[];
+  reviewedCategories?: string[];
+  categoriesReviewedAt?: string | null;
+  contentReviewedAt?: string | null;
+  officialUrl?: string | null;
+  policyUrls?: { delivery?: string; returns?: string; payment?: string; support?: string; policies?: string };
 }
 
 
