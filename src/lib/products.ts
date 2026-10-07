@@ -23,6 +23,8 @@ export interface Product extends ProductIdentity {
   imageUrl: string | null;
   originalPrice: number | null;
   salePrice: number | null;
+  /** Currency of the recorded price; absent on legacy USD-based records. */
+  currency?: string | null;
   discountPercentage: number | null;
   rating: number | null;
   reviewsCount: number | null;

@@ -59,7 +59,7 @@ export default function HomeProducts({
                 )}
 
                 {typeof sale === "number" && (
-                  <p className="mt-3 text-lg font-bold text-ink">{format(sale)}</p>
+                  <p className="mt-3 text-lg font-bold text-ink">{format(sale, p.currency)}</p>
                 )}
 
                 <Link

@@ -6,7 +6,7 @@
  * components, and the Edge middleware).
  */
 
-import { countryName } from "@/lib/countries";
+import { countryName } from "./countries";
 
 export interface RegionConfig {
   /** ISO-3166-1 alpha-2 country code, uppercase (e.g. "DE"). */

@@ -2,15 +2,14 @@
 
 import React, { createContext, useContext, useMemo } from "react";
 import type { RegionConfig } from "@/lib/regions";
-import { formatMoney } from "@/lib/regions";
+import { formatProductPrice } from "@/lib/model/productPrice";
 
 /**
  * Client-side currency context for the current region.
  *
  * The server (region layout) computes the region + a single USD→region rate and
- * passes them down. Client components (product cards, price comparison) call
- * `useCurrency().format(amountInUsd)` to show localized, converted prices
- * without needing FX access of their own.
+ * passes them down. Recorded product currencies are formatted as supplied;
+ * legacy amounts without a currency retain the USD conversion.
  */
 interface CurrencyContextValue {
   region: RegionConfig;
@@ -41,9 +40,9 @@ export function useCurrency() {
 
   return {
     region,
-    /** Format an amount expressed in USD as localized region currency. */
-    format(amountInUsd: number): string {
-      return formatMoney(amountInUsd * usdRate, region);
+    /** Preserve a recorded currency; convert legacy USD amounts when omitted. */
+    format(amount: number, currency?: string | null): string {
+      return formatProductPrice(amount, currency, region, usdRate);
     },
   };
 }

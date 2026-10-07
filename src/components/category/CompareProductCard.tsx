@@ -68,6 +68,7 @@ export default function CompareProductCard({ product }: { product: Product }) {
               title: product.title,
               imageUrl: product.imageUrl,
               salePrice: product.salePrice,
+              currency: product.currency,
               category: product.category,
               brand: product.brand,
               size: product.size,
@@ -105,7 +106,7 @@ export default function CompareProductCard({ product }: { product: Product }) {
 
         {typeof sale === "number" && (
           <>
-            <p className="mt-2.5 text-lg font-bold text-ink">{format(sale)}</p>
+            <p className="mt-2.5 text-lg font-bold text-ink">{format(sale, product.currency)}</p>
             <p className="mt-0.5 text-[11px] text-ink-muted">{t.priceBasis}</p>
           </>
         )}

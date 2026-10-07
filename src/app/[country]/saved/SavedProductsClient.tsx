@@ -102,7 +102,7 @@ export default function SavedProductsPage() {
                   )}
 
                   {typeof item.salePrice === "number" && (
-                    <p className="mt-3 text-lg font-bold text-ink">{format(item.salePrice)}</p>
+                    <p className="mt-3 text-lg font-bold text-ink">{format(item.salePrice, item.currency)}</p>
                   )}
 
                   <div className="mt-auto pt-4">

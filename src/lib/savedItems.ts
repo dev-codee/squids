@@ -7,6 +7,7 @@ export interface SavedItem {
   title: string;
   imageUrl?: string | null;
   salePrice?: number | null;
+  currency?: string | null;
   category?: string | null;
   brand?: string | null;
   size?: string | null;

@@ -97,19 +97,19 @@ export default function PriceHistoryPanel({
           <span className="block text-[11px] uppercase tracking-wide text-ink-muted">
             Lowest
           </span>
-          <span className="text-sm font-bold text-ink">{format(series.minPrice)}</span>
+          <span className="text-sm font-bold text-ink">{format(series.minPrice, currency)}</span>
         </div>
         <div>
           <span className="block text-[11px] uppercase tracking-wide text-ink-muted">
             Highest
           </span>
-          <span className="text-sm font-bold text-ink">{format(series.maxPrice)}</span>
+          <span className="text-sm font-bold text-ink">{format(series.maxPrice, currency)}</span>
         </div>
         <div>
           <span className="block text-[11px] uppercase tracking-wide text-ink-muted">
             Latest
           </span>
-          <span className="text-sm font-bold text-brand">{format(series.latestPrice)}</span>
+          <span className="text-sm font-bold text-brand">{format(series.latestPrice, currency)}</span>
         </div>
       </div>
 
@@ -161,7 +161,7 @@ export default function PriceHistoryPanel({
                 stroke="#FF4D00"
                 strokeWidth="2.5"
               />
-              <title>{`${c.retailerName}: ${format(c.itemPrice)} on ${new Date(c.observedAt).toLocaleDateString()}`}</title>
+              <title>{`${c.retailerName}: ${format(c.itemPrice, c.currency)} on ${new Date(c.observedAt).toLocaleDateString()}`}</title>
             </g>
           ))}
         </svg>
