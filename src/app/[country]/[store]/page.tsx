@@ -84,10 +84,10 @@ export async function generateMetadata({
       images: store.logoUrl ? [store.logoUrl] : [],
     },
     robots: {
-      index: true,
+      index: store.activeCouponsCount + store.activeDealsCount > 0,
       follow: true,
       googleBot: {
-        index: true,
+        index: store.activeCouponsCount + store.activeDealsCount > 0,
         follow: true,
       },
     },

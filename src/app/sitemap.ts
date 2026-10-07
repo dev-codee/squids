@@ -18,6 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (let page = 1; page <= first.totalPages; page++) {
       const result = page === 1 ? first : await getPublicAdvertisers({ country, requireDeals: true, pageSize: 100, page });
       for (const store of result.advertisers) {
+        if (!(store.dealCount && store.dealCount > 0)) continue;
         entries.push({ url: `${base}/${slugifyAdvertiserName(store.name)}`, changeFrequency: "weekly", priority: 0.8 });
       }
     }

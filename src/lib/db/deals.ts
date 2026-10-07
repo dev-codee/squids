@@ -18,7 +18,7 @@ import type { Deal, DealQuery, PagedDeals } from "@/lib/deals";
 import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE, dealDisplayTitle } from "@/lib/deals";
 import { CACHE_TAGS, PUBLIC_REVALIDATE, revalidatePublic } from "@/lib/cache";
 import { NOT_EXPIRED } from "@/lib/expiry";
-import { publicOfferFilter, distinctOfferStages, merchantNameExpression } from "@/lib/model/publication";
+import { publicMerchantFilter, publicOfferFilter, distinctOfferStages, merchantNameExpression } from "@/lib/model/publication";
 import { buildAdvertiserFilter, getPublicAdvertisers } from "@/lib/db/advertisers";
 import { slugifyAdvertiserName } from "@/lib/db/advertisers";
 
@@ -1057,7 +1057,7 @@ export async function getNewDealsSince(since: Date): Promise<NewDealForAlert[]> 
 export function publicMerchantStages(country?: string, category?: string): Record<string, unknown>[] {
   return [
     { $lookup: { from: "advertisers", let: { merchantId: { $toString: "$advertiser.id" }, merchantNetwork: "$network", merchantName: merchantNameExpression("$advertiser.name") }, pipeline: [
-      { $match: { $and: [buildAdvertiserFilter({ country, category }), { status: "active", relationship: "joined" }] } },
+      { $match: { $and: [buildAdvertiserFilter({ country, category }), publicMerchantFilter()] } },
       { $match: { $expr: { $and: [
         { $eq: [{ $toString: "$id" }, "$$merchantId"] }, { $eq: ["$network", "$$merchantNetwork"] },
         { $eq: [merchantNameExpression("$name"), "$$merchantName"] },

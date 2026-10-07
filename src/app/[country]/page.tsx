@@ -4,6 +4,7 @@ import { getHomeSettings } from "@/lib/db/homeSettings";
 import { getCategoriesForCountry } from "@/lib/db/categories";
 import { getRecentDeals, getPopularShops } from "@/lib/db/deals";
 import { getProductsFromDb } from "@/lib/db/products";
+import { getPublicAdvertisers } from "@/lib/db/advertisers";
 import type { Product } from "@/lib/products";
 import AdvertisersClient from "./AdvertisersClient";
 import { getDictionary } from "@/i18n";
@@ -71,7 +72,7 @@ export default async function CountryHomePage({
   const tab = searchParams.tab === "products" ? "products" : "stores";
   const country = rawCountry.toUpperCase();
 
-  const [homeSettings, recentDeals, popularShops, products, categories] = await Promise.all([
+  const [homeSettings, recentDeals, popularShops, products, categories, initialData] = await Promise.all([
     getHomeSettings(),
     getRecentDeals(10, country),
     getPopularShops({ minDeals: 10, limit: 8, country }),
@@ -87,6 +88,7 @@ export default async function CountryHomePage({
     // Resolved here so the category links are in the crawlable HTML rather than
     // arriving after a client-side fetch.
     getCategoriesForCountry(country).catch(() => []),
+    getPublicAdvertisers({ country, search: tab === "stores" ? search : undefined, pageSize: 12, requireDeals: true }),
   ]);
 
   const categoryTiles = categories
@@ -101,7 +103,9 @@ export default async function CountryHomePage({
 
   return (
     <AdvertisersClient
+      key={`${country}:${tab}:${search}`}
       country={country}
+      initialData={initialData}
       initialSearch={search}
       initialTab={tab}
       homeSettings={homeSettings}

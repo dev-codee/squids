@@ -147,8 +147,7 @@ export default function AdvertisersClient({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => {
-    // The home page only shows the store grid once a search is active, so skip
-    // the request entirely until then.
+    // The default, flagship-first grid is already included in the server HTML.
     if (isHome && (productMode || (!search.trim() && !selectedCategory))) {
       setLoading(false);
       return;
@@ -179,10 +178,7 @@ export default function AdvertisersClient({
     }
   }
 
-  // On the home page the store grid is a search result shelf: it only takes
-  // over the page once the shopper has actually searched for a store.
-  const searching = Boolean(search.trim()) && !productMode;
-  const showStoreGrid = !isHome || searching;
+  const showStoreGrid = !productMode;
 
   const storeGrid = (
     <>

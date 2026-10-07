@@ -1,3 +1,9 @@
+/** Keep editor-selected flagship stores visible without altering feed status.
+ * Individual offers still pass the market, expiry and source checks below. */
+export function publicMerchantFilter(): Record<string, unknown> {
+  return { relationship: "joined", $or: [{ status: /^active$/i }, { isFlagship: true }] };
+}
+
 /** Shared public offer gate. Missing market data is withheld pending review. */
 export function publicOfferFilter(country?: string): Record<string, unknown> {
   return { $and: [

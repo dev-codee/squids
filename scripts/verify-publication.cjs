@@ -1,7 +1,7 @@
 // Read-only regression check. Run npm test first, then node --env-file=.env.local scripts/verify-publication.cjs.
 const { MongoClient } = require('mongodb');
 const assert = require('node:assert/strict');
-const { publicOfferFilter, distinctOfferStages, merchantNameExpression } = require('../.test-out/model/publication.js');
+const { publicMerchantFilter, publicOfferFilter, distinctOfferStages, merchantNameExpression } = require('../.test-out/model/publication.js');
 (async () => {
  const client = new MongoClient(process.env.MONGODB_URI,{serverSelectionTimeoutMS:10000});
  try {
@@ -13,7 +13,19 @@ const { publicOfferFilter, distinctOfferStages, merchantNameExpression } = requi
   assert.deepEqual(eligible.map(x=>x.id).sort((a,b)=>a-b),[1,10]);
   const names=await db.aggregate([{$documents:[{name:'Beauty Amora AU'},{name:'Beauty Amora'},{name:'ISSA Many Geos'},{name:'Gorman'}]},{$project:{_id:0,canonical:merchantNameExpression('$name')}}]).toArray();
   assert.deepEqual(names.map(x=>x.canonical),['beauty amora','beauty amora','issa','gorman']);
-  console.log(JSON.stringify({publicationFixtures:'passed',merchantIdentityFixtures:'passed'},null,2));
+  const merchants=[
+    {id:1,status:'active',relationship:'joined'},
+    {id:2,status:'Active',relationship:'joined'},
+    {id:3,status:'inactive',relationship:'joined',isFlagship:true},
+    {id:4,status:'inactive',relationship:'joined'},
+    {id:5,status:'active',relationship:'pending',isFlagship:true},
+  ];
+  const visible=await db.aggregate([{$documents:merchants},{$match:publicMerchantFilter()}]).toArray();
+  assert.deepEqual(visible.map(x=>x.id).sort((a,b)=>a-b),[1,2,3]);
+  // A flagship selection changes merchant visibility, never offer eligibility.
+  const flagshipOffers=await db.aggregate([{$documents:fixtures.map(x=>({...x,isFlagship:true}))},{$match:publicOfferFilter('AU')},...distinctOfferStages()]).toArray();
+  assert.deepEqual(flagshipOffers.map(x=>x.id).sort((a,b)=>a-b),[1,10]);
+  console.log(JSON.stringify({publicationFixtures:'passed',merchantIdentityFixtures:'passed',flagshipVisibilityFixtures:'passed',flagshipOfferEligibilityFixtures:'passed'},null,2));
  }catch(e){console.error('Query verification failed:',e.name,e.code||'',String(e.message).replace(/mongodb[^ ]*/g,'[redacted]').slice(0,250));process.exitCode=1;}
  finally{await client.close();}
 })();

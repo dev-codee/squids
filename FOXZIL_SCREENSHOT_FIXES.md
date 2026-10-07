@@ -23,6 +23,13 @@ Operators can supply `reviewedCategories` (protected advertiser PUT stamps revie
 
 No live import, database repair, deployment, email send, paid-promotion permission check or revenue settlement reconciliation was performed. Those require real source records and an authorized end-to-end environment. Mobile/browser visual evidence and real email delivery cannot be inferred from compilation or model tests.
 
+## Follow-up UI and flagship requirements
+
+- Main brand is orange-red `#FF4D00`; square offer actions use `#300A6E` with `#0B00CF` hover. Store identity panels use alice blue. Store page titles are 20px, offer headings 14px and descriptions 13px.
+- Actual expiry (or the translated unknown label) appears beneath the offer action. Exclusive badges depend on the source flag and sit by the discount tile. Terms use an SVG chevron with expanded state and a linked panel. The duplicate coupon heading and recently viewed sidebar were removed.
+- The user's later instruction to preserve flagship selections supersedes the earlier blanket inactive-merchant restriction for editor-selected flagships. Joined, market-matching records marked `isFlagship` remain public without changing their stored feed status. Their individual offers still pass all source, market, date and deduplication checks. A flagship with no eligible offers shows an empty state with no invented offers and is noindex.
+- The homepage includes its real, flagship-first store grid in server HTML directly below the hero; no search is required to see selected stores. No store names, flags, statuses, dates or counts were hardcoded or written to the database.
+
 ## Validation recorded
 
 - Final production build and TypeScript checks passed after the moderation/feed adjustments.
