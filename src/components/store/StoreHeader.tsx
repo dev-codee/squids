@@ -41,7 +41,7 @@ export default function StoreHeader({ store, country: countryProp }: StoreHeader
     <div className="border-b border-line bg-white">
       <div className="mx-auto max-w-shell px-4 pt-6 sm:px-6 lg:px-8">
         {/* Identity card */}
-        <div className="rounded-card border border-line bg-brand-soft/70 p-5 sm:p-6">
+        <div className="rounded-card border border-line bg-store-header p-5 sm:p-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-card border border-line bg-white p-2.5">

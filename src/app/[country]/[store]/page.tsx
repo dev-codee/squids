@@ -5,7 +5,6 @@ import StoreSidebar from "@/components/store/StoreSidebar";
 import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
 import OfferList from "@/components/store/OfferList";
-import RecentlyViewedStores from "@/components/store/RecentlyViewedStores";
 import LightningDealCard from "@/components/store/LightningDealCard";
 import StoreEssentials from "@/components/store/StoreEssentials";
 import StoreProductOffers from "@/components/store/StoreProductOffers";
@@ -193,7 +192,7 @@ export default async function StoreMainPage({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-8">
             <header>
-              <h1 className="text-[26px] font-extrabold tracking-tight text-ink sm:text-3xl lg:text-[40px] leading-tight">
+              <h1 className="text-[20px] font-extrabold leading-tight tracking-tight text-ink">
                 {pageTitle ||
                   dict.store.promoCodeTitle
                     .replace("{store}", store.name)
@@ -210,10 +209,7 @@ export default async function StoreMainPage({
 
             {/* Coupons — vouchers with a code */}
             {store.coupons.length > 0 && (
-              <section>
-                <h2 className="mb-3 text-base font-bold text-ink">
-                  {dict.store.verifiedOffersTitle.replace("{store}", store.name)}
-                </h2>
+              <section aria-label={dict.storeV2.tabCoupons}>
                 <OfferList
                   items={store.coupons}
                   storeName={store.name}
@@ -272,21 +268,11 @@ export default async function StoreMainPage({
           <aside className="space-y-6 lg:col-span-4">
             <StoreEssentials store={store} country={params.country} />
             <StoreSidebar store={store} aiContent={aiContent} country={params.country} />
-            {/* Similar stores always render; "recently viewed" only has
-                anything to show once a visitor has opened a second store. */}
             <RelatedStores
               stores={store.relatedStores}
               country={params.country}
               title={dict.storeV2.relatedTitle}
               variant="sidebar"
-            />
-            <RecentlyViewedStores
-              current={{
-                slug: store.slug,
-                name: store.name,
-                logoUrl: store.logoUrl,
-                country: params.country,
-              }}
             />
           </aside>
         </div>

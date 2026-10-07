@@ -2,7 +2,7 @@
 
 import { useDialogFocus } from "@/components/common/useDialogFocus";
 import { deliveryKind } from "@/lib/model/offerPresentation";
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { CouponItem } from "@/lib/storeData";
@@ -43,6 +43,7 @@ export default function HorizontalCouponCard({
   const dialogRef = useDialogFocus(showModal, () => setShowModal(false));
   const [revealed, setRevealed] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
+  const termsId = useId();
 
   const routeCountry =
     (typeof params?.country === "string" ? params.country : "") || "AU";
@@ -111,11 +112,14 @@ export default function HorizontalCouponCard({
         : dict.common.code
     : dict.common.deal;
 
-  const expiryText = coupon.expiryDate
-    ? new Date(coupon.expiryDate).toLocaleDateString(computedMarket === "FR" ? "fr-FR" : "en-GB", {
+  const expiryDate = coupon.expiryDate ? new Date(coupon.expiryDate) : null;
+  const hasExpiry = expiryDate !== null && Number.isFinite(expiryDate.getTime());
+  const expiryText = hasExpiry
+    ? expiryDate.toLocaleDateString(computedMarket === "FR" ? "fr-FR" : "en-GB", {
         day: "numeric",
         month: "short",
         year: "numeric",
+        timeZone: "UTC",
       })
     : t.expiryUnknown;
 
@@ -136,7 +140,12 @@ export default function HorizontalCouponCard({
           {/* Eligibility rail: one tile carrying both the offer kind and the
               discount value, so the number a shopper scans for sits inside the
               badge rather than floating beside it. */}
-          <div className="flex flex-shrink-0 sm:w-28">
+          <div className="flex flex-shrink-0 flex-col items-center gap-2 sm:w-28">
+            {coupon.isExclusive && (
+              <span className="inline-flex items-center rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand-hover">
+                {dict.cards.exclusive}
+              </span>
+            )}
             <div className="flex w-full min-w-[84px] flex-col items-center justify-center gap-1 rounded-card border border-brand-border bg-brand-soft/60 px-3 py-2.5 text-center">
               <span className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">
                 {badge}
@@ -151,11 +160,11 @@ export default function HorizontalCouponCard({
 
           {/* Benefit */}
           <div className="min-w-0 flex-1">
-            <h3 className="text-[17px] font-bold leading-snug text-ink">
+            <h3 className="text-[14px] font-bold leading-snug text-ink">
               {coupon.title}
             </h3>
             {coupon.description && (
-              <p className="mt-1 line-clamp-2 text-sm text-ink-soft">
+              <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-ink-soft">
                 {coupon.description}
               </p>
             )}
@@ -182,11 +191,6 @@ export default function HorizontalCouponCard({
                   ✓ {dict.cards.verified}
                 </span>
               ) : null}
-              {coupon.isExclusive && (
-                <span className="inline-flex items-center rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand">
-                  {dict.cards.exclusive}
-                </span>
-              )}
               {expiryBadge && (
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${EXPIRY_BADGE_CLASSES[expiryBadge.tone]}`}
@@ -202,7 +206,7 @@ export default function HorizontalCouponCard({
             {coupon.code ? (
               <button
                 onClick={handleReveal}
-                className="rounded-[9px] bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+                className="rounded-none bg-offer px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-offer-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-offer/40 focus-visible:ring-offset-2"
               >
                 {copied ? dict.cards.copied : revealed ? coupon.code : dict.cards.showCode}
               </button>
@@ -212,11 +216,16 @@ export default function HorizontalCouponCard({
                 target="_blank"
                 rel="nofollow noopener noreferrer sponsored"
                 onClick={() => track("affiliate_click", "coupon_card")}
-                className="rounded-[9px] border border-brand px-4 py-2.5 text-center text-sm font-semibold text-brand transition-colors hover:bg-brand-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
+                className="rounded-none border border-offer px-4 py-2.5 text-center text-sm font-semibold text-offer transition-colors hover:border-offer-hover hover:bg-offer-hover hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-offer/40 focus-visible:ring-offset-2"
               >
                 {dict.cards.getDeal}
               </a>
             )}
+            <p className="text-center text-[11px] leading-relaxed text-ink-soft">
+              {hasExpiry ? (
+                <>{t.expiry}: <time dateTime={expiryDate.toISOString()}>{expiryText}</time></>
+              ) : t.expiryUnknown}
+            </p>
             <CouponVotes
               couponId={coupon.id}
               storeSlug={storeName}
@@ -231,16 +240,17 @@ export default function HorizontalCouponCard({
             type="button"
             onClick={() => setTermsOpen((v) => !v)}
             aria-expanded={termsOpen}
+            aria-controls={termsId}
             className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-ink-soft transition-colors hover:text-ink sm:px-5"
           >
             {t.termsTitle}
-            <span aria-hidden className={`transition-transform ${termsOpen ? "rotate-180" : ""}`}>
-              ⌄
-            </span>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-5 w-5 shrink-0 transition-transform ${termsOpen ? "rotate-180" : ""}`}>
+              <path d="m6 9 6 6 6-6" />
+            </svg>
           </button>
 
           {termsOpen && (
-            <div className="animate-fade-in border-t border-line bg-canvas-sunk px-4 py-3 sm:px-5">
+            <div id={termsId} className="animate-fade-in border-t border-line bg-canvas-sunk px-4 py-3 sm:px-5">
               {coupon.terms && <p className="mb-3 text-sm text-ink">{coupon.terms}</p>}
               {coupon.delivery && <p className="mb-3 text-sm text-ink">{ui.delivery}: {coupon.delivery.charge?.known ? `${coupon.delivery.charge.value} ${coupon.delivery.currency}` : ui.unknown}{coupon.delivery.freeThreshold?.known ? ` · ${t.minimumSpend}: ${coupon.delivery.freeThreshold.value} ${coupon.delivery.currency}` : ""} · {coupon.delivery.zone.market} {coupon.delivery.restrictions?.join("; ")}</p>}
               <dl className="text-sm">
@@ -318,7 +328,7 @@ export default function HorizontalCouponCard({
             <div className="flex gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="flex-1 rounded-[9px] border border-line-strong px-4 py-2.5 text-sm font-semibold text-ink-soft transition hover:bg-canvas"
+                className="flex-1 rounded-none border border-line-strong px-4 py-2.5 text-sm font-semibold text-ink-soft transition hover:bg-canvas"
               >
                 {dict.cards.close}
               </button>
@@ -327,7 +337,7 @@ export default function HorizontalCouponCard({
                   setShowModal(false);
                   openMerchant("reveal_modal");
                 }}
-                className="flex-1 rounded-[9px] bg-brand px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-brand-hover"
+                className="flex-1 rounded-none bg-offer px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-offer-hover"
               >
                 {dict.cards.goTo.replace("{store}", storeName)}
               </button>

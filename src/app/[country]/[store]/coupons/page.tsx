@@ -121,7 +121,7 @@ export default async function StoreCouponsPage({
             <span className="inline-flex items-center rounded-lg bg-white/20 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm mb-3">
               {dict.couponsPage.officialDirectory.replace("{store}", store.name)}
             </span>
-            <h1 className="text-3xl font-extrabold sm:text-4xl">
+            <h1 className="text-[20px] font-extrabold leading-tight text-ink">
               {dict.couponsPage.heading.replace("{store}", store.name)}
             </h1>
             <p className="mt-2 text-sm text-brand-soft leading-relaxed">

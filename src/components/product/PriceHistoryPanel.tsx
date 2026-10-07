@@ -143,7 +143,7 @@ export default function PriceHistoryPanel({
             <polyline
               points={polylineStr}
               fill="none"
-              stroke="#bf481c"
+              stroke="#FF4D00"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -158,7 +158,7 @@ export default function PriceHistoryPanel({
                 cy={c.y}
                 r="4.5"
                 fill="#ffffff"
-                stroke="#bf481c"
+                stroke="#FF4D00"
                 strokeWidth="2.5"
               />
               <title>{`${c.retailerName}: ${format(c.itemPrice)} on ${new Date(c.observedAt).toLocaleDateString()}`}</title>

@@ -11,7 +11,7 @@ const config: Config = {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
       },
       colors: {
-        // Foxzil design system. Ivory canvas, navy text, orange primary action.
+        // Orange-red brand with purple offer actions.
         canvas: {
           DEFAULT: "#FAF9F5",
           sunk: "#F4F2EC",
@@ -22,19 +22,24 @@ const config: Config = {
           muted: "#727C8C",
         },
         brand: {
-          DEFAULT: "#BF481C",
-          hover: "#A43C15",
-          soft: "#FDF1EC",
-          border: "#F2D5C8",
+          DEFAULT: "#FF4D00",
+          hover: "#D94100",
+          soft: "#FFF1EB",
+          border: "#FFD0BC",
         },
+        offer: {
+          DEFAULT: "#300A6E",
+          hover: "#0B00CF",
+        },
+        "store-header": "#F0F8FF",
         line: {
           DEFAULT: "#E6E3DB",
           strong: "#D6D2C8",
         },
         accent: {
-          DEFAULT: "#BF481C",
-          hover: "#A43C15",
-          soft: "#FDF1EC",
+          DEFAULT: "#FF4D00",
+          hover: "#D94100",
+          soft: "#FFF1EB",
         },
       },
       borderRadius: {
