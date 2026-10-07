@@ -70,7 +70,7 @@ export default function AdminAdvertisersPage() {
         if (currentCountry) params.set("country", currentCountry);
 
 
-        const res = await fetch(`/api/advertisers?${params.toString()}`);
+        const res = await fetch(`/api/admin/advertisers?${params.toString()}`);
         const json = await res.json();
         if (!res.ok) {
           throw new Error(json?.error ?? "Failed to load advertisers.");

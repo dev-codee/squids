@@ -42,7 +42,7 @@ export default function FAQModal({ isOpen, onClose, onSaved, faq }: FAQModalProp
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/advertisers?search=${encodeURIComponent(advSearch)}&pageSize=5`);
+        const res = await fetch(`/api/admin/advertisers?search=${encodeURIComponent(advSearch)}&pageSize=5`);
         const data = await res.json();
         setAdvResults(data.advertisers || []);
         setShowAdvDropdown(true);

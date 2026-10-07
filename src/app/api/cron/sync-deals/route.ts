@@ -79,13 +79,14 @@ export async function GET(request: NextRequest) {
     // (Previously capped at 10 pages / 1000 deals, which silently dropped every
     // joined coupon past the first 1000 — e.g. advertiser 80881's voucher.)
     const MAX_PAGES = 500;
+    let awinComplete = false;
 
     while (page <= MAX_PAGES) {
       try {
         const { deals } = await fetchDeals({ page, pageSize });
-        if (!deals || deals.length === 0) break;
+        if (!deals || deals.length === 0) { awinComplete = true; break; }
         awinDeals.push(...deals);
-        if (deals.length < pageSize) break;
+        if (deals.length < pageSize) { awinComplete = true; break; }
         page++;
       } catch (pageErr) {
         console.warn(`[cron/sync-deals] Awin page ${page} error:`, pageErr);
@@ -95,15 +96,17 @@ export async function GET(request: NextRequest) {
 
     const awinResult = await upsertDeals(awinDeals);
     let awinStale = 0;
-    if (awinDeals.length > 0) {
+    if (awinComplete && awinDeals.length > 0) {
       awinStale = await removeStaleDeals(
         awinDeals.map((d) => d.id),
         "awin",
       );
     }
-    await updateSyncTime("awin:deals", awinDeals.length);
+    if (awinComplete) await updateSyncTime("awin:deals", awinDeals.length);
+    else await recordSyncError("awin:deals", "Partial feed: last-good records retained");
 
     results.awin = {
+      complete: awinComplete,
       count: awinDeals.length,
       upserted: awinResult.upserted,
       modified: awinResult.modified,
@@ -118,7 +121,7 @@ export async function GET(request: NextRequest) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     console.error("[cron/sync-deals] Awin sync failed:", error);
     await recordSyncError("awin:deals", msg).catch(() => {});
-    results.awin = { error: msg };
+    results.awin = { complete: false, error: msg };
   }
 
   // ── Admitad ──────────────────────────────────────────────────────────────
@@ -161,8 +164,10 @@ export async function GET(request: NextRequest) {
     // Promotions live on a separate CF endpoint/creative type. Fetch them too,
     // but don't let a promotions failure block the coupon sync.
     let cfPromotions: Awaited<ReturnType<typeof fetchCfPromotions>> = [];
+    let cfComplete = false;
     try {
       cfPromotions = await fetchCfPromotions();
+      cfComplete = true;
     } catch (promoErr) {
       const pmsg = promoErr instanceof Error ? promoErr.message : "Unknown error";
       console.warn("[cron/sync-deals] CF promotions fetch failed (non-fatal):", pmsg);
@@ -171,7 +176,7 @@ export async function GET(request: NextRequest) {
 
     const cfResult = await upsertDeals(cfDeals);
     let cfStale = 0;
-    if (cfDeals.length > 0) {
+    if (cfComplete && cfDeals.length > 0) {
       cfStale = await removeStaleDeals(
         cfDeals.map((d) => d.id),
         "commission-factory",
@@ -184,9 +189,11 @@ export async function GET(request: NextRequest) {
     // to replace them. Idempotent no-op once the DB is clean.
     const cfLegacyRemoved =
       cfPromotions.length > 0 ? await removeLegacyCfPromotions() : 0;
-    await updateSyncTime("commission-factory:deals", cfDeals.length);
+    if (cfComplete) await updateSyncTime("commission-factory:deals", cfDeals.length);
+    else await recordSyncError("commission-factory:deals", "Partial feed: last-good promotions retained");
 
     results.cf = {
+      complete: cfComplete,
       count: cfDeals.length,
       coupons: cfCoupons.length,
       promotions: cfPromotions.length,
@@ -205,7 +212,7 @@ export async function GET(request: NextRequest) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     console.warn("[cron/sync-deals] CF sync failed (non-fatal):", msg);
     await recordSyncError("commission-factory:deals", msg).catch(() => {});
-    results.cf = { error: msg };
+    results.cf = { complete: false, error: msg };
   }
 
   // ── Kwanko ───────────────────────────────────────────────────────────────

@@ -100,9 +100,9 @@ export default function StoreHeader({ store, country: countryProp }: StoreHeader
                   <Link
                     href={`/${country}/report-issue?type=expired_deal&store=${encodeURIComponent(store.slug)}`}
                     className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 text-ink-muted transition-colors hover:border-brand-border hover:text-brand"
-                    title="Report outdated coupon or incorrect store details"
+                    title={dict.offerUi.report}
                   >
-                    <span>⚑</span> Report issue
+                    <span>⚑</span> {dict.offerUi.report}
                   </Link>
                 </div>
               </div>
@@ -122,7 +122,7 @@ export default function StoreHeader({ store, country: countryProp }: StoreHeader
                   }}
                   country={country}
                   compact
-                  label={t.saveStore}
+                  label={dict.offerUi.followShort}
                 />
                 <a
                   href={store.websiteUrl}

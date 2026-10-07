@@ -22,3 +22,11 @@ The read-only database check found no product records. It also found several gui
 Operators can supply `reviewedCategories` (protected advertiser PUT stamps review time), `officialUrl`, distinct `policyUrls`, and reviewed content confirmation. Protected offer enrichment accepts source terms/URL, `reviewedRegionCodes`, structured `promotion` conditions/evidence and `delivery` rules. Reviewed offer country overrides survive feed refreshes. Legacy subscriptions without a country are withheld pending a genuine market selection.
 
 No live import, database repair, deployment, email send, paid-promotion permission check or revenue settlement reconciliation was performed. Those require real source records and an authorized end-to-end environment. Mobile/browser visual evidence and real email delivery cannot be inferred from compilation or model tests.
+
+## Validation recorded
+
+- Final production build and TypeScript checks passed after the moderation/feed adjustments.
+- Model suite: 14 files passed, including new paid/free/conditional delivery regression cases.
+- Read-only MongoDB aggregation checks passed for lifecycle, explicit/unknown/wrong markets, reviewed country overrides, deduplication and suffix normalization. The stored Beauty Amora offers produced zero US-eligible results; Hacoo had 10 distinct FR-eligible source records before merchant joining.
+- Commission Factory source verification timed out. No active status or expiry was guessed to bypass that failure.
+- Awin partial-page failures and partial CF imports retain last-good records and do not record a complete refresh. Protected moderation reads expose unpublished records for review, separate from public API publication.

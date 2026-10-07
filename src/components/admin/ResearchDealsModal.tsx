@@ -63,7 +63,7 @@ export default function ResearchDealsModal({
     async function loadAdvertisers() {
       setLoadingAdvertisers(true);
       try {
-        const res = await fetch("/api/advertisers?pageSize=100");
+        const res = await fetch("/api/admin/advertisers?pageSize=100");
         const json = await res.json();
         if (json.advertisers) {
           setAdvertisers(json.advertisers);

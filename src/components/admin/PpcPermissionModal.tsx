@@ -92,7 +92,7 @@ export default function PpcPermissionModal({
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/advertisers?search=${encodeURIComponent(advSearch)}&pageSize=6`);
+        const res = await fetch(`/api/admin/advertisers?search=${encodeURIComponent(advSearch)}&pageSize=6`);
         const data = await res.json();
         setAdvResults(data.advertisers || []);
         setShowAdvDropdown(true);

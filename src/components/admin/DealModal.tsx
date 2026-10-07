@@ -103,7 +103,7 @@ export default function DealModal({
     const id = Number(rawId);
 
     try {
-      const res = await fetch(`/api/advertisers?id=${id}`);
+      const res = await fetch(`/api/admin/advertisers?id=${id}`);
       if (!res.ok) return;
       const data = await res.json();
       const adv = data.advertiser;

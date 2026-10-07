@@ -77,7 +77,7 @@ export default function AdvertisersClient({
 
   // A product-tab search filters the comparison row server-side; the store grid
   // stays out of the way in that mode.
-  const productMode = isHome && initialTab === "products";
+  const productMode = isHome && initialTab === "products" && products.length > 0;
 
   const [data, setData] = useState<PageData | null>(initialData ?? null);
   const [loading, setLoading] = useState(!initialData);
@@ -89,8 +89,10 @@ export default function AdvertisersClient({
     setSearch(urlSearch);
   }, [searchParams]);
 
+  const loadGeneration = useRef(0);
   const load = useCallback(
     async (currentSearch: string, currentCategory: string, currentPage: number) => {
+      const generation = ++loadGeneration.current;
       setLoading(true);
       setError(null);
 
@@ -133,11 +135,11 @@ export default function AdvertisersClient({
           // One automatic retry for transient failures.
           result = await fetchOnce();
         }
-        setData(result);
+        if (generation === loadGeneration.current) setData(result);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong.");
+        if (generation === loadGeneration.current) setError(err instanceof Error ? err.message : "Something went wrong.");
       } finally {
-        setLoading(false);
+        if (generation === loadGeneration.current) setLoading(false);
       }
     },
     [country, isHome],
@@ -272,7 +274,7 @@ export default function AdvertisersClient({
         country={country}
         initialTab={initialTab}
         initialSearch={initialSearch}
-        showProductsTab={products.length > 0 || initialTab === "products"}
+        showProductsTab={products.length > 0}
       />
 
       {showStoreGrid && (

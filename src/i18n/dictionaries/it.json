@@ -479,7 +479,7 @@
   },
   "couponsPage": {
     "officialDirectory": "Directory ufficiale dei coupon di {store}",
-    "heading": "Codici sconto e offerte verificate di {store}",
+    "heading": "Codici sconto e offerte di {store}",
     "intro": "Sfoglia codici sconto testati, sconti per studenti e offerte cashback. Copia il tuo codice e risparmia subito su {store}.",
     "verifiedCoupons": "Coupon verificati",
     "verifiedCouponsSub": "Codici sconto attivi per questo negozio.",
@@ -494,7 +494,7 @@
     "cashbackOffersSub": "Guadagna rimborsi cashback sugli ordini idonei.",
     "cashbackDeals": "Offerte cashback",
     "noneTitle": "Nessun coupon ancora pubblicato per {store}",
-    "noneSub": "Torna presto — i codici verificati vengono aggiunti regolarmente."
+    "noneSub": "Torna per scoprire nuove offerte."
   },
   "dealsPage": {
     "flashHub": "Vendite flash e hub offerte",
@@ -529,7 +529,7 @@
   },
   "meta": {
     "homeTitle": "Codici coupon e offerte in {country} · FoxZil",
-    "homeDescription": "Scopri codici coupon verificati e offerte per {country}. Risparmia nei migliori negozi con FoxZil.",
+    "homeDescription": "Scopri codici sconto e offerte per {country}. Controlla le condizioni.",
     "storesTitle": "Negozi con coupon e offerte in {country} · FoxZil",
     "storesDescription": "Esplora tutti i negozi con codici coupon e offerte attive in {country}.",
     "categoriesTitle": "Codici coupon per categoria in {country} · FoxZil",
@@ -537,7 +537,7 @@
     "categoryTitle": "Coupon e offerte {category} in {country} · FoxZil",
     "categoryDescription": "Trova i migliori codici coupon e offerte {category} per {country}. Risparmia oggi.",
     "couponsTitle": "Codici coupon {store} · FoxZil",
-    "couponsDescription": "Tutti i codici coupon verificati per {store}. Aggiornati oggi.",
+    "couponsDescription": "Codici sconto e offerte di {store}. Controlla condizioni e fonte.",
     "dealsTitle": "Offerte e vendite flash {store} · FoxZil",
     "dealsDescription": "Le ultime offerte, vendite flash e promozioni a tempo limitato di {store}.",
     "topDealsTitle": "Migliori coupon e offerte in {country} · FoxZil",

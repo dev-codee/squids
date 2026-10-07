@@ -766,14 +766,7 @@ export async function updateAdvertiser(
   const col = db.collection<AdvertiserDoc>(COLLECTION);
   const update = { $set: { ...data, syncedAt: new Date() } };
 
-  // Prefer the exact (network, id) match; fall back to id-only so a
-  // missing/stale network never causes the update to silently no-op.
-  if (network) {
-    const scoped = await col.updateOne({ network, id }, update);
-    if (scoped.matchedCount > 0) return true;
-  }
-
-  const result = await col.updateOne({ id }, update);
+  const result = await col.updateOne({ id, ...(network ? { network } : {}) }, update);
   return result.matchedCount > 0;
 }
 
@@ -787,14 +780,7 @@ export async function deleteAdvertiser(
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
-  // Prefer the exact (network, id) match, but fall back to id-only so a
-  // missing/stale network never causes the delete to silently no-op.
-  if (network) {
-    const scoped = await col.deleteOne({ network, id });
-    if (scoped.deletedCount > 0) return true;
-  }
-
-  const result = await col.deleteOne({ id });
+  const result = await col.deleteOne({ id, ...(network ? { network } : {}) });
   return result.deletedCount > 0;
 }
 
@@ -830,13 +816,14 @@ const getPublicStoreRecords = unstable_cache(async (country?: string): Promise<A
   return [...unique.values()].sort((a, b) => Number(!!b.isFlagship) - Number(!!a.isFlagship) || a.name.localeCompare(b.name) || String(a.network).localeCompare(String(b.network)) || String(a.id).localeCompare(String(b.id)));
 }, ["public:eligible-store-records:v2"], { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers, CACHE_TAGS.deals] });
 
-export async function getPublicAdvertisers(query: AdvertiserQuery & { network?: string }): Promise<PagedAdvertisers> {
+export async function getPublicAdvertisers(query: AdvertiserQuery & { network?: string; sortByOffers?: boolean }): Promise<PagedAdvertisers> {
   const search = query.search?.trim().toLowerCase();
   const category = query.category?.trim().toLowerCase();
   const stores = (await getPublicStoreRecords(query.country?.toUpperCase())).filter((a) =>
     (!search || a.name.toLowerCase().includes(search)) &&
     (!category || a.categories?.some((c) => c.toLowerCase() === category)) &&
     (!query.network || a.network === query.network));
+  if (query.sortByOffers) stores.sort((a, b) => (b.dealCount ?? 0) - (a.dealCount ?? 0));
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, query.pageSize || DEFAULT_PAGE_SIZE));
   const totalPages = Math.max(1, Math.ceil(stores.length / pageSize));
   const page = Math.min(totalPages, Math.max(1, query.page || 1));

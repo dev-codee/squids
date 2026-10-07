@@ -26,6 +26,7 @@ const COLLECTION = "deals";
 
 export function normalizeDealDoc(doc: any): Deal {
   if (!doc) return doc;
+  if (doc.advertiser?.name) doc.advertiser.name = cleanAdvertiserName(doc.advertiser.name);
   doc.trackingUrl = resolveAffiliateTrackingUrl(
     doc.network,
     doc.advertiser?.id,
@@ -236,7 +237,7 @@ async function getDealsFromDbUncached(
     Math.max(1, query.pageSize || DEFAULT_DEALS_PAGE_SIZE),
     MAX_DEALS_PAGE_SIZE,
   );
-  const stages = [ { $match: filter }, ...publicMerchantStages(query.country, query.category), ...distinctOfferStages() ];
+  const stages = [ { $match: filter }, ...(query.includeExpired ? [] : [...publicMerchantStages(query.country, query.category), ...distinctOfferStages()]) ];
   const counts = await col.aggregate([...stages, { $count: "n" }]).toArray();
   const total = counts[0]?.n ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -299,7 +300,7 @@ async function getPopularShopsUncached(opts?: {
   country?: string;
 }): Promise<PopularShopData[]> {
   const { minDeals = 1, limit = 8, country } = opts ?? {};
-  const result = await getPublicAdvertisers({ country, requireDeals: true, pageSize: 100 });
+  const result = await getPublicAdvertisers({ country, requireDeals: true, pageSize: 100, sortByOffers: true });
   return result.advertisers.filter((a) => (a.dealCount ?? 0) >= minDeals)
     .sort((a, b) => (b.dealCount ?? 0) - (a.dealCount ?? 0)).slice(0, limit)
     .map((a) => ({ id: a.id, network: a.network, name: a.name, logoUrl: a.logoUrl, dealCount: a.dealCount ?? 0 }));
@@ -833,14 +834,7 @@ export async function updateDeal(
   const col = db.collection<DealDoc>(COLLECTION);
   const update = { $set: { ...data, syncedAt: new Date() } };
 
-  // Prefer the exact (network, id) match; fall back to id-only so a
-  // missing/stale network never causes the update to silently no-op.
-  if (network) {
-    const scoped = await col.updateOne({ network, id }, update);
-    if (scoped.matchedCount > 0) return true;
-  }
-
-  const result = await col.updateOne({ id }, update);
+  const result = await col.updateOne({ id, ...(network ? { network } : {}) }, update);
   return result.matchedCount > 0;
 }
 
@@ -1004,15 +998,7 @@ export async function deleteDeal(
   const db = await getDb();
   const col = db.collection<DealDoc>(COLLECTION);
 
-  // Prefer the exact (network, id) match. If the caller's network is missing,
-  // stale, or mismatched, fall back to deleting by id alone so the delete
-  // never silently no-ops (ids are effectively unique across networks).
-  if (network) {
-    const scoped = await col.deleteOne({ network, id });
-    if (scoped.deletedCount > 0) return true;
-  }
-
-  const result = await col.deleteOne({ id });
+  const result = await col.deleteOne({ id, ...(network ? { network } : {}) });
   return result.deletedCount > 0;
 }
 
@@ -1061,8 +1047,8 @@ export async function getNewDealsSince(since: Date): Promise<NewDealForAlert[]> 
         title: dealDisplayTitle(d as unknown as Deal),
         discountText: d.discountText ?? null,
         trackingUrl: resolveAffiliateTrackingUrl(d.network, d.advertiser?.id, d.trackingUrl),
-        firstSeenAt: d.firstSeenAt as Date,
-        regionCodes: d.regionCodes ?? [],
+        firstSeenAt: new Date(d.firstSeenAt),
+        regionCodes: d.reviewedRegionCodes ?? d.regionCodes ?? [],
       };
     });
 }

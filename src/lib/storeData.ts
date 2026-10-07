@@ -14,13 +14,11 @@ import { cache } from "react";
 import {
   getAdvertiserBySlug,
   slugifyAdvertiserName,
-  ensureAdvertiserStorePage,
   getRelatedAdvertisers,
-  getShowcaseAdvertisersFromDb,
 } from "@/lib/db/advertisers";
 import { generateStoreSeoContent } from "@/lib/ai/storeSeo";
 import type { StorePageContent } from "@/lib/ai/storeContent";
-import { getDealsFromDb, ensureDealAiContent } from "@/lib/db/deals";
+import { getDealsFromDb } from "@/lib/db/deals";
 
 import { getProductsFromDb } from "@/lib/db/products";
 import { getReviewsFromDb } from "@/lib/db/reviews";
@@ -30,7 +28,6 @@ import type { Advertiser } from "@/lib/awin";
 import { cleanAdvertiserName } from "@/lib/networks";
 import type { Deal } from "@/lib/deals";
 import { dealDisplayTitle, dealDisplayDescription } from "@/lib/deals";
-import type { Product } from "@/lib/products";
 import { getRegionConfig, formatMoney, type RegionConfig } from "@/lib/regions";
 import { convert, getUsdRates, type UsdRates } from "@/lib/fx";
 
@@ -240,7 +237,6 @@ function secondsUntil(endDate: string | null | undefined): number | undefined {
 }
 
 import { localeForCountry } from "@/i18n";
-import { languageNameForLocale } from "@/lib/ai/languageNames";
 import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
 
 function resolveAffiliateLink(
@@ -485,7 +481,6 @@ async function loadStoreDataUncached(
   //   3. the region's flagship stores, as a last resort.
   // A visitor who has only ever opened this one store still sees a full row,
   // which the per-browser "recently viewed" strip cannot give them.
-  const MIN_SIMILAR = 4;
   const MAX_SIMILAR = 8;
 
   const manualSlugs = (advertiser.similarStoreSlugs ?? [])
@@ -603,7 +598,7 @@ function safeOfficialUrl(value?: string | null): string | null {
   if (!value) return null;
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:" || /(?:awin1|admitad|anrdoezrs|commissionfactory|go\.linkwi)/i.test(url.hostname)) return null;
+    if (url.protocol !== "https:" || /(?:awin1|admitad|anrdoezrs|commissionfactory|cfjump|tkqlhce|jdoqocy|go\.linkwi)/i.test(url.hostname)) return null;
     return url.href;
   } catch { return null; }
 }

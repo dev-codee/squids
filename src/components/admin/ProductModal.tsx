@@ -85,7 +85,7 @@ export default function ProductModal({
     searchTimeoutRef.current = setTimeout(async () => {
       setIsSearchingAdv(true);
       try {
-        const res = await fetch(`/api/advertisers?search=${encodeURIComponent(advSearch)}&pageSize=5`);
+        const res = await fetch(`/api/admin/advertisers?search=${encodeURIComponent(advSearch)}&pageSize=5`);
         const data = await res.json();
         setAdvResults(data.advertisers || []);
         setShowAdvDropdown(true);

@@ -479,7 +479,7 @@
   },
   "couponsPage": {
     "officialDirectory": "Répertoire officiel des coupons {store}",
-    "heading": "Codes promo & réductions {store} vérifiés",
+    "heading": "Codes promo et offres de {store}",
     "intro": "Parcourez des codes promo testés, des réductions étudiantes et des offres de cashback. Copiez votre code et économisez instantanément sur {store}.",
     "verifiedCoupons": "Coupons vérifiés",
     "verifiedCouponsSub": "Codes de réduction actifs pour cette boutique.",
@@ -494,7 +494,7 @@
     "cashbackOffersSub": "Gagnez du cashback sur les commandes éligibles.",
     "cashbackDeals": "Offres de cashback",
     "noneTitle": "Aucun coupon publié pour {store} pour le moment",
-    "noneSub": "Revenez bientôt — des codes vérifiés sont ajoutés régulièrement."
+    "noneSub": "Revenez découvrir les nouvelles offres."
   },
   "dealsPage": {
     "flashHub": "Ventes flash & centre d'offres",
@@ -529,7 +529,7 @@
   },
   "meta": {
     "homeTitle": "Codes promo et bons plans {country} · FoxZil",
-    "homeDescription": "Parcourez les codes promo vérifiés et les bons plans pour {country}. Économisez sur les meilleures boutiques avec FoxZil.",
+    "homeDescription": "Découvrez les codes promo et offres des marchands pour {country}. Consultez les conditions.",
     "storesTitle": "Boutiques avec coupons et offres en {country} · FoxZil",
     "storesDescription": "Parcourez toutes les boutiques proposant des codes promo et bons plans actifs en {country}.",
     "categoriesTitle": "Codes promo par catégorie en {country} · FoxZil",
@@ -537,7 +537,7 @@
     "categoryTitle": "Codes promo et offres {category} en {country} · FoxZil",
     "categoryDescription": "Trouvez les meilleurs codes promo et offres {category} pour {country}. Économisez dès aujourd'hui.",
     "couponsTitle": "Codes promo {store} · FoxZil",
-    "couponsDescription": "Tous les codes promo vérifiés pour {store}. Mis à jour aujourd'hui.",
+    "couponsDescription": "Codes promo et offres de {store}. Consultez les conditions et la source de chaque offre.",
     "dealsTitle": "Bons plans et ventes flash {store} · FoxZil",
     "dealsDescription": "Derniers bons plans, ventes flash et offres à durée limitée de {store}.",
     "topDealsTitle": "Meilleurs coupons et offres en {country} · FoxZil",

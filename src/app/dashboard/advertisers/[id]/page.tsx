@@ -79,7 +79,7 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
     setAdvertiserLoading(true);
     setAdvertiserError(null);
     try {
-      const res = await fetch(`/api/advertisers?id=${advertiserId}`);
+      const res = await fetch(`/api/admin/advertisers?id=${advertiserId}`);
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json?.error ?? "Failed to load advertiser.");
@@ -116,7 +116,7 @@ export default function AdminAdvertiserDealsPage({ params }: PageProps) {
         });
         if (currentSearch) queryParams.set("search", currentSearch);
 
-        const res = await fetch(`/api/deals?${queryParams.toString()}`);
+        const res = await fetch(`/api/admin/deals?${queryParams.toString()}`);
         const json = await res.json();
         if (!res.ok) {
           throw new Error(json?.error ?? "Failed to load deals.");

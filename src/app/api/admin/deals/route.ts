@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getDealsFromDb,
   createDeal,
   updateDeal,
   deleteDeal,
@@ -291,4 +292,15 @@ export async function DELETE(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+/** Protected raw listing for moderation; unpublished records remain editable. */
+export async function GET(request: NextRequest) {
+  const p = request.nextUrl.searchParams;
+  try {
+    const result = await getDealsFromDb({ search: p.get("search") || undefined, advertiserId: Number(p.get("advertiserId")) || undefined,
+      network: p.get("network") || undefined, status: p.get("status") || "all", type: p.get("type") || "all",
+      page: parseInt(p.get("page") || "1", 10) || 1, pageSize: parseInt(p.get("pageSize") || "24", 10) || 24, includeExpired: true });
+    return NextResponse.json(result);
+  } catch { return NextResponse.json({ error: "Offer records unavailable." }, { status: 503 }); }
 }

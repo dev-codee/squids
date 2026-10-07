@@ -72,7 +72,7 @@ export default function AdminCouponsPage() {
         });
         if (currentSearch) params.set("search", currentSearch);
 
-        const res = await fetch(`/api/deals?${params.toString()}`);
+        const res = await fetch(`/api/admin/deals?${params.toString()}`);
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error ?? "Failed to load coupons.");
         setData(json as PagedDeals);

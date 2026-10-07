@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getAdvertisersFromDb,
   createAdvertiser,
   updateAdvertiser,
   deleteAdvertiser,
@@ -26,7 +27,13 @@ function invalidateAdvertiserCaches() {
 export async function GET(request: NextRequest) {
   try {
     const idRaw = request.nextUrl.searchParams.get("id");
-    if (!idRaw || isNaN(Number(idRaw))) {
+    if (!idRaw) {
+      const p = request.nextUrl.searchParams;
+      return NextResponse.json(await getAdvertisersFromDb({ search: p.get("search") || undefined, country: p.get("country") || undefined,
+        category: p.get("category") || undefined, network: p.get("network") || undefined, relationship: p.get("relationship") || undefined,
+        region: p.get("region") || undefined, page: parseInt(p.get("page") || "1", 10) || 1, pageSize: parseInt(p.get("pageSize") || "24", 10) || 24, withFacets: p.get("withFacets") === "true" }));
+    }
+    if (isNaN(Number(idRaw))) {
       return NextResponse.json(
         { error: "Valid advertiser ID query parameter is required." },
         { status: 400 },

@@ -159,6 +159,7 @@ export default function HorizontalCouponCard({
                 {coupon.description}
               </p>
             )}
+            {coupon.delivery && <p className="mt-2 text-sm text-ink-soft">{ui.delivery}: {coupon.delivery.charge?.known ? `${coupon.delivery.charge.value} ${coupon.delivery.currency}` : ui.unknown}{coupon.delivery.freeThreshold?.known ? ` · ${t.minimumSpend}: ${coupon.delivery.freeThreshold.value} ${coupon.delivery.currency}` : ""} · {coupon.delivery.zone?.market}</p>}
             {!coupon.code && (
               <p className="mt-1 text-sm text-ink-muted">{t.noCodeNeeded}</p>
             )}

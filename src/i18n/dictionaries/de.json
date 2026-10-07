@@ -479,7 +479,7 @@
   },
   "couponsPage": {
     "officialDirectory": "Offizielles {store} Gutscheinverzeichnis",
-    "heading": "Verifizierte {store} Gutscheincodes & Rabatte",
+    "heading": "Gutscheincodes und Angebote von {store}",
     "intro": "Durchsuchen Sie getestete Gutscheincodes, Studentenrabatte und Cashback-Angebote. Kopieren Sie Ihren Code und sparen Sie sofort bei {store}.",
     "verifiedCoupons": "Verifizierte Gutscheine",
     "verifiedCouponsSub": "Aktive Rabattcodes für dieses Geschäft.",
@@ -494,7 +494,7 @@
     "cashbackOffersSub": "Verdienen Sie Cashback-Rückerstattungen für berechtigte Bestellungen.",
     "cashbackDeals": "Cashback-Angebote",
     "noneTitle": "Noch keine Gutscheine für {store} veröffentlicht",
-    "noneSub": "Schauen Sie bald wieder vorbei — verifizierte Codes werden regelmäßig hinzugefügt."
+    "noneSub": "Entdecken Sie künftig neue Shop-Angebote."
   },
   "dealsPage": {
     "flashHub": "Flash-Sales & Angebots-Hub",
@@ -529,7 +529,7 @@
   },
   "meta": {
     "homeTitle": "{country} Gutscheincodes & Angebote · FoxZil",
-    "homeDescription": "Verifizierte Gutscheincodes, Rabattcodes und Angebote für {country}. Mit FoxZil in Top-Shops sparen.",
+    "homeDescription": "Entdecken Sie Gutscheincodes und Händlerangebote für {country}. Prüfen Sie die Bedingungen.",
     "storesTitle": "Shops mit {country} Gutscheinen & Angeboten · FoxZil",
     "storesDescription": "Alle Shops mit aktiven Gutscheincodes und Angeboten in {country} durchsuchen.",
     "categoriesTitle": "Gutscheincodes nach Kategorie in {country} · FoxZil",
@@ -537,7 +537,7 @@
     "categoryTitle": "{category} Gutscheine & Angebote in {country} · FoxZil",
     "categoryDescription": "Die besten {category} Gutscheincodes und Angebote für {country} finden. Jetzt sparen.",
     "couponsTitle": "{store} Gutscheincodes & Rabattcodes · FoxZil",
-    "couponsDescription": "Alle verifizierten Gutscheincodes für {store}. Heute aktualisiert.",
+    "couponsDescription": "Gutscheincodes und Angebote von {store}. Prüfen Sie Bedingungen und Quelle.",
     "dealsTitle": "{store} Angebote & Blitzangebote · FoxZil",
     "dealsDescription": "Neueste Angebote, Blitzverkäufe und zeitlich begrenzte Aktionen von {store}.",
     "topDealsTitle": "Top-Gutscheine & Angebote in {country} · FoxZil",
