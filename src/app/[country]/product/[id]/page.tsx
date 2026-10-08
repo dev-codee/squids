@@ -129,7 +129,7 @@ export default async function ProductComparisonPage({
   // retailer rather than an opaque id.
   const offers: RetailerOffer[] = (
     await Promise.all(
-      rows.map(async (row) => {
+      rows.map(async (row): Promise<RetailerOffer | null> => {
         const entry = totals.get(row.product.id);
         if (!entry) return null;
         const advertiser = await getAdvertiserByIdFromDb(row.product.advertiserId, row.product.network).catch(
