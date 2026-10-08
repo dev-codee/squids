@@ -11,7 +11,8 @@
 
 import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
-import { publicMerchantFilter, publicOfferFilter, distinctOfferStages, merchantNameExpression } from "@/lib/model/publication";
+import { publicMerchantFilter, publicOfferCountStages, publicMerchantCountKey, merchantNameExpression } from "@/lib/model/publication";
+import { singleFlight } from "@/lib/model/singleFlight";
 import { NOT_EXPIRED } from "@/lib/expiry";
 import { normalizeCountryCode, foreignCountrySignals } from "@/lib/countries";
 import { cleanAdvertiserName, storeSlug } from "@/lib/networks";
@@ -786,33 +787,25 @@ export async function deleteAdvertiser(
 
 /** Public stores are unique by canonical slug. The selected record and count are
  * shared by directory, homepage, search and sitemap. Pagination follows deduplication. */
-const getPublicStoreRecords = unstable_cache(async (country?: string): Promise<Advertiser[]> => {
+const loadPublicStoreRecords = singleFlight(async (country: string): Promise<Advertiser[]> => {
   const db = await getDb();
-  const docs = await db.collection(COLLECTION).aggregate([
-    { $match: { $and: [buildAdvertiserFilter({ country }), publicMerchantFilter()] } },
-    { $lookup: { from: "deals", let: { merchantId: { $toString: "$id" }, merchantNumericId: { $convert: { input: "$id", to: "double", onError: null, onNull: null } }, merchantNetwork: "$network", merchantName: merchantNameExpression("$name") }, pipeline: [
-      { $match: publicOfferFilter(country) },
-      { $match: { $expr: { $and: [
-        { $or: [
-          { $eq: ["$advertiser.id", "$$merchantId"] },
-          { $and: [
-            { $ne: ["$$merchantNumericId", null] },
-            { $eq: [{ $toString: "$$merchantNumericId" }, "$$merchantId"] },
-            { $eq: ["$advertiser.id", "$$merchantNumericId"] },
-          ] },
-        ] },
-        { $eq: ["$network", "$$merchantNetwork"] },
-        { $eq: [merchantNameExpression("$advertiser.name"), "$$merchantName"] },
-      ] } } },
-      ...distinctOfferStages(), { $count: "n" },
-    ], as: "offerCount" } },
-    { $set: { dealCount: { $ifNull: [{ $arrayElemAt: ["$offerCount.n", 0] }, 0] } } },
-    { $match: { $or: [{ dealCount: { $gt: 0 } }, { isFlagship: true }] } },
-    { $project: { _id: 0, offerCount: 0 } },
-  ]).toArray();
+  const [docs, offerCounts] = await Promise.all([
+    db.collection(COLLECTION).aggregate([
+      { $match: { $and: [buildAdvertiserFilter({ country: country || undefined }), publicMerchantFilter()] } },
+      { $set: { _publicMerchantName: merchantNameExpression("$name") } },
+      { $project: { _id: 0 } },
+    ], { maxTimeMS: 15_000 }).toArray(),
+    db.collection(COLLECTION_DEALS).aggregate<{ _id: { network: string; merchant: string; name: string }; n: number }>(
+      publicOfferCountStages(country || undefined), { maxTimeMS: 15_000 },
+    ).toArray(),
+  ]);
+  const counts = new Map(offerCounts.map(({ _id, n }) => [publicMerchantCountKey(_id.network, _id.merchant, _id.name), n]));
   const unique = new Map<string, Advertiser>();
   for (const doc of docs) {
-    const a = normalizeAdvertiserDoc(doc);
+    const { _publicMerchantName, ...record } = doc;
+    record.dealCount = counts.get(publicMerchantCountKey(record.network, record.id, _publicMerchantName)) ?? 0;
+    if (record.dealCount === 0 && !record.isFlagship) continue;
+    const a = normalizeAdvertiserDoc(record);
     const slug = slugifyAdvertiserName(a.name);
     if (!slug) continue;
     const previous = unique.get(slug);
@@ -821,7 +814,13 @@ const getPublicStoreRecords = unstable_cache(async (country?: string): Promise<A
       (score === advertiserRegionScore(previous, country) && (a.dealCount ?? 0) > (previous.dealCount ?? 0))) unique.set(slug, a);
   }
   return [...unique.values()].sort((a, b) => Number(!!b.isFlagship) - Number(!!a.isFlagship) || a.name.localeCompare(b.name) || String(a.network).localeCompare(String(b.network)) || String(a.id).localeCompare(String(b.id)));
-}, ["public:eligible-store-records:v3"], { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers, CACHE_TAGS.deals] });
+});
+
+export const getPublicStoreRecords = unstable_cache(
+  (country?: string) => loadPublicStoreRecords(country?.toUpperCase() ?? ""),
+  ["public:eligible-store-records:v4"],
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers, CACHE_TAGS.deals] },
+);
 
 export async function getPublicAdvertisers(query: AdvertiserQuery & { network?: string; sortByOffers?: boolean }): Promise<PagedAdvertisers> {
   const search = query.search?.trim().toLowerCase();

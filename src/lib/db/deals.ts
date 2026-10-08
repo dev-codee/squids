@@ -238,12 +238,12 @@ async function getDealsFromDbUncached(
     MAX_DEALS_PAGE_SIZE,
   );
   const stages = [ { $match: filter }, ...(query.includeExpired ? [] : [...publicMerchantStages(query.country, query.category), ...distinctOfferStages()]) ];
-  const counts = await col.aggregate([...stages, { $count: "n" }]).toArray();
+  const counts = await col.aggregate([...stages, { $count: "n" }], { maxTimeMS: 15_000 }).toArray();
   const total = counts[0]?.n ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const page = Math.min(Math.max(1, query.page || 1), totalPages);
   const skip = (page - 1) * pageSize;
-  const docs = await col.aggregate([...stages, { $sort: { "advertiser.name": 1, title: 1, id: 1 } }, { $skip: skip }, { $limit: pageSize }, { $project: { _id: 0 } }]).toArray();
+  const docs = await col.aggregate([...stages, { $sort: { "advertiser.name": 1, title: 1, id: 1 } }, { $skip: skip }, { $limit: pageSize }, { $project: { _id: 0 } }], { maxTimeMS: 15_000 }).toArray();
 
   return {
     deals: docs.map((d) => normalizeDealDoc(d)),
@@ -276,7 +276,7 @@ async function getRecentDealsUncached(
     { $group: { _id: { network: "$network", merchant: "$advertiser.id" }, doc: { $first: "$$ROOT" } } },
     { $replaceRoot: { newRoot: "$doc" } }, { $sort: { fetchedAt: -1, id: -1 } },
     { $limit: Math.max(1, limit) }, { $project: { _id: 0 } },
-  ]).toArray();
+  ], { maxTimeMS: 15_000 }).toArray();
 
   return docs.map((d) => normalizeDealDoc(d));
 }
@@ -1056,21 +1056,30 @@ export async function getNewDealsSince(since: Date): Promise<NewDealForAlert[]> 
 /** Quarantine by withholding mismatched advertiser joins from every public read. */
 export function publicMerchantStages(country?: string, category?: string): Record<string, unknown>[] {
   return [
-    { $lookup: { from: "advertisers", let: { merchantId: { $toString: "$advertiser.id" }, merchantNumericId: { $convert: { input: "$advertiser.id", to: "double", onError: null, onNull: null } }, merchantNetwork: "$network", merchantName: merchantNameExpression("$advertiser.name") }, pipeline: [
-      { $match: { $and: [buildAdvertiserFilter({ country, category }), publicMerchantFilter()] } },
-      { $match: { $expr: { $and: [
-        { $or: [
-          { $eq: ["$id", "$$merchantId"] },
-          { $and: [
-            { $ne: ["$$merchantNumericId", null] },
-            { $eq: [{ $toString: "$$merchantNumericId" }, "$$merchantId"] },
-            { $eq: ["$id", "$$merchantNumericId"] },
-          ] },
-        ] }, { $eq: ["$network", "$$merchantNetwork"] },
-        { $eq: [merchantNameExpression("$name"), "$$merchantName"] },
-      ] } } }, { $limit: 1 },
-    ], as: "publicMerchant" } },
+    // localField/foreignField performs an indexed equality join before the
+    // publication predicates. Converting the foreign ID in $expr scans stores.
+    { $set: { _publicMerchantIds: { $let: {
+      vars: {
+        text: { $toString: "$advertiser.id" },
+        numeric: { $convert: { input: "$advertiser.id", to: "double", onError: null, onNull: null } },
+      },
+      in: ["$$text", { $cond: [
+        { $and: [{ $ne: ["$$numeric", null] }, { $eq: [{ $toString: "$$numeric" }, "$$text"] }] },
+        "$$numeric", "$$text",
+      ] }],
+    } } } },
+    { $lookup: {
+      from: "advertisers", localField: "_publicMerchantIds", foreignField: "id",
+      let: { merchantNetwork: "$network", merchantName: merchantNameExpression("$advertiser.name") },
+      pipeline: [
+        { $match: { $and: [buildAdvertiserFilter({ country, category }), publicMerchantFilter()] } },
+        { $match: { $expr: { $and: [
+          { $eq: ["$network", "$$merchantNetwork"] },
+          { $eq: [merchantNameExpression("$name"), "$$merchantName"] },
+        ] } } }, { $limit: 1 },
+      ], as: "publicMerchant",
+    } },
     { $match: { "publicMerchant.0": { $exists: true } } },
-    { $unset: "publicMerchant" },
+    { $unset: ["publicMerchant", "_publicMerchantIds"] },
   ];
 }

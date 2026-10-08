@@ -237,23 +237,21 @@ async function getCategoriesForCountryUncached(
   query?: { search?: string; featuredOnly?: boolean },
 ): Promise<Category[]> {
   const categories = await getCategoriesUncached(query);
-  const { countAdvertisersByCategory, countAdvertisersGloballyByCategory } = await import("@/lib/db/advertisers");
-
-  return Promise.all(
-    categories.map(async (cat) => {
-      try {
-        const perCountry = await countAdvertisersByCategory(country, cat.name);
-        const storeCount = perCountry;
-        return { ...cat, storeCount };
-      } catch (err) {
-        console.error(
-          `[db/categories] Error counting stores for "${cat.name}" in ${country}:`,
-          err,
-        );
-        return { ...cat, storeCount: 0 };
-      }
-    }),
-  );
+  const { getPublicStoreRecords } = await import("@/lib/db/advertisers");
+  // Load the canonical directory once, including all pages. Parallel category
+  // lookups otherwise start the same expensive cache miss for every category.
+  try {
+    const stores = await getPublicStoreRecords(country.toUpperCase());
+    return categories.map((cat) => ({
+      ...cat,
+      storeCount: stores.filter((store) => store.categories?.some(
+        (name) => name.toLowerCase() === cat.name.trim().toLowerCase(),
+      )).length,
+    }));
+  } catch (err) {
+    console.error(`[db/categories] Error counting stores in ${country}:`, err);
+    return categories.map((cat) => ({ ...cat, storeCount: 0 }));
+  }
 }
 
 /** Cached category listing for public pages. */
@@ -269,7 +267,7 @@ export const getCategoriesForCountry = unstable_cache(
   ["public:categories-by-country"],
   {
     revalidate: PUBLIC_REVALIDATE,
-    tags: [CACHE_TAGS.categories, CACHE_TAGS.advertisers],
+    tags: [CACHE_TAGS.categories, CACHE_TAGS.advertisers, CACHE_TAGS.deals],
   },
 );
 

@@ -17,13 +17,28 @@ export function publicOfferFilter(country?: string): Record<string, unknown> {
 }
 
 /** The same distinct offer key is used for cards and totals, before pagination. */
-export function distinctOfferStages(): Record<string, unknown>[] {
+export function distinctOfferStages(byMerchantName = false): Record<string, unknown>[] {
   const norm = (field: string) => ({ $toLower: { $trim: { input: { $ifNull: [field, ""] } } } });
   return [
     { $sort: { isExclusive: -1, sourceUpdatedAt: -1, id: 1 } },
-    { $group: { _id: { network: "$network", merchant: { $toString: "$advertiser.id" }, type: "$type", title: norm("$title"), code: norm("$code"), discount: norm("$discountText") }, doc: { $first: "$$ROOT" } } },
+    { $group: { _id: { network: "$network", merchant: { $toString: "$advertiser.id" }, ...(byMerchantName ? { merchantName: "$_publicMerchantName" } : {}), type: "$type", title: norm("$title"), code: norm("$code"), discount: norm("$discountText") }, doc: { $first: "$$ROOT" } } },
     { $replaceRoot: { newRoot: "$doc" } },
   ];
+}
+
+/** Count offers once per market rather than scanning them for every merchant.
+ * Name remains part of identity so a mismatched feed name cannot publish offers. */
+export function publicOfferCountStages(country?: string): Record<string, unknown>[] {
+  return [
+    { $match: publicOfferFilter(country) },
+    { $set: { _publicMerchantName: merchantNameExpression("$advertiser.name") } },
+    ...distinctOfferStages(true),
+    { $group: { _id: { network: "$network", merchant: { $toString: "$advertiser.id" }, name: "$_publicMerchantName" }, n: { $sum: 1 } } },
+  ];
+}
+
+export function publicMerchantCountKey(network: unknown, id: unknown, name: string): string {
+  return JSON.stringify([network ?? null, String(id ?? ""), name]);
 }
 
 /** Legacy feed names may include a market suffix that the merchant record strips. */
