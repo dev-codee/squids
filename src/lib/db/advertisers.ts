@@ -234,6 +234,9 @@ export async function getAdvertiserFacets(): Promise<AdvertiserFacets> {
 async function getAdvertisersFromDbUncached(
   query: AdvertiserQuery & { network?: string; withFacets?: boolean },
 ): Promise<PagedAdvertisers | null> {
+  // Public search/pagination must use the same canonical, batched directory
+  // as server-rendered pages, rather than rejoining every advertiser to deals.
+  if (query.requireDeals && !query.withFacets) return getPublicAdvertisers(query);
   const db = await getDb();
   const col = db.collection<AdvertiserDoc>(COLLECTION);
 
@@ -627,14 +630,14 @@ async function getRelatedAdvertisersUncached(
 export const getAdvertisersFromDb = unstable_cache(
   getAdvertisersFromDbUncached,
   ["public:advertisers-list"],
-  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers] },
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers, CACHE_TAGS.deals] },
 );
 
 /** Cached showcase listing — lightweight, limited, for home page only. */
 export const getShowcaseAdvertisersFromDb = unstable_cache(
   getShowcaseAdvertisersUncached,
   ["public:advertisers-showcase"],
-  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers] },
+  { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers, CACHE_TAGS.deals] },
 );
 
 /** Cached single-advertiser lookup by id. */
