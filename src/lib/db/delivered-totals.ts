@@ -37,9 +37,11 @@ export interface OfferTotal {
 async function promotionsFor(
   advertiserId: number,
   market: string,
+  network?: string,
 ): Promise<EvaluablePromotion[]> {
   const paged = await getDealsFromDb({
     advertiserId,
+    network,
     country: market,
     pageSize: 50,
   }).catch(() => null);
@@ -78,6 +80,7 @@ export async function deliveredTotalsFor(params: {
       const merchantMarket = await getMerchantMarketForMerchant(
         product.advertiserId,
         market,
+        product.network,
       ).catch(() => null);
 
       let rule: DeliveryRule | null = null;
@@ -89,11 +92,11 @@ export async function deliveredTotalsFor(params: {
         }).catch(() => null);
       }
 
-      const promotions = await promotionsFor(product.advertiserId, market).catch(
+      const promotions = await promotionsFor(product.advertiserId, market, product.network).catch(
         () => [],
       );
 
-      const currency = merchantMarket?.currency ?? params.defaultCurrency;
+      const currency = product.currency?.toUpperCase() || "USD";
       const shopper: ShopperContext = {
         market,
         postcode: params.shopper?.postcode ?? null,

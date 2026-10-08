@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import type { Product } from "@/lib/products";
 import type { Advertiser } from "@/lib/awin";
+import { merchantProductRegions } from "@/lib/model/productAssignment";
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -22,6 +23,9 @@ export default function ProductModal({
   const emptyForm = {
     id: "",
     advertiserId: "",
+    network: "",
+    regionCodes: "",
+    currency: "",
     title: "",
     category: "",
     imageUrl: "",
@@ -50,6 +54,9 @@ export default function ProductModal({
       setFormData({
         id: String(product.id),
         advertiserId: String(product.advertiserId),
+        network: product.network || "",
+        regionCodes: (product.regionCodes ?? []).join(", "),
+        currency: product.currency || "",
         title: product.title,
         category: product.category || "",
         imageUrl: product.imageUrl || "",
@@ -115,6 +122,9 @@ export default function ProductModal({
       const payload = {
         id: formData.id ? Number(formData.id) : undefined,
         advertiserId: Number(formData.advertiserId),
+        network: formData.network || undefined,
+        regionCodes: formData.regionCodes.trim() ? formData.regionCodes.split(",").map(code => code.trim()).filter(Boolean) : undefined,
+        currency: formData.currency || undefined,
         title: formData.title,
         category: formData.category || null,
         imageUrl: formData.imageUrl || null,
@@ -197,7 +207,7 @@ export default function ProductModal({
                 value={advSearch}
                 onChange={(e) => {
                   setAdvSearch(e.target.value);
-                  if (formData.advertiserId) setFormData({ ...formData, advertiserId: "" }); // Reset on new type
+                  setFormData({ ...formData, advertiserId: "", network: "", regionCodes: "" });
                 }}
                 placeholder="Search by name (e.g. Nike)"
                 className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
@@ -214,20 +224,51 @@ export default function ProductModal({
                 <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
                   {advResults.map((adv) => (
                     <div
-                      key={adv.id}
+                      key={`${adv.network}:${adv.id}`}
                       className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
                       onClick={() => {
-                        setFormData({ ...formData, advertiserId: String(adv.id) });
+                        const sameStore = formData.advertiserId === String(adv.id) && formData.network === adv.network;
+                        setFormData({
+                          ...formData,
+                          advertiserId: String(adv.id),
+                          network: adv.network,
+                          regionCodes: sameStore ? formData.regionCodes : merchantProductRegions(adv).join(", "),
+                          currency: formData.currency || adv.currencyCode || "",
+                        });
                         setAdvSearch(adv.name);
                         setShowAdvDropdown(false);
                       }}
                     >
                       <p className="text-sm font-semibold text-gray-900">{adv.name}</p>
-                      <p className="text-xs text-gray-500">ID: {adv.id}</p>
+                      <p className="text-xs text-gray-500">ID: {adv.id} · {adv.network} · {merchantProductRegions(adv).join(", ") || "Worldwide"}</p>
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700">Product country codes</label>
+              <input
+                type="text"
+                value={formData.regionCodes}
+                onChange={(e) => setFormData({ ...formData, regionCodes: e.target.value })}
+                placeholder="Defaults to the selected store's countries"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+              <p className="mt-1 text-xs text-gray-500">Separate codes with commas. For worldwide stores, enter the product's actual markets.</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700">Price currency</label>
+              <input
+                type="text"
+                maxLength={3}
+                value={formData.currency}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value.toUpperCase() })}
+                placeholder="Defaults to the selected store's currency"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+              />
             </div>
 
             <div className="sm:col-span-2">

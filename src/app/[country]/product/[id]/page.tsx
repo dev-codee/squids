@@ -12,6 +12,8 @@ import { deliveredTotalsFor } from "@/lib/db/delivered-totals";
 import { getAdvertiserByIdFromDb } from "@/lib/db/advertisers";
 import { getCategories } from "@/lib/db/categories";
 import { getPriceHistory } from "@/lib/db/price-observations";
+import ProductHero from "@/components/product/ProductHero";
+import ProductIcon from "@/components/product/ProductIcon";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
 import OfferTable, { type RetailerOffer } from "@/components/product/OfferTable";
 import PriceHistoryPanel from "@/components/product/PriceHistoryPanel";
@@ -106,9 +108,9 @@ export default async function ProductComparisonPage({
       canClaimComparison: false,
       reviewCount: 0,
     })),
-    getRelatedProducts(product, 4).catch(() => []),
+    getRelatedProducts(product, 4, country).catch(() => []),
     getCategories().catch(() => []),
-    getProductVariants(product).catch(() => []),
+    getProductVariants(product, 12, country).catch(() => []),
     getPriceHistory(product.id, country).catch(() => []),
   ]);
 
@@ -144,6 +146,8 @@ export default async function ProductComparisonPage({
         return {
           productId: row.product.id,
           retailerName: advertiser?.name ?? `#${row.product.advertiserId}`,
+          retailerKey: `${row.product.network ?? "awin"}:${row.product.advertiserId}`,
+          retailerLogo: advertiser?.logoUrl,
           inStock: row.product.inStock,
           trackingUrl: row.product.trackingUrl,
           matchBasis: basis,
@@ -156,11 +160,11 @@ export default async function ProductComparisonPage({
 
   const knownTotals = offers.filter((offer) => offer.breakdown.total.known).length;
 
-  const lowestPrice = offers.reduce<number | null>((min, o) => {
-    const p = o.breakdown.itemPrice.known ? o.breakdown.itemPrice.value : null;
-    if (p === null) return min;
-    return min === null ? p : Math.min(min, p);
-  }, product.salePrice ?? null);
+  const displayCurrency = product.currency?.toUpperCase() || "USD";
+  const summaryOffers = offers.filter(o => o.currency === displayCurrency && o.matchBasis !== "title" && o.inStock && o.breakdown.itemPrice.known)
+    .sort((a,b) => (a.breakdown.itemPrice.known ? a.breakdown.itemPrice.value / a.breakdown.quantity : Infinity) - (b.breakdown.itemPrice.known ? b.breakdown.itemPrice.value / b.breakdown.quantity : Infinity));
+  const summaryOffer = summaryOffers[0];
+  const lowestPrice = summaryOffer?.breakdown.itemPrice.known ? summaryOffer.breakdown.itemPrice.value / summaryOffer.breakdown.quantity : product.salePrice ?? null;
 
   // Link the breadcrumb to a real category page when one exists for this name.
   const categoryEntry = product.category
@@ -178,20 +182,12 @@ export default async function ProductComparisonPage({
   // Fuzzy title-only candidates are strictly excluded from structured data claims.
   const verifiedOffers = offers.filter(
     (o) =>
-      o.matchBasis === "source" ||
+      o.currency === displayCurrency && (o.matchBasis === "source" ||
       o.matchBasis === "identifier" ||
-      o.matchBasis === "manual",
+      o.matchBasis === "manual"),
   );
 
-  const priceValues = verifiedOffers
-    .map((o) =>
-      o.breakdown.total.known
-        ? o.breakdown.total.value
-        : o.breakdown.itemPrice.known
-          ? o.breakdown.itemPrice.value
-          : null,
-    )
-    .filter((v): v is number => typeof v === "number" && v > 0);
+  const priceValues = verifiedOffers.map(o => o.breakdown.itemPrice.known ? o.breakdown.itemPrice.value / o.breakdown.quantity : null).filter((v): v is number => typeof v === "number" && v > 0);
 
   const lowPrice = priceValues.length > 0 ? Math.min(...priceValues) : undefined;
   const highPrice = priceValues.length > 0 ? Math.max(...priceValues) : undefined;
@@ -213,16 +209,12 @@ export default async function ProductComparisonPage({
   if (lowPrice !== undefined && highPrice !== undefined && verifiedOffers.length > 0) {
     productJsonLd.offers = {
       "@type": "AggregateOffer",
-      priceCurrency: region.currency,
+      priceCurrency: displayCurrency,
       lowPrice: lowPrice,
       highPrice: highPrice,
       offerCount: verifiedOffers.length,
       offers: verifiedOffers.map((o) => {
-        const price = o.breakdown.total.known
-          ? o.breakdown.total.value
-          : o.breakdown.itemPrice.known
-            ? o.breakdown.itemPrice.value
-            : undefined;
+        const price = o.breakdown.itemPrice.known ? o.breakdown.itemPrice.value / o.breakdown.quantity : undefined;
         return {
           "@type": "Offer",
           price: price,
@@ -286,261 +278,25 @@ export default async function ProductComparisonPage({
   ];
 
   return (
-    <div className="min-h-screen bg-canvas pb-16">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-
-      <div className="mx-auto max-w-shell px-4 py-6 sm:px-6 lg:px-8">
-        <Breadcrumbs
-          items={[
-            { label: dict.header.home, href: `/${lc}` },
-            { label: dict.categories.allCategories, href: `/${lc}/categories` },
-            ...(categoryEntry
-              ? [
-                  {
-                    label:
-                      (dict.categoryNames as Record<string, string>)[categoryEntry.name] ??
-                      categoryEntry.name,
-                    href: `/${lc}/category/${categoryEntry.slug}`,
-                  },
-                ]
-              : []),
-            { label: product.title },
-          ]}
-        />
-
-        {searchParams?.alert === "confirmed" && (
-          <div className="mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-4 text-emerald-800" role="alert">
-            <p className="text-sm font-semibold">Price alert confirmed!</p>
-            <p className="mt-0.5 text-xs text-emerald-700">
-              We will notify you by email as soon as this product drops to or below your target price.
-            </p>
-          </div>
-        )}
-
-        {/* Identity block */}
-        <div className="mt-2 grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-          <div className="flex items-center justify-center rounded-card border border-line bg-white p-8">
-            {product.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={product.imageUrl}
-                alt={product.title}
-                className="max-h-[360px] max-w-full object-contain"
-              />
-            ) : (
-              <span className="text-4xl font-bold text-ink-muted">
-                {product.title.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
-
-          <div>
-            <h1 className="text-[28px] font-extrabold tracking-tight text-ink sm:text-4xl lg:text-[42px] leading-tight">
-              {product.title}
-            </h1>
-            <p className="mt-1.5 text-sm text-ink-soft">
-              {[product.category, product.inStock ? t.inStock : t.stockUnknown]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-
-            {/* Actions. Saving a product has no backing feature yet, so it is
-                not offered here as a live control. */}
-            <div className="mt-5 flex flex-wrap gap-2">
-              {product.trackingUrl && (
-                <a
-                  href={product.trackingUrl}
-                  target="_blank"
-                  rel="nofollow noopener noreferrer sponsored"
-                  className="inline-flex items-center justify-center rounded-[9px] bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2"
-                >
-                  {t.checkRetailer}
-                </a>
-              )}
-              {categoryEntry && (
-                <Link
-                  href={`/${lc}/category/${categoryEntry.slug}`}
-                  className="inline-flex items-center justify-center rounded-[9px] border border-line-strong bg-white px-5 py-2.5 text-sm font-semibold text-ink transition hover:border-brand-border hover:text-brand"
-                >
-                  {dict.categoryV2.tabProducts}
-                </Link>
-              )}
-            </div>
-
-            {/* Comparison context */}
-            <ul className="mt-5 space-y-2 text-sm text-ink-soft">
-              <li className="flex items-center gap-2">
-                <span className="text-brand" aria-hidden>✓</span>
-                {t.exactVariant}
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-brand" aria-hidden>✓</span>
-                {t.coverageShown}
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-brand" aria-hidden>✓</span>
-                {t.confirmedAtCheckout}
-              </li>
-            </ul>
-
-            <p className="mt-4 rounded-card border border-brand-border bg-brand-soft px-4 py-2.5 text-xs text-ink-soft">
-              {t.disclosure}
-            </p>
-          </div>
-        </div>
-
-        {/* Comparison context: quantity and destination.
-
-            A plain GET form, so the controls work without JavaScript and every
-            state is a real URL. The totals below are recalculated server-side
-            for whatever is submitted. */}
-        <form
-          method="get"
-          className="mt-6 flex flex-wrap items-end gap-3 rounded-card border border-line bg-white px-4 py-3.5"
-        >
-          <label className="text-xs font-semibold text-ink-soft">
-            <span className="block">{t.quantity}</span>
-            <input
-              type="number"
-              name="qty"
-              min={1}
-              max={99}
-              defaultValue={quantity}
-              className="mt-1 w-20 rounded-[9px] border border-line-strong px-3 py-1.5 text-sm font-normal text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-            />
-          </label>
-          <label className="text-xs font-semibold text-ink-soft">
-            <span className="block">{t.postcode}</span>
-            <input
-              type="text"
-              name="postcode"
-              inputMode="text"
-              maxLength={10}
-              defaultValue={postcode ?? ""}
-              placeholder={t.postcodePlaceholder}
-              className="mt-1 w-40 rounded-[9px] border border-line-strong px-3 py-1.5 text-sm font-normal text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-            />
-          </label>
-          <button
-            type="submit"
-            className="rounded-[9px] bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
-          >
-            {t.applyContext}
-          </button>
-          <p className="w-full text-xs text-ink-muted">{t.contextNote}</p>
-        </form>
-
-        {/* Variant switcher. Only rendered when variants are actually recorded —
-            a switcher built from title guesses would compare different items. */}
-        {variants.length > 0 && (
-          <section className="mt-4 rounded-card border border-line bg-white px-4 py-3.5">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-              {t.variantTitle}
-            </h2>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span className="rounded-[9px] border border-brand bg-brand-soft px-3 py-1.5 text-xs font-semibold text-brand">
-                {variantLabel(product)}
-              </span>
-              {variants.map((variant) => (
-                <Link
-                  key={variant.id}
-                  href={`/${lc}/product/${variant.id}`}
-                  className="rounded-[9px] border border-line-strong px-3 py-1.5 text-xs font-semibold text-ink transition hover:border-brand-border hover:text-brand"
-                >
-                  {variantLabel(variant)}
-                </Link>
-              ))}
-            </div>
-            <p className="mt-2 text-xs text-ink-muted">{t.variantNote}</p>
-          </section>
-        )}
-
-        {/* Offer table */}
-        <section className="mt-8">
-          <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-ink">{t.offersTitle}</h2>
-              <p className="mt-0.5 text-sm text-ink-muted">
-                {t.offersSummary
-                  .replace("{retailers}", String(offers.length))
-                  .replace("{totals}", String(knownTotals))}
-              </p>
-            </div>
-            <span className="text-xs font-medium text-ink-muted">
-              {t.sortBy}: {t.colTotal}
-            </span>
-          </div>
-
-          {offers.length === 0 ? (
-            <div className="rounded-card border border-dashed border-line-strong bg-white p-10 text-center text-sm text-ink-muted">
-              {t.noOffers}
-            </div>
-          ) : (
-            <>
-              {offers.length === 1 && (
-                <p className="mb-3 rounded-card border border-line bg-white px-4 py-2.5 text-xs text-ink-soft">
-                  {t.oneOfferOnly}
-                </p>
-              )}
-              <OfferTable
-                offers={offers}
-                canClaimComparison={"canClaimComparison" in matches ? matches.canClaimComparison : false}
-              />
-            </>
-          )}
-        </section>
-
-        {/* History and alerts */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-          <PriceHistoryPanel observations={priceHistory} currency={region.currency} />
-          <PriceAlertCard
-            productId={product.id}
-            productTitle={product.title}
-            currentPrice={lowestPrice}
-          />
-        </div>
-
-        {/* Product information */}
-        <section className="mt-8 overflow-hidden rounded-card border border-line bg-white">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3.5">
-            <h2 className="text-base font-bold text-ink">{t.productInformation}</h2>
-            <Link
-              href={`/${lc}/report-issue?type=wrong_match&product=${encodeURIComponent(String(product.id))}`}
-              className="text-xs font-semibold text-brand hover:underline"
-            >
-              {t.reportMatch}
-            </Link>
-          </div>
-          <dl className="grid gap-px bg-line sm:grid-cols-4">
-            {specs.map((spec) => (
-              <div key={spec.label} className="bg-white px-5 py-3.5">
-                <dt className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                  {spec.label}
-                </dt>
-                <dd className="mt-1 text-sm text-ink">{spec.value}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="border-t border-line bg-canvas px-5 py-3 text-xs text-ink-muted">
-            {t.specNote}
-          </p>
-        </section>
-
-        {/* Related products */}
-        {related.length > 0 && (
-          <section className="mt-8">
-            <h2 className="mb-4 text-lg font-bold text-ink">{t.relatedProducts}</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {related.map((item) => (
-                <CompareProductCard key={item.id} product={item} />
-              ))}
-            </div>
-          </section>
-        )}
+    <main className="min-h-screen bg-[#f7f8fa] pb-16">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <div className="mx-auto max-w-shell px-4 pt-6 sm:px-6 lg:px-8">
+        <Breadcrumbs items={[{label:dict.header.home,href:`/${lc}`},{label:dict.productShop.products,href:`/${lc}/products`},...(categoryEntry?[{label:categoryEntry.name,href:`/${lc}/products?category=${encodeURIComponent(product.category || categoryEntry.name)}`}]:[]),{label:product.title}]} />
+        {searchParams?.alert === "confirmed" && <div className="my-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800" role="status">Price alert confirmed. We’ll email you when your target price is reached.</div>}
+        <ProductHero product={product} price={lowestPrice} currency={displayCurrency} offerCount={offers.length} retailerName={summaryOffer?.retailerName} />
+        {variants.length>0&&<div className="mb-7 flex flex-wrap items-center gap-2"><span className="mr-2 text-xs font-semibold text-ink-soft">{t.variantTitle}</span><span className="rounded-lg border border-brand bg-brand-soft px-3 py-2 text-xs font-semibold text-brand">{variantLabel(product)}</span>{variants.map(v=><Link key={v.id} href={`/${lc}/product/${v.id}`} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-ink hover:border-brand">{variantLabel(v)}</Link>)}</div>}
       </div>
-    </div>
+      <nav aria-label={dict.productShop.viewOptions} className="sticky top-[117px] z-20 border-y border-slate-200 bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-shell gap-6 overflow-x-auto px-4 sm:px-6 lg:px-8">{[["retailer-offers",dict.productShop.offers],["price-history",t.priceHistory],["product-details",dict.productShop.details]].map(([id,label],i)=><a key={id} href={`#${id}`} className={`shrink-0 border-b-2 py-4 text-sm font-semibold ${i===0?"border-brand text-brand":"border-transparent text-ink-soft hover:text-brand"}`}>{label}{i===0&&<span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-xs">{offers.length}</span>}</a>)}</div></nav>
+      <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8">
+        <section id="retailer-offers" className="scroll-mt-48 pt-8">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">{t.offersTitle}</h2><p className="mt-1 text-sm text-ink-muted">{t.offersSummary.replace("{retailers}",String(offers.length)).replace("{totals}",String(knownTotals))}</p></div><a href="#price-alert" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-ink hover:border-brand hover:text-brand"><ProductIcon name="bell" className="h-4 w-4" />{t.setPriceAlert}</a></div>
+          <details className="mb-5 rounded-xl border border-slate-200 bg-white"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5 text-sm text-ink-soft"><span className="flex items-center gap-2"><ProductIcon name="truck" className="h-4 w-4" />{t.compareForOrder}</span><span className="text-xs text-ink-muted">{t.quantity}: {quantity}{postcode?` · ${postcode}`:""} <span className="ml-2 text-brand">⌄</span></span></summary><form method="get" action={`/${lc}/product/${id}#retailer-offers`} className="flex flex-wrap items-end gap-3 border-t border-slate-100 px-5 py-4"><label className="text-xs font-semibold text-ink-soft"><span className="block">{t.quantity}</span><input type="number" name="qty" min={1} max={99} defaultValue={quantity} className="mt-2 w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label><label className="text-xs font-semibold text-ink-soft"><span className="block">{t.postcode}</span><input name="postcode" maxLength={10} defaultValue={postcode??""} placeholder={t.postcodePlaceholder} className="mt-2 w-44 rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label><button type="submit" className="rounded-lg bg-ink px-4 py-2.5 text-xs font-semibold text-white hover:bg-brand">{t.applyContext}</button><p className="w-full text-xs leading-relaxed text-ink-muted">{t.contextNote}</p></form></details>
+          {offers.length===0?<div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-ink-muted">{t.noOffers}</div>:<OfferTable offers={offers} defaultCurrency={displayCurrency} canClaimComparison={new Set(offers.filter(o=>o.matchBasis!=="title").map(o=>o.retailerKey)).size>=2} />}
+        </section>
+        <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]"><PriceHistoryPanel observations={priceHistory} currency={displayCurrency} /><PriceAlertCard productId={product.id} productTitle={product.title} currentPrice={product.salePrice} currency={displayCurrency} /></div>
+        <section id="product-details" className="mt-8 scroll-mt-48 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5"><h2 className="text-xl font-bold tracking-tight text-ink">{dict.productShop.recordedSpecs}</h2><Link href={`/${lc}/report-issue?type=wrong_match&product=${id}`} className="text-xs font-medium text-ink-muted hover:text-brand">{t.reportMatch}</Link></div><dl className="grid sm:grid-cols-2">{specs.map(spec=><div key={spec.label} className="flex justify-between gap-4 border-b border-slate-100 px-6 py-4 text-sm odd:bg-slate-50/40"><dt className="text-ink-muted">{spec.label}</dt><dd className="text-right font-medium text-ink">{spec.value}</dd></div>)}</dl><p className="px-6 py-4 text-xs text-ink-muted">{t.specNote}</p></section>
+        {related.length>0&&<section className="mt-10"><div className="mb-5 flex items-center justify-between gap-3"><h2 className="text-xl font-bold tracking-tight text-ink">{t.relatedProducts}</h2><Link href={`/${lc}/products`} className="text-xs font-semibold text-brand">{dict.productShop.browseAll} →</Link></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{related.map(item=><CompareProductCard key={item.id} product={item} />)}</div></section>}
+      </div>
+    </main>
   );
 }

@@ -52,12 +52,12 @@ export async function POST(request: NextRequest) {
   }
 
   const product = await getProductById(productId);
-  if (!product) {
+  if (!product || !product.regionCodes?.includes(country.toUpperCase())) {
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
   }
 
   const region = getRegionConfig(country);
-  const currency = region.currency;
+  const currency = product.currency?.toUpperCase() || "USD";
 
   try {
     const { alert, needsConfirmation } = await createOrUpdateProductAlert({

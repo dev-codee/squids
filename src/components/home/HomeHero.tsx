@@ -41,10 +41,10 @@ export default function HomeHero({
     e.preventDefault();
     const q = query.trim();
     const params = new URLSearchParams();
-    if (tab === "products") params.set("tab", "products");
     if (q) params.set("search", q);
     const qs = params.toString();
-    router.push(qs ? `/${lc}?${qs}` : `/${lc}`);
+    const target = tab === "products" ? `/${lc}/products` : `/${lc}`;
+    router.push(qs ? `${target}?${qs}` : target);
   };
 
   const trust = [

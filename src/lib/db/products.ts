@@ -1,3 +1,4 @@
+import { escapeProductSearch } from "@/lib/model/productCatalog";
 import { getDb } from "@/lib/mongodb";
 import type { Product, PagedProducts } from "@/lib/products";
 import type { MatchCandidate, MatchResult } from "@/lib/model/matching";
@@ -36,18 +37,19 @@ export interface ProductQuery {
   brand?: string;
   size?: string;
   condition?: string;
+  currency?: string;
 }
 
 export interface ProductFacets {
   brands: { name: string; count: number }[];
   sizes: { name: string; count: number }[];
   conditions: { name: string; count: number }[];
+  categories?: { name: string; count: number }[];
+  currencies?: { name: string; count: number }[];
 }
 
 /** Escape a user/DB-supplied string for safe use inside a RegExp. */
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+const escapeRegex = escapeProductSearch;
 
 export async function getProductsFromDb(query: ProductQuery): Promise<PagedProducts> {
   const db = await getDb();
@@ -56,9 +58,10 @@ export async function getProductsFromDb(query: ProductQuery): Promise<PagedProdu
   const filter: Record<string, unknown> = {};
   if (query.country) filter.regionCodes = query.country.toUpperCase();
   if (query.network) filter.network = query.network;
+  if (query.currency) filter.currency = query.currency.toUpperCase();
 
   if (query.search?.trim()) {
-    filter.title = { $regex: query.search.trim(), $options: "i" };
+    filter.title = { $regex: escapeRegex(query.search.trim().slice(0, 160)), $options: "i" };
   }
   if (query.advertiserId) {
     filter.advertiserId = query.advertiserId;
@@ -96,13 +99,16 @@ export async function getProductsFromDb(query: ProductQuery): Promise<PagedProdu
 
   const sortSpec: Record<string, 1 | -1> =
     query.sort === "price-asc"
-      ? { salePrice: 1 }
+      ? { salePrice: 1, id: 1 }
       : query.sort === "price-desc"
-        ? { salePrice: -1 }
+        ? { salePrice: -1, id: 1 }
         : { id: -1 };
 
-  const pageSize = Math.max(1, Math.min(100, query.pageSize || 24));
-  const total = await col.countDocuments(filter);
+  if (query.sort === "price-asc" || query.sort === "price-desc") {
+    filter.salePrice = { ...priceBounds, $type: "number", $gte: Math.max(0, priceBounds.$gte ?? 0) };
+  }
+  const pageSize = Math.max(1, Math.min(100, Math.floor(query.pageSize || 24)));
+  const total = await col.countDocuments(filter, { maxTimeMS: 10_000 });
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const page = Math.max(1, Math.min(totalPages, query.page || 1));
   const skip = (page - 1) * pageSize;
@@ -112,6 +118,7 @@ export async function getProductsFromDb(query: ProductQuery): Promise<PagedProdu
     .sort(sortSpec)
     .skip(skip)
     .limit(pageSize)
+    .maxTimeMS(10_000)
     .toArray();
 
   return {
@@ -123,45 +130,26 @@ export async function getProductsFromDb(query: ProductQuery): Promise<PagedProdu
   };
 }
 
-export async function getProductFacets(category?: string): Promise<ProductFacets> {
+export async function getProductFacets(category?: string, country?: string): Promise<ProductFacets> {
   const db = await getDb();
-  const col = db.collection<Product>(COLLECTION);
-
   const match: Record<string, unknown> = {};
+  if (country) match.regionCodes = country.toUpperCase();
   if (category?.trim()) {
     const name = category.trim();
-    const head = name.split(/[&/,]/)[0].trim();
-    const terms = Array.from(new Set([name, head, name.replace(/[^a-z0-9]+/gi, "-")]))
-      .filter(Boolean)
-      .map(escapeRegex);
+    const terms = [name, name.split(/[&/,]/)[0].trim(), name.replace(/[^a-z0-9]+/gi, "-")].filter(Boolean).map(escapeRegex);
     match.category = { $regex: terms.join("|"), $options: "i" };
   }
-
-  const [brandDocs, sizeDocs, conditionDocs] = await Promise.all([
-    col.aggregate<{ _id: string; count: number }>([
-      { $match: { ...match, brand: { $nin: [null, ""] } } },
-      { $group: { _id: "$brand", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 15 },
-    ]).toArray(),
-    col.aggregate<{ _id: string; count: number }>([
-      { $match: { ...match, size: { $nin: [null, ""] } } },
-      { $group: { _id: "$size", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 15 },
-    ]).toArray(),
-    col.aggregate<{ _id: string; count: number }>([
-      { $match: { ...match, condition: { $nin: [null, ""] } } },
-      { $group: { _id: "$condition", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ]).toArray(),
-  ]);
-
-  return {
-    brands: brandDocs.map((d) => ({ name: d._id, count: d.count })),
-    sizes: sizeDocs.map((d) => ({ name: d._id, count: d.count })),
-    conditions: conditionDocs.map((d) => ({ name: d._id, count: d.count })),
-  };
+  const facet = (field: string) => [
+    { $match: { [field]: { $type: "string", $nin: ["", "unknown"] } } },
+    { $group: { _id: "$" + field, count: { $sum: 1 } } },
+    { $sort: { count: -1, _id: 1 } }, { $limit: 50 },
+    { $project: { _id: 0, name: "$_id", count: 1 } },
+  ];
+  const [result] = await db.collection(COLLECTION).aggregate<ProductFacets>([
+    { $match: match },
+    { $facet: { brands: facet("brand"), sizes: facet("size"), conditions: facet("condition"), categories: facet("category"), currencies: facet("currency") } },
+  ], { maxTimeMS: 10_000 }).toArray();
+  return result ?? { brands: [], sizes: [], conditions: [], categories: [], currencies: [] };
 }
 
 export async function getNextProductId(): Promise<number> {
@@ -376,12 +364,14 @@ export async function getMatchingProducts(product: Product): Promise<ProductMatc
 export async function getRelatedProducts(
   product: Product,
   limit = 4,
+  country?: string,
 ): Promise<Product[]> {
   const db = await getDb();
   const col = db.collection<Product>(COLLECTION);
 
   const key = productMatchKey(product.title);
   const filter: Record<string, unknown> = { id: { $ne: product.id } };
+  if (country) filter.regionCodes = country.toUpperCase();
   if (product.category) filter.category = product.category;
 
   const docs = (await col
@@ -413,14 +403,16 @@ export async function getRelatedProducts(
 export async function getProductVariants(
   product: Product,
   limit = 12,
+  country?: string,
 ): Promise<Product[]> {
-  if (!product.brand) return [];
+  if (!product.brand || !product.mpn) return [];
 
   const db = await getDb();
   const col = db.collection<Product>(COLLECTION);
 
   const filter: Record<string, unknown> = { brand: product.brand, id: { $ne: product.id } };
   if (product.mpn) filter.mpn = product.mpn;
+  if (country) filter.regionCodes = country.toUpperCase();
 
   const docs = (await col
     .find(filter, { projection: { _id: 0 } })

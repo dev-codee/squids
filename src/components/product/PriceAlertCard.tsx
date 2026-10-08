@@ -10,12 +10,14 @@ interface PriceAlertCardProps {
   productId?: number;
   productTitle?: string;
   currentPrice?: number | null;
+  currency?: string;
 }
 
 export default function PriceAlertCard({
   productId,
   productTitle,
   currentPrice,
+  currency,
 }: PriceAlertCardProps) {
   const dict = useDictionary();
   const t = dict.productV2;
@@ -79,7 +81,7 @@ export default function PriceAlertCard({
   };
 
   return (
-    <section className="rounded-card border border-line bg-brand-soft/70 p-5">
+    <section id="price-alert" className="scroll-mt-48 rounded-2xl border border-brand-border bg-[#fff8f4] p-5 sm:p-6">
       <div className="flex items-center gap-2">
         <h2 className="text-base font-bold text-ink">{t.alertTitle}</h2>
       </div>
@@ -102,14 +104,15 @@ export default function PriceAlertCard({
 
           {/* Target Price */}
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-              Target Price ({region.currency})
+            <label htmlFor="alert-target" className="text-xs font-semibold text-ink-soft">
+              {dict.productShop.alertTarget} ({currency || region.currency})
             </label>
             <div className="mt-1 flex items-center gap-2">
               <span className="rounded-[9px] border border-line bg-white px-3 py-2 text-sm font-medium text-ink-muted">
-                {region.currency}
+                {currency || region.currency}
               </span>
               <input
+                id="alert-target"
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -125,10 +128,11 @@ export default function PriceAlertCard({
 
           {/* Email */}
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-              Email Address
+            <label htmlFor="alert-email" className="text-xs font-semibold text-ink-soft">
+              {dict.productShop.alertEmail}
             </label>
             <input
+              id="alert-email"
               type="email"
               required
               value={email}
@@ -140,10 +144,10 @@ export default function PriceAlertCard({
 
           {/* Frequency */}
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-              Notification Frequency
+            <label htmlFor="alert-frequency" className="text-xs font-semibold text-ink-soft">
+              {dict.productShop.alertFrequency}
             </label>
-            <select
+            <select id="alert-frequency"
               value={frequency}
               onChange={(e) => setFrequency(e.target.value as AlertFrequency)}
               className="mt-1 w-full rounded-[9px] border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand focus:ring-1 focus:ring-brand"

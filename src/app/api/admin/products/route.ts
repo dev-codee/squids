@@ -4,7 +4,12 @@ import {
   updateProduct,
   deleteProduct,
   getNextProductId,
+  getProductById,
 } from "@/lib/db/products";
+import { getDb } from "@/lib/mongodb";
+import type { Advertiser } from "@/lib/awin";
+import type { Product } from "@/lib/products";
+import { productAssignment, selectProductMerchant, ProductAssignmentError } from "@/lib/model/productAssignment";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +17,29 @@ function toNumberOrNull(val: any): number | null {
   if (val === null || val === undefined || val === "") return null;
   const num = Number(val);
   return isNaN(num) ? null : num;
+}
+
+async function assignmentFor(body: Record<string, any>, existing?: Product) {
+  const advertiserId = Number(body.advertiserId ?? existing?.advertiserId);
+  if (!Number.isSafeInteger(advertiserId) || advertiserId <= 0) {
+    throw new ProductAssignmentError("A valid advertiser is required.");
+  }
+  const db = await getDb();
+  if (body.network != null && typeof body.network !== "string") {
+    throw new ProductAssignmentError("Select a valid advertiser network.");
+  }
+  const network = body.network || (body.advertiserId === undefined ? existing?.network : undefined);
+  const merchants = await db.collection<Advertiser>("advertisers").find({
+    id: advertiserId,
+    ...(network && { network }),
+  }).limit(2).toArray();
+  if (body.regionCodes !== undefined && (!Array.isArray(body.regionCodes) || body.regionCodes.some((c: unknown) => typeof c !== "string"))) {
+    throw new ProductAssignmentError("Country codes must be a list of two-letter codes.");
+  }
+  if (body.currency != null && typeof body.currency !== "string") {
+    throw new ProductAssignmentError("Currency must be a three-letter currency code.");
+  }
+  return productAssignment(selectProductMerchant(merchants, network), body, existing);
 }
 
 export async function POST(request: NextRequest) {
@@ -31,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const product = {
       id,
-      advertiserId: Number(body.advertiserId),
+      ...await assignmentFor(body),
       title: body.title,
       category: body.category || null,
       imageUrl: body.imageUrl || null,
@@ -47,6 +75,7 @@ export async function POST(request: NextRequest) {
     const created = await createProduct(product);
     return NextResponse.json({ success: true, product: created });
   } catch (error) {
+    if (error instanceof ProductAssignmentError) return NextResponse.json({ error: error.message }, { status: 400 });
     console.error("Error creating product:", error);
     return NextResponse.json({ error: "Failed to create product." }, { status: 500 });
   }
@@ -61,8 +90,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Product ID is required." }, { status: 400 });
     }
 
+    const existing = await getProductById(id);
+    if (!existing) return NextResponse.json({ error: "Product not found." }, { status: 404 });
     const productData = {
-      ...(body.advertiserId && { advertiserId: Number(body.advertiserId) }),
+      ...await assignmentFor(body, existing),
       ...(body.title && { title: body.title }),
       ...(body.category !== undefined && { category: body.category || null }),
       ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl || null }),
@@ -82,6 +113,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof ProductAssignmentError) return NextResponse.json({ error: error.message }, { status: 400 });
     console.error("Error updating product:", error);
     return NextResponse.json({ error: "Failed to update product." }, { status: 500 });
   }

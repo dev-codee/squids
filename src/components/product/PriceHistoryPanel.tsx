@@ -1,175 +1,19 @@
 "use client";
-
+import { useId, useState } from "react";
 import { useDictionary } from "@/i18n/DictionaryProvider";
 import { useCurrency } from "@/i18n/CurrencyProvider";
 import type { PriceObservation } from "@/lib/model/priceObservation";
-import { buildPriceHistorySeries } from "@/lib/model/priceObservation";
-
-interface PriceHistoryPanelProps {
-  observations?: PriceObservation[];
-  currency?: string;
-}
-
-/**
- * Price history panel.
- *
- * Renders honest observations over time. History begins at first real observation;
- * if no tracking data exists, renders the standard empty state. Gaps are preserved
- * rather than synthetically interpolated.
- */
-export default function PriceHistoryPanel({
-  observations = [],
-  currency,
-}: PriceHistoryPanelProps) {
-  const dict = useDictionary();
-  const t = dict.productV2;
-  const { format } = useCurrency();
-
-  const series = buildPriceHistorySeries(
-    0,
-    "",
-    currency || "USD",
-    observations,
-  );
-
-  if (!series || series.observations.length === 0) {
-    return (
-      <section className="rounded-card border border-line bg-white p-5">
-        <h2 className="text-base font-bold text-ink">{t.priceHistory}</h2>
-        <div className="mt-4 flex flex-col items-center justify-center rounded-card border border-dashed border-line-strong bg-canvas px-6 py-10 text-center">
-          <span className="text-ink-muted" aria-hidden>
-            <svg
-              width="26"
-              height="26"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="3" y="4.5" width="18" height="16" rx="2" />
-              <path d="M3 9h18M8 2.5v4M16 2.5v4" />
-            </svg>
-          </span>
-          <p className="mt-3 text-sm font-medium text-ink-soft">{t.historyEmpty}</p>
-          <p className="mt-1 text-xs text-ink-muted">{t.historyNone}</p>
-        </div>
-      </section>
-    );
-  }
-
-  // Calculate SVG timeline points
-  const points = series.observations;
-  const minP = series.minPrice;
-  const maxP = series.maxPrice;
-  const rangeP = maxP > minP ? maxP - minP : 1;
-
-  const svgWidth = 480;
-  const svgHeight = 160;
-  const paddingX = 40;
-  const paddingY = 24;
-
-  const coords = points.map((p, idx) => {
-    const x =
-      points.length === 1
-        ? svgWidth / 2
-        : paddingX + (idx / (points.length - 1)) * (svgWidth - 2 * paddingX);
-    const normalizedY = (p.itemPrice - minP) / rangeP;
-    const y = svgHeight - paddingY - normalizedY * (svgHeight - 2 * paddingY);
-    return { x, y, ...p };
-  });
-
-  const polylineStr = coords.map((c) => `${c.x},${c.y}`).join(" ");
-
-  return (
-    <section className="rounded-card border border-line bg-white p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-bold text-ink">{t.priceHistory}</h2>
-        <span className="text-xs font-semibold text-brand">
-          {points.length} observation{points.length > 1 ? "s" : ""}
-        </span>
-      </div>
-
-      {/* Metrics Row */}
-      <div className="mt-4 grid grid-cols-3 gap-2 rounded-card border border-line bg-canvas p-3 text-center">
-        <div>
-          <span className="block text-[11px] uppercase tracking-wide text-ink-muted">
-            Lowest
-          </span>
-          <span className="text-sm font-bold text-ink">{format(series.minPrice, currency)}</span>
-        </div>
-        <div>
-          <span className="block text-[11px] uppercase tracking-wide text-ink-muted">
-            Highest
-          </span>
-          <span className="text-sm font-bold text-ink">{format(series.maxPrice, currency)}</span>
-        </div>
-        <div>
-          <span className="block text-[11px] uppercase tracking-wide text-ink-muted">
-            Latest
-          </span>
-          <span className="text-sm font-bold text-brand">{format(series.latestPrice, currency)}</span>
-        </div>
-      </div>
-
-      {/* SVG Timeline Chart */}
-      <div className="mt-4 overflow-x-auto">
-        <svg
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          className="h-44 w-full min-w-[320px]"
-          fill="none"
-        >
-          {/* Grid lines */}
-          <line
-            x1={paddingX}
-            y1={paddingY}
-            x2={svgWidth - paddingX}
-            y2={paddingY}
-            stroke="#e5e7eb"
-            strokeDasharray="4 4"
-          />
-          <line
-            x1={paddingX}
-            y1={svgHeight - paddingY}
-            x2={svgWidth - paddingX}
-            y2={svgHeight - paddingY}
-            stroke="#e5e7eb"
-            strokeDasharray="4 4"
-          />
-
-          {/* Price line */}
-          {coords.length > 1 && (
-            <polyline
-              points={polylineStr}
-              fill="none"
-              stroke="#FF4D00"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-
-          {/* Dots */}
-          {coords.map((c, i) => (
-            <g key={c.id || i}>
-              <circle
-                cx={c.x}
-                cy={c.y}
-                r="4.5"
-                fill="#ffffff"
-                stroke="#FF4D00"
-                strokeWidth="2.5"
-              />
-              <title>{`${c.retailerName}: ${format(c.itemPrice, c.currency)} on ${new Date(c.observedAt).toLocaleDateString()}`}</title>
-            </g>
-          ))}
-        </svg>
-      </div>
-
-      <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">
-        Real price observations from participating retailers. Gaps indicate periods without active checks.
-      </p>
-    </section>
-  );
+import ProductIcon from "./ProductIcon";
+export default function PriceHistoryPanel({ observations=[],currency="USD" }: { observations?: PriceObservation[];currency?:string }) {
+  const d=useDictionary(),t=d.productShop;const {region}=useCurrency();const [days,setDays]=useState(0);const id=useId().replace(/:/g,"");
+  const points=observations.filter(o=>o.currency===currency&&Number.isFinite(o.itemPrice)&&o.itemPrice>=0&&Number.isFinite(Date.parse(o.observedAt))&&(!days||Date.parse(o.observedAt)>=Date.now()-days*86400000)).sort((a,b)=>Date.parse(a.observedAt)-Date.parse(b.observedAt));
+  const money=(v:number)=>new Intl.NumberFormat(region.locale,{style:"currency",currency,maximumFractionDigits:2}).format(v);
+  const min=points.length?Math.min(...points.map(p=>p.itemPrice)):0,max=points.length?Math.max(...points.map(p=>p.itemPrice)):0;
+  const start=points.length?Date.parse(points[0].observedAt):0,end=points.length?Date.parse(points[points.length-1].observedAt):0;
+  const pad=Math.max((max-min)*0.25,max*0.03,1),bottom=Math.max(0,min-pad),top=max+pad;
+  const coords=points.map(p=>({...p,x:start===end?280:62+(Date.parse(p.observedAt)-start)/(end-start)*448,y:178-(p.itemPrice-bottom)/(top-bottom)*136}));
+  return <section id="price-history" className="scroll-mt-48 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight text-ink">{d.productV2.priceHistory}</h2><p className="mt-1 text-xs text-ink-muted">{t.historySubtitle}</p></div><div className="flex gap-1 rounded-lg bg-slate-100 p-1">{[[30,t.days30],[90,t.days90],[0,t.allTime]].map(([v,label])=><button key={v} type="button" aria-pressed={days===v} onClick={()=>setDays(Number(v))} className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition ${days===v?"bg-white text-ink shadow-sm":"text-ink-muted hover:text-ink"}`}>{label}</button>)}</div></div>
+    {points.length ? <><div className="mt-6 grid grid-cols-3 gap-3 border-y border-slate-100 py-4">{[[t.lowest,money(min)],[t.highest,money(max)],[t.latest,money(points[points.length-1].itemPrice)]].map(([label,value])=><div key={label}><p className="text-[11px] text-ink-muted">{label}</p><p className="mt-1 text-base font-bold text-ink">{value}</p></div>)}</div><svg viewBox="0 0 560 220" role="img" aria-label={`${d.productV2.priceHistory}: ${money(min)} – ${money(max)}`} className="mt-3 w-full"><defs><linearGradient id={`price-${id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ff4d00" stopOpacity="0.15" /><stop offset="100%" stopColor="#ff4d00" stopOpacity="0" /></linearGradient></defs>{[0,1,2].map(i=><g key={i}><line x1="62" x2="510" y1={42+i*68} y2={42+i*68} stroke="#e2e8f0" strokeDasharray="3 5" /><text x="52" y={46+i*68} textAnchor="end" fontSize="10" fill="#727c8c">{money(top-i*(top-bottom)/2)}</text></g>)}{coords.map((p,i)=><g key={p.id}><title>{`${p.retailerName} · ${money(p.itemPrice)} · ${new Date(p.observedAt).toLocaleDateString(region.locale)}`}</title>{i>0&&Date.parse(p.observedAt)-Date.parse(coords[i-1].observedAt)<=7*86400000&&<line x1={coords[i-1].x} y1={coords[i-1].y} x2={p.x} y2={p.y} stroke="#ff4d00" strokeWidth="2" />}<circle cx={p.x} cy={p.y} r="4" stroke="#ff4d00" strokeWidth="2" fill="white" /></g>)}<text x="62" y="205" fill="#727c8c" fontSize="10">{new Date(start).toLocaleDateString(region.locale)}</text>{start!==end&&<text x="510" y="205" textAnchor="end" fill="#727c8c" fontSize="10">{new Date(end).toLocaleDateString(region.locale)}</text>}</svg><p className="mt-2 text-[11px] leading-relaxed text-ink-muted">{d.categoryV2.priceBasis}</p></>:
+      <div className="flex min-h-[275px] flex-col items-center justify-center px-4 py-8 text-center"><div className="mb-4 rounded-2xl bg-[#f7f8fa] p-5 text-ink-muted"><ProductIcon name="chart" className="h-9 w-9" /></div><h3 className="text-base font-semibold text-ink">{t.noHistoryTitle}</h3><p className="mt-2 max-w-xs text-xs leading-relaxed text-ink-muted">{t.noHistoryBody}</p><a href="#price-alert" className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-brand"><ProductIcon name="bell" className="h-4 w-4" />{d.productV2.setPriceAlert}</a></div>}
+  </section>;
 }

@@ -30,7 +30,6 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [countryOpen, setCountryOpen] = useState(false);
   const countryRef = useRef<HTMLDivElement>(null);
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
   // Tracks whether the current value came from the user typing (vs. a URL sync),
   // so live-filtering only fires in response to real input.
   const userTypedRef = useRef(false);
@@ -91,22 +90,6 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
     return () => document.removeEventListener("mousedown", onClick);
   }, [suggestOpen]);
 
-  // Live-filter as the user types: debounce, then push the search term into the
-  // URL. The home advertiser grid reacts to `?search=` and re-filters — no Enter
-  // required. Typing from any page navigates to the country home with the query.
-  useEffect(() => {
-    if (!userTypedRef.current) return;
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(() => {
-      const q = searchQuery.trim();
-      if (q === urlSearch) return; // already reflected in the URL
-      router.replace(q ? `/${lc}?search=${encodeURIComponent(q)}` : `/${lc}`);
-    }, 300);
-    return () => {
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    };
-  }, [searchQuery, urlSearch, lc, router]);
-
   // Close the country dropdown when clicking outside of it.
   useEffect(() => {
     if (!countryOpen) return;
@@ -121,14 +104,15 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     setSuggestOpen(false);
     const q = searchQuery.trim();
+    userTypedRef.current = false;
+    const searchTarget = pathname.includes("/product") ? `/${lc}/products` : `/${lc}`;
     if (q) {
       trackSearchSubmit(q, "all");
-      router.push(`/${lc}?search=${encodeURIComponent(q)}`);
+      router.push(`${searchTarget}?search=${encodeURIComponent(q)}`);
     } else {
-      router.push(`/${lc}`);
+      router.push(searchTarget);
     }
   };
 
@@ -168,6 +152,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
 
   const navLinks = [
     { label: dict.header.home, href: `/${lc}` },
+    { label: dict.productShop.products, href: `/${lc}/products` },
     { label: dict.header.stores, href: `/${lc}/stores` },
     { label: dict.header.topDeals, href: `/${lc}/deals` },
     { label: dict.header.categories, href: `/${lc}/categories` },

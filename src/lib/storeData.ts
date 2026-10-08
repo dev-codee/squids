@@ -85,6 +85,7 @@ export interface ProductFeedItem {
   image: string;
   originalPrice: number;
   salePrice: number;
+  currency?: string | null;
   discountPercentage: number;
   rating: number;
   reviewsCount: number;
@@ -423,6 +424,7 @@ async function loadStoreDataUncached(
     title: p.title,
     category: p.category || "",
     image: p.imageUrl || "",
+    currency: p.currency,
     originalPrice: p.originalPrice || 0,
     salePrice: p.salePrice || 0,
     discountPercentage: p.discountPercentage || 0,

@@ -5,6 +5,7 @@ import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
 import LightningDealCard from "@/components/store/LightningDealCard";
 import OfferList from "@/components/store/OfferList";
+import StoreProductOffers from "@/components/store/StoreProductOffers";
 import type { DealItem } from "@/lib/storeData";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
@@ -26,7 +27,7 @@ export async function generateMetadata({
   const hreflangLanguages = { [getRegionConfig(params.country).locale]: canonicalUrl };
 
   return {
-    robots: { index: store.activeDealsCount > 0, follow: true },
+    robots: { index: store.activeDealsCount + store.products.length > 0, follow: true },
     title: dict.meta.dealsTitle.replace("{store}", store.name),
     description: dict.meta.dealsDescription.replace("{store}", store.name),
     alternates: {
@@ -89,7 +90,7 @@ export default async function StoreDealsPage({
       </section>
     );
 
-  const hasAny = store.promotions.length > 0 || store.deals.length > 0;
+  const hasAny = store.promotions.length > 0 || store.deals.length > 0 || store.products.length > 0;
 
   return (
     <div className="min-h-screen bg-canvas/60 pb-16">
@@ -118,6 +119,8 @@ export default async function StoreDealsPage({
             </p>
           </div>
         </div>
+
+        <StoreProductOffers products={store.products} storeName={store.name} />
 
         {/* No-code deals (`type: "deal"`, or vouchers without a code) — these were
             previously only rendered on the overview page's "Deals" section and

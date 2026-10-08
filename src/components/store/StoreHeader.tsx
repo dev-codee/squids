@@ -5,6 +5,7 @@ import { usePathname, useParams } from "next/navigation";
 import type { StoreData } from "@/lib/storeData";
 import { countryFlag, countryName } from "@/lib/countries";
 import { useDictionary } from "@/i18n/DictionaryProvider";
+import { getRegionConfig } from "@/lib/regions";
 import FollowStoreButton from "./FollowStoreButton";
 
 interface StoreHeaderProps {
@@ -32,9 +33,9 @@ export default function StoreHeader({ store, country: countryProp }: StoreHeader
   const currentPath = pathname || base;
 
   const tabs = [
-    { label: t.allOffers, href: base, count: store.activeCouponsCount + store.activeDealsCount },
+    { label: t.allOffers, href: base, count: store.activeCouponsCount + store.activeDealsCount + store.products.length },
     { label: t.tabCoupons, href: `${base}/coupons`, count: store.activeCouponsCount },
-    { label: t.tabPromotions, href: `${base}/deals`, count: store.activeDealsCount },
+    { label: t.tabPromotions, href: `${base}/deals`, count: store.activeDealsCount + store.products.length },
   ];
 
   return (
@@ -94,7 +95,7 @@ export default function StoreHeader({ store, country: countryProp }: StoreHeader
                     </span>
                   ) : store.syncedAt ? (
                     <span className="inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 text-ink-muted">
-                      Feed synced {new Date(store.syncedAt).toLocaleDateString()}
+                      {dict.sidebar.lastUpdated} {new Date(store.syncedAt).toLocaleDateString(getRegionConfig(cc).locale, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}
                     </span>
                   ) : null}
                   <Link

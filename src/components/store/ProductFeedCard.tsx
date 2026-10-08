@@ -41,7 +41,7 @@ export default function ProductFeedCard({ product }: ProductFeedCardProps) {
         </h4>
 
         <p className="mt-3 text-lg font-extrabold text-ink">
-          {format(product.salePrice)}
+          {format(product.salePrice, product.currency)}
         </p>
       </div>
 

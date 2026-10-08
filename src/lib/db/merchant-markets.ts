@@ -200,8 +200,9 @@ export { merchantMarketId };
 export async function getMerchantMarketForMerchant(
   merchantId: number,
   market: string,
+  network?: string,
 ): Promise<MerchantMarket | null> {
   const db = await getDb();
   const col = db.collection<MerchantMarketDoc>(COLLECTION);
-  return strip(await col.findOne({ merchantId, market: market.toUpperCase() }));
+  return strip(await col.findOne({ merchantId, market: market.toUpperCase(), ...(network ? { network } : {}) }));
 }

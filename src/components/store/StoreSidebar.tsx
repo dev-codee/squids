@@ -109,12 +109,12 @@ export default function StoreSidebar({ store, aiContent, country }: StoreSidebar
           </div>
           <div className="flex justify-between border-b border-line pb-2">
             <span className="text-ink-soft">{dict.sidebar.promotions}</span>
-            <span className="font-semibold">{store.promotions.length}</span>
+            <span className="font-semibold">{store.promotions.length + store.products.length}</span>
           </div>
           <div className="flex justify-between border-b border-line pb-2">
             <span className="font-semibold text-ink">{dict.sidebar.totalOffers}</span>
             <span className="font-bold text-ink">
-              {store.coupons.length + store.deals.length + store.promotions.length}
+              {store.coupons.length + store.deals.length + store.promotions.length + store.products.length}
             </span>
           </div>
           {store.avgSavings && (

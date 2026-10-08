@@ -223,7 +223,7 @@ export default async function CategoryDetailPage({
       totalPages: 1,
     })),
     getProductsFromDb({ category: category.name, country, pageSize: 1 }).catch(() => ({ total: 0 })),
-    getProductFacets(category.name).catch(() => ({ brands: [], sizes: [], conditions: [] })),
+    getProductFacets(category.name, country).catch(() => ({ brands: [], sizes: [], conditions: [] })),
     getSubcategories(slug).catch(() => []),
     getAdvertisersFromDb({ country, category: category.name, pageSize: 12, requireDeals: true }),
     getDealsFromDb({
