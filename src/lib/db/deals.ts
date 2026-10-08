@@ -1056,10 +1056,17 @@ export async function getNewDealsSince(since: Date): Promise<NewDealForAlert[]> 
 /** Quarantine by withholding mismatched advertiser joins from every public read. */
 export function publicMerchantStages(country?: string, category?: string): Record<string, unknown>[] {
   return [
-    { $lookup: { from: "advertisers", let: { merchantId: { $toString: "$advertiser.id" }, merchantNetwork: "$network", merchantName: merchantNameExpression("$advertiser.name") }, pipeline: [
+    { $lookup: { from: "advertisers", let: { merchantId: { $toString: "$advertiser.id" }, merchantNumericId: { $convert: { input: "$advertiser.id", to: "double", onError: null, onNull: null } }, merchantNetwork: "$network", merchantName: merchantNameExpression("$advertiser.name") }, pipeline: [
       { $match: { $and: [buildAdvertiserFilter({ country, category }), publicMerchantFilter()] } },
       { $match: { $expr: { $and: [
-        { $eq: [{ $toString: "$id" }, "$$merchantId"] }, { $eq: ["$network", "$$merchantNetwork"] },
+        { $or: [
+          { $eq: ["$id", "$$merchantId"] },
+          { $and: [
+            { $ne: ["$$merchantNumericId", null] },
+            { $eq: [{ $toString: "$$merchantNumericId" }, "$$merchantId"] },
+            { $eq: ["$id", "$$merchantNumericId"] },
+          ] },
+        ] }, { $eq: ["$network", "$$merchantNetwork"] },
         { $eq: [merchantNameExpression("$name"), "$$merchantName"] },
       ] } } }, { $limit: 1 },
     ], as: "publicMerchant" } },

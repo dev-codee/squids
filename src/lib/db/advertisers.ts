@@ -790,10 +790,17 @@ const getPublicStoreRecords = unstable_cache(async (country?: string): Promise<A
   const db = await getDb();
   const docs = await db.collection(COLLECTION).aggregate([
     { $match: { $and: [buildAdvertiserFilter({ country }), publicMerchantFilter()] } },
-    { $lookup: { from: "deals", let: { merchantId: { $toString: "$id" }, merchantNetwork: "$network", merchantName: merchantNameExpression("$name") }, pipeline: [
+    { $lookup: { from: "deals", let: { merchantId: { $toString: "$id" }, merchantNumericId: { $convert: { input: "$id", to: "double", onError: null, onNull: null } }, merchantNetwork: "$network", merchantName: merchantNameExpression("$name") }, pipeline: [
       { $match: publicOfferFilter(country) },
       { $match: { $expr: { $and: [
-        { $eq: [{ $toString: "$advertiser.id" }, "$$merchantId"] },
+        { $or: [
+          { $eq: ["$advertiser.id", "$$merchantId"] },
+          { $and: [
+            { $ne: ["$$merchantNumericId", null] },
+            { $eq: [{ $toString: "$$merchantNumericId" }, "$$merchantId"] },
+            { $eq: ["$advertiser.id", "$$merchantNumericId"] },
+          ] },
+        ] },
         { $eq: ["$network", "$$merchantNetwork"] },
         { $eq: [merchantNameExpression("$advertiser.name"), "$$merchantName"] },
       ] } } },
