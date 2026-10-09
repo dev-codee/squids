@@ -102,7 +102,7 @@ export default function AdvertisersClient({
         pageSize: String(pageSize),
         country,
         relationship: "joined",
-        requireDeals: "true",
+        requireDeals: String(isHome),
       });
       // Showcase mode: lightweight pre-limited query for home page
       if (isHome) params.set("showcase", "true");

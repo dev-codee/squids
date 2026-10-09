@@ -378,7 +378,6 @@ async function loadStoreDataUncached(
     totalPages = result.totalPages;
     page++;
   } while (page <= totalPages);
-  if (!allDeals.length && !advertiser.isFlagship) return null;
 
   // Ordering within every section: exclusive offers pinned to the very top,
   // then the most recently edited first. `syncedAt` is the last-edited stamp

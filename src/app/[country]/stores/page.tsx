@@ -54,7 +54,7 @@ export default async function StoresPage({
 
   const search = typeof searchParams.search === "string" ? searchParams.search : "";
   const page = Math.max(1, parseInt(String(searchParams.page || "1"), 10) || 1);
-  const initialData = await getPublicAdvertisers({ country: rawCountry.toUpperCase(), search, page, pageSize: 35, requireDeals: true });
+  const initialData = await getPublicAdvertisers({ country: rawCountry.toUpperCase(), search, page, pageSize: 35, requireDeals: false });
   return (
     <AdvertisersClient
       key={`${rawCountry}:${search}:${page}`}

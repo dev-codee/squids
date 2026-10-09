@@ -5,7 +5,7 @@ import {
   AwinConfigError,
   AwinApiError,
 } from "@/lib/awin";
-import { getAdvertisersFromDb, getShowcaseAdvertisersFromDb } from "@/lib/db/advertisers";
+import { getAdvertisersFromDb, getPublicAdvertisers, getShowcaseAdvertisersFromDb } from "@/lib/db/advertisers";
 
 // Always run on the server, never statically prerendered.
 export const dynamic = "force-dynamic";
@@ -13,8 +13,9 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/advertisers?page=1&pageSize=24&search=&region=&relationship=
  *
- * Primary: reads from MongoDB (fast, no Awin rate-limit concerns).
- * Fallback: fetches directly from Awin if MongoDB is empty or unavailable.
+ * Public listings use the canonical, region-filtered MongoDB directory.
+ * Pass `requireDeals=false` to include stores without published offers.
+ * Public database failures return 503 rather than bypassing publication rules.
  *
  * Pass `showcase=true` for the home page: it limits FIRST, then computes deal
  * counts only for the returned rows — O(limit) instead of O(all advertisers).
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
     network: params.get("network") ?? undefined,
     page: Number.parseInt(params.get("page") ?? "1", 10) || 1,
     pageSize: Number.parseInt(params.get("pageSize") ?? "", 10) || undefined,
-    requireDeals: true,
+    requireDeals: isShowcase || params.get("requireDeals") !== "false",
     // Only compute facets (4 full-collection scans) when the caller needs them
     // (admin dashboard). Public listings omit this to stay fast.
     withFacets: params.get("withFacets") === "true",
@@ -74,18 +75,20 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const dbResult = await getAdvertisersFromDb(query);
+      const dbResult = query.withFacets
+        ? await getAdvertisersFromDb(query)
+        : await getPublicAdvertisers(query);
       if (dbResult) {
         return NextResponse.json(dbResult);
       }
     } catch (dbError) {
       console.warn(
-        "[/api/advertisers] MongoDB unavailable, falling back to Awin API:",
+        "[/api/advertisers] MongoDB unavailable:",
         dbError instanceof Error ? dbError.message : dbError,
       );
     }
 
-    if (query.requireDeals || isShowcase) return NextResponse.json({ error: "Store data is temporarily unavailable." }, { status: 503 });
+    if (!query.withFacets || query.requireDeals || isShowcase) return NextResponse.json({ error: "Store data is temporarily unavailable." }, { status: 503 });
     // Fallback: fetch from Awin API directly
     const all = await fetchProgrammesForRelationships();
     const result = queryAdvertisers(all, query);

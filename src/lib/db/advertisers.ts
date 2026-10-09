@@ -788,9 +788,10 @@ export async function deleteAdvertiser(
   return result.deletedCount > 0;
 }
 
-/** Public stores are unique by canonical slug. The selected record and count are
- * shared by directory, homepage, search and sitemap. Pagination follows deduplication. */
-const loadPublicStoreRecords = singleFlight(async (country: string): Promise<Advertiser[]> => {
+/** Public stores are unique by canonical slug. The directory also includes stores
+ * without offers; offer listings retain their existing gate. Pagination follows deduplication. */
+const loadPublicStoreRecords = singleFlight(async (key: string): Promise<Advertiser[]> => {
+  const [country, requireDeals] = JSON.parse(key) as [string, boolean];
   const db = await getDb();
   const [docs, offerCounts] = await Promise.all([
     db.collection(COLLECTION).aggregate([
@@ -807,11 +808,19 @@ const loadPublicStoreRecords = singleFlight(async (country: string): Promise<Adv
   for (const doc of docs) {
     const { _publicMerchantName, ...record } = doc;
     record.dealCount = counts.get(publicMerchantCountKey(record.network, record.id, _publicMerchantName)) ?? 0;
-    if (record.dealCount === 0 && !record.isFlagship) continue;
+    const offerListingCandidate = record.dealCount > 0 || !!record.isFlagship;
+    if (requireDeals && !offerListingCandidate) continue;
     const a = normalizeAdvertiserDoc(record);
     const slug = slugifyAdvertiserName(a.name);
     if (!slug) continue;
     const previous = unique.get(slug);
+    // Keep the same merchant behind a link in both directory and offer listings.
+    // A newly included empty record must not replace its published counterpart.
+    const previousOfferListingCandidate = previous && ((previous.dealCount ?? 0) > 0 || !!previous.isFlagship);
+    if (previous && offerListingCandidate !== previousOfferListingCandidate) {
+      if (offerListingCandidate) unique.set(slug, a);
+      continue;
+    }
     const score = advertiserRegionScore(a, country);
     if (!previous || score > advertiserRegionScore(previous, country) ||
       (score === advertiserRegionScore(previous, country) && (a.dealCount ?? 0) > (previous.dealCount ?? 0))) unique.set(slug, a);
@@ -820,15 +829,15 @@ const loadPublicStoreRecords = singleFlight(async (country: string): Promise<Adv
 });
 
 export const getPublicStoreRecords = unstable_cache(
-  (country?: string) => loadPublicStoreRecords(country?.toUpperCase() ?? ""),
-  ["public:eligible-store-records:v4"],
+  (country?: string, requireDeals = true) => loadPublicStoreRecords(JSON.stringify([country?.toUpperCase() ?? "", requireDeals])),
+  ["public:eligible-store-records:v5"],
   { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers, CACHE_TAGS.deals] },
 );
 
 export async function getPublicAdvertisers(query: AdvertiserQuery & { network?: string; sortByOffers?: boolean }): Promise<PagedAdvertisers> {
   const search = query.search?.trim().toLowerCase();
   const category = query.category?.trim().toLowerCase();
-  const stores = (await getPublicStoreRecords(query.country?.toUpperCase())).filter((a) =>
+  const stores = (await getPublicStoreRecords(query.country?.toUpperCase(), query.requireDeals !== false)).filter((a) =>
     (!search || a.name.toLowerCase().includes(search)) &&
     (!category || a.categories?.some((c) => c.toLowerCase() === category)) &&
     (!query.network || a.network === query.network));
@@ -840,5 +849,5 @@ export async function getPublicAdvertisers(query: AdvertiserQuery & { network?: 
 }
 
 export async function getCanonicalPublicStore(slug: string, country?: string): Promise<Advertiser | null> {
-  return (await getPublicStoreRecords(country?.toUpperCase())).find((a) => slugifyAdvertiserName(a.name) === slug) ?? null;
+  return (await getPublicStoreRecords(country?.toUpperCase(), false)).find((a) => slugifyAdvertiserName(a.name) === slug) ?? null;
 }
