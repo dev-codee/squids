@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { headers } from "next/headers";
 import "./globals.css";
 import { getRegionConfig, getSiteUrl } from "@/lib/regions";
 import AttributionCapture from "@/components/tracking/AttributionCapture";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const inter = localFont({
+  src: "./fonts/InterVariable.woff2",
+  weight: "100 900",
+  style: "normal",
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
