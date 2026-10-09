@@ -18,7 +18,7 @@ import type { Deal, DealQuery, PagedDeals } from "@/lib/deals";
 import { DEFAULT_DEALS_PAGE_SIZE, MAX_DEALS_PAGE_SIZE, dealDisplayTitle } from "@/lib/deals";
 import { CACHE_TAGS, PUBLIC_REVALIDATE, revalidatePublic } from "@/lib/cache";
 import { NOT_EXPIRED } from "@/lib/expiry";
-import { publicMerchantFilter, publicOfferFilter, distinctOfferStages, merchantNameExpression } from "@/lib/model/publication";
+import { publicOfferFilter, distinctOfferStages, publicOfferMerchantStages } from "@/lib/model/publication";
 import { buildAdvertiserFilter, getPublicAdvertisers } from "@/lib/db/advertisers";
 import { slugifyAdvertiserName } from "@/lib/db/advertisers";
 
@@ -120,7 +120,7 @@ function buildFilter(query: DealQuery & { network?: string }): Record<string, un
   // Counts are derived from the same filtered set, so a count can never claim
   // more offers than the page actually shows.
   if (!query.includeExpired) {
-    conditions.push(publicOfferFilter(query.country));
+    conditions.push(publicOfferFilter());
   }
 
   if (query.network) {
@@ -1055,31 +1055,5 @@ export async function getNewDealsSince(since: Date): Promise<NewDealForAlert[]> 
 
 /** Quarantine by withholding mismatched advertiser joins from every public read. */
 export function publicMerchantStages(country?: string, category?: string): Record<string, unknown>[] {
-  return [
-    // localField/foreignField performs an indexed equality join before the
-    // publication predicates. Converting the foreign ID in $expr scans stores.
-    { $set: { _publicMerchantIds: { $let: {
-      vars: {
-        text: { $toString: "$advertiser.id" },
-        numeric: { $convert: { input: "$advertiser.id", to: "double", onError: null, onNull: null } },
-      },
-      in: ["$$text", { $cond: [
-        { $and: [{ $ne: ["$$numeric", null] }, { $eq: [{ $toString: "$$numeric" }, "$$text"] }] },
-        "$$numeric", "$$text",
-      ] }],
-    } } } },
-    { $lookup: {
-      from: "advertisers", localField: "_publicMerchantIds", foreignField: "id",
-      let: { merchantNetwork: "$network", merchantName: merchantNameExpression("$advertiser.name") },
-      pipeline: [
-        { $match: { $and: [buildAdvertiserFilter({ country, category }), publicMerchantFilter()] } },
-        { $match: { $expr: { $and: [
-          { $eq: ["$network", "$$merchantNetwork"] },
-          { $eq: [merchantNameExpression("$name"), "$$merchantName"] },
-        ] } } }, { $limit: 1 },
-      ], as: "publicMerchant",
-    } },
-    { $match: { "publicMerchant.0": { $exists: true } } },
-    { $unset: ["publicMerchant", "_publicMerchantIds"] },
-  ];
+  return publicOfferMerchantStages(buildAdvertiserFilter({ country, category }), country);
 }

@@ -4,7 +4,8 @@ export function publicMerchantFilter(): Record<string, unknown> {
   return { relationship: "joined", $or: [{ status: /^active$/i }, { isFlagship: true }] };
 }
 
-/** Shared public offer gate. Missing market data is withheld pending review. */
+/** Shared public offer gate. A joined merchant can supply missing offer geography,
+ * but explicit offer restrictions and reviewed overrides always take precedence. */
 export function publicOfferFilter(country?: string): Record<string, unknown> {
   return { $and: [
     { status: { $in: ["active", "expiring-soon", "expiringSoon"] }, isAutoWelcome: { $ne: true }, isBrandDeal: { $ne: true }, quarantined: { $ne: true }, aiStatus: { $ne: "REVIEW" }, title: { $type: "string", $regex: /\S/ }, trackingUrl: { $regex: /^https?:\/\//i } },
@@ -12,7 +13,7 @@ export function publicOfferFilter(country?: string): Record<string, unknown> {
       { $or: [{ $eq: [{ $ifNull: ["$startDate", null] }, null] }, { $lte: [{ $convert: { input: "$startDate", to: "date", onError: new Date("9999-01-01"), onNull: null } }, "$$NOW"] }] },
       { $or: [{ $eq: [{ $ifNull: ["$endDate", null] }, null] }, { $gt: [{ $convert: { input: "$endDate", to: "date", onError: new Date("1970-01-01"), onNull: null } }, "$$NOW"] }] },
     ] } },
-    ...(country ? [{ $expr: { $gt: [{ $size: { $setIntersection: [{ $ifNull: ["$reviewedRegionCodes", { $ifNull: ["$regionCodes", []] }] }, [country.toUpperCase(), "WW", "GLOBAL", "INT", "00"]] } }, 0] } }] : []),
+    ...(country ? [{ $expr: { $gt: [{ $size: { $setIntersection: [{ $ifNull: ["$_publicRegionCodes", { $ifNull: ["$reviewedRegionCodes", { $ifNull: ["$regionCodes", []] }] }] }, [country.toUpperCase(), "WW", "GLOBAL", "INT", "00"]] } }, 0] } }] : []),
   ] };
 }
 
@@ -30,10 +31,64 @@ export function distinctOfferStages(byMerchantName = false): Record<string, unkn
  * Name remains part of identity so a mismatched feed name cannot publish offers. */
 export function publicOfferCountStages(country?: string): Record<string, unknown>[] {
   return [
-    { $match: publicOfferFilter(country) },
+    { $match: publicOfferFilter() },
+    ...publicOfferMerchantStages({}, country),
     { $set: { _publicMerchantName: merchantNameExpression("$advertiser.name") } },
     ...distinctOfferStages(true),
     { $group: { _id: { network: "$network", merchant: { $toString: "$advertiser.id" }, name: "$_publicMerchantName" }, n: { $sum: 1 } } },
+  ];
+}
+
+/** Resolve ownership before geography, so a feed's empty country list does not
+ * hide an offer from its own explicitly assigned merchant market. */
+export function publicOfferMerchantStages(merchantFilter: Record<string, unknown> = {}, country?: string): Record<string, unknown>[] {
+  return [
+    { $set: { _publicMerchantIds: { $let: {
+      vars: {
+        text: { $toString: "$advertiser.id" },
+        numeric: { $convert: { input: "$advertiser.id", to: "double", onError: null, onNull: null } },
+      },
+      in: ["$$text", { $cond: [
+        { $and: [{ $ne: ["$$numeric", null] }, { $eq: [{ $toString: "$$numeric" }, "$$text"] }] },
+        "$$numeric", "$$text",
+      ] }],
+    } } } },
+    { $lookup: {
+      from: "advertisers", localField: "_publicMerchantIds", foreignField: "id",
+      let: { merchantNetwork: "$network", merchantName: merchantNameExpression("$advertiser.name") },
+      pipeline: [
+        { $match: { $and: [merchantFilter, publicMerchantFilter()] } },
+        { $match: { $expr: { $and: [
+          { $eq: ["$network", "$$merchantNetwork"] },
+          { $eq: [merchantNameExpression("$name"), "$$merchantName"] },
+        ] } } },
+        { $project: { _id: 0, countryCode: 1, countryCodes: 1, region: 1 } },
+        { $limit: 1 },
+      ], as: "publicMerchant",
+    } },
+    { $match: { "publicMerchant.0": { $exists: true } } },
+    { $set: { _publicRegionCodes: { $ifNull: ["$reviewedRegionCodes", { $cond: [
+      { $gt: [{ $size: { $ifNull: ["$regionCodes", []] } }, 0] }, "$regionCodes",
+      { $let: {
+        vars: { merchant: { $arrayElemAt: ["$publicMerchant", 0] } },
+        in: { $setDifference: [{ $map: {
+          input: { $concatArrays: [
+            { $ifNull: ["$$merchant.countryCodes", []] },
+            [{ $ifNull: ["$$merchant.countryCode", ""] }, { $ifNull: ["$$merchant.region", ""] }],
+          ] },
+          as: "code",
+          in: { $let: {
+            vars: { match: { $regexFind: { input: { $toUpper: { $trim: { input: { $ifNull: ["$$code", ""] } } } }, regex: /(?:^|[-_])([A-Z]{2})$/ } } },
+            in: { $ifNull: [{ $arrayElemAt: ["$$match.captures", 0] }, ""] },
+          } },
+        } }, ["", "WW"]] },
+      } },
+    ] }] } } },
+    { $match: publicOfferFilter(country) },
+    // Expose the resolved markets to alerts and other consumers without writing
+    // inherited geography back over the original feed record.
+    { $set: { regionCodes: "$_publicRegionCodes" } },
+    { $unset: ["publicMerchant", "_publicMerchantIds", "_publicRegionCodes"] },
   ];
 }
 

@@ -830,7 +830,7 @@ const loadPublicStoreRecords = singleFlight(async (key: string): Promise<Adverti
 
 export const getPublicStoreRecords = unstable_cache(
   (country?: string, requireDeals = true) => loadPublicStoreRecords(JSON.stringify([country?.toUpperCase() ?? "", requireDeals])),
-  ["public:eligible-store-records:v5"],
+  ["public:eligible-store-records:v6"],
   { revalidate: PUBLIC_REVALIDATE, tags: [CACHE_TAGS.advertisers, CACHE_TAGS.deals] },
 );
 

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const numId = Number(rawId);
     const identity = { id: Number.isFinite(numId) ? { $in: [numId, rawId] } : rawId, ...(offerNetwork ? { network: offerNetwork } : {}) };
     const docs = await db.collection("deals").aggregate([
-      { $match: { $and: [identity, publicOfferFilter(market)] } }, ...publicMerchantStages(market), { $limit: 2 },
+      { $match: { $and: [identity, publicOfferFilter()] } }, ...publicMerchantStages(market), { $limit: 2 },
     ]).toArray();
     if (docs.length !== 1) return NextResponse.json({ error: "Offer unavailable in this market." }, { status: 404 });
     const deal = docs[0];
