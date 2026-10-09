@@ -244,7 +244,7 @@ export default async function StoreMainPage({
                 <h2 className="mb-3 text-base font-bold text-ink">
                   {dict.store.promotionsTitle.replace("{store}", store.name)}
                 </h2>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-3">
                   {store.promotions.map((promotion) => (
                     <LightningDealCard key={promotion.id} deal={promotion} />
                   ))}

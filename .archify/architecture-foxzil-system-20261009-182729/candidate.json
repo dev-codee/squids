@@ -1,0 +1,791 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Foxzil \u2014 System Architecture",
+    "output": "foxzil-system.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/dev-codee/squids.git",
+      "revision": "88c9618308be72ce29f05f1e66311ce94ca94740",
+      "provider": "github",
+      "link_mode": "web"
+    },
+    "views": [
+      {
+        "id": "offers",
+        "label": "Offers & stores",
+        "focus": [
+          "networks",
+          "sync",
+          "mongo",
+          "publication",
+          "public",
+          "region"
+        ],
+        "note": "Follow imported records through owner and market checks to regional public pages."
+      },
+      {
+        "id": "management",
+        "label": "Admin & automation",
+        "focus": [
+          "schedule",
+          "admin",
+          "ai",
+          "automation",
+          "ppc",
+          "mongo",
+          "sync"
+        ],
+        "note": "Admin edits, optional AI and n8n callbacks share stored records; PPC requires human review."
+      },
+      {
+        "id": "shopping",
+        "label": "Products & shopping",
+        "focus": [
+          "mongo",
+          "catalog",
+          "productpage",
+          "public",
+          "outbound",
+          "retailer"
+        ],
+        "note": "Store offer visits use /api/outbound. Catalog comparisons use direct affiliate URLs at the pinned commit."
+      },
+      {
+        "id": "notifications",
+        "label": "Alerts & email",
+        "focus": [
+          "productpage",
+          "alerts",
+          "smtp",
+          "mongo",
+          "schedule"
+        ],
+        "note": "Store and product alerts need confirmation. Send-time checks and success cursors prevent false sends."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "networks",
+      "type": "external",
+      "label": "Affiliate networks",
+      "sublabel": "Awin \u00b7 Admitad \u00b7 CF \u00b7 Kwanko",
+      "pos": [
+        430,
+        40
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/app/api/cron/sync-deals/route.ts",
+          "line": 65,
+          "end_line": 247,
+          "label": "Network feed calls"
+        },
+        {
+          "path": "src/app/api/cron/sync-advertisers/route.ts",
+          "line": 1,
+          "end_line": 32,
+          "label": "Merchant connectors"
+        }
+      ]
+    },
+    {
+      "id": "sync",
+      "type": "backend",
+      "label": "Feed synchronization",
+      "sublabel": "Merchants \u00b7 offers \u00b7 transactions",
+      "pos": [
+        430,
+        340
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/app/api/cron/sync-deals/route.ts",
+          "line": 65,
+          "end_line": 118,
+          "label": "Partial feed handling"
+        },
+        {
+          "path": "src/lib/db/deals.ts",
+          "line": 347,
+          "end_line": 368,
+          "label": "Protect manual records"
+        },
+        {
+          "path": "src/app/api/cron/sync-transactions/route.ts",
+          "line": 40,
+          "end_line": 102,
+          "label": "Awin and Admitad revenue"
+        }
+      ]
+    },
+    {
+      "id": "mongo",
+      "type": "database",
+      "label": "MongoDB",
+      "sublabel": "Shared records + operator metadata",
+      "pos": [
+        430,
+        640
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/mongodb.ts",
+          "line": 20,
+          "end_line": 71,
+          "label": "Shared MongoDB client"
+        },
+        {
+          "path": "src/lib/db/deals.ts",
+          "line": 220,
+          "end_line": 246,
+          "label": "Offer reads and totals"
+        },
+        {
+          "path": "src/lib/db/transactions.ts",
+          "line": 94,
+          "end_line": 116,
+          "label": "Transaction upserts"
+        }
+      ]
+    },
+    {
+      "id": "publication",
+      "type": "security",
+      "label": "Public eligibility",
+      "sublabel": "Ownership \u00b7 market \u00b7 expiry \u00b7 dedup",
+      "pos": [
+        430,
+        940
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/model/publication.ts",
+          "line": 3,
+          "end_line": 91,
+          "label": "Shared publication rules"
+        },
+        {
+          "path": "src/lib/db/advertisers.ts",
+          "line": 792,
+          "end_line": 852,
+          "label": "Canonical regional directory"
+        },
+        {
+          "path": "src/lib/cache.ts",
+          "line": 13,
+          "end_line": 34,
+          "label": "Cache tags and revalidation"
+        }
+      ],
+      "tag": "GLOBAL RULES"
+    },
+    {
+      "id": "public",
+      "type": "frontend",
+      "label": "Regional storefront",
+      "sublabel": "Stores \u00b7 coupons \u00b7 deals \u00b7 products",
+      "pos": [
+        430,
+        1240
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/storeData.ts",
+          "line": 369,
+          "end_line": 407,
+          "label": "All pages and type grouping"
+        },
+        {
+          "path": "src/lib/model/storeOffers.ts",
+          "line": 1,
+          "end_line": 27,
+          "label": "Coupon classification"
+        },
+        {
+          "path": "src/components/store/HorizontalCouponCard.tsx",
+          "line": 134,
+          "end_line": 157,
+          "label": "Exclusive badge"
+        }
+      ]
+    },
+    {
+      "id": "schedule",
+      "type": "cloud",
+      "label": "Scheduled HTTP jobs",
+      "sublabel": "Vercel cron configuration",
+      "pos": [
+        820,
+        340
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "vercel.json",
+          "line": 3,
+          "end_line": 47,
+          "label": "Schedules in UTC"
+        },
+        {
+          "path": "src/app/api/cron/sync-deals/route.ts",
+          "line": 21,
+          "end_line": 47,
+          "label": "Cron authorization"
+        }
+      ],
+      "tag": "CONFIGURED"
+    },
+    {
+      "id": "admin",
+      "type": "frontend",
+      "label": "Admin dashboard + APIs",
+      "sublabel": "Store edits \u00b7 exclusive flags \u00b7 reports",
+      "pos": [
+        40,
+        640
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/middleware.ts",
+          "line": 19,
+          "end_line": 78,
+          "label": "Protected admin routes"
+        },
+        {
+          "path": "src/app/api/admin/deals/route.ts",
+          "line": 41,
+          "end_line": 71,
+          "label": "Operator offer fields"
+        },
+        {
+          "path": "src/app/dashboard/page.tsx",
+          "line": 27,
+          "end_line": 47,
+          "label": "Management and revenue"
+        }
+      ]
+    },
+    {
+      "id": "region",
+      "type": "backend",
+      "label": "Region + language rules",
+      "sublabel": "37 markets \u00b7 currency \u00b7 locale",
+      "pos": [
+        40,
+        940
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/regions.ts",
+          "line": 1,
+          "end_line": 146,
+          "label": "Configured markets"
+        },
+        {
+          "path": "src/middleware.ts",
+          "line": 42,
+          "end_line": 56,
+          "label": "Region from request URL"
+        },
+        {
+          "path": "src/i18n/index.ts",
+          "line": 1,
+          "end_line": 36,
+          "label": "Language dictionaries"
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "type": "external",
+      "label": "Optional AI copy",
+      "sublabel": "Perplexity API \u00b7 server-side generation",
+      "pos": [
+        40,
+        340
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/ai/client.ts",
+          "line": 54,
+          "end_line": 101,
+          "label": "Actual AI provider"
+        },
+        {
+          "path": "src/app/api/admin/deals/generate-content/route.ts",
+          "line": 24,
+          "end_line": 69,
+          "label": "Admin generation trigger"
+        }
+      ],
+      "tag": "OPTIONAL"
+    },
+    {
+      "id": "automation",
+      "type": "external",
+      "label": "n8n integrations",
+      "sublabel": "Coupon evidence \u00b7 merchant replies",
+      "pos": [
+        40,
+        1540
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/app/api/n8n/coupon-verify/route.ts",
+          "line": 23,
+          "end_line": 62,
+          "label": "Verification callback"
+        },
+        {
+          "path": "src/app/api/n8n/ppc-reply/route.ts",
+          "line": 9,
+          "end_line": 59,
+          "label": "Reply review callback"
+        }
+      ],
+      "tag": "OPTIONAL"
+    },
+    {
+      "id": "ppc",
+      "type": "security",
+      "label": "PPC permission workflow",
+      "sublabel": "Outreach \u00b7 human review \u00b7 launch gate",
+      "pos": [
+        40,
+        1240
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/ppc/gate.ts",
+          "line": 18,
+          "end_line": 24,
+          "label": "Six required launch checks"
+        },
+        {
+          "path": "src/lib/ppc/gate.ts",
+          "line": 91,
+          "end_line": 104,
+          "label": "Written permission evidence"
+        },
+        {
+          "path": "src/lib/ppc/outreach.ts",
+          "line": 122,
+          "end_line": 177,
+          "label": "Email outreach"
+        }
+      ]
+    },
+    {
+      "id": "catalog",
+      "type": "backend",
+      "label": "Product catalog + matching",
+      "sublabel": "Market prices \u00b7 identifiers \u00b7 variants",
+      "pos": [
+        820,
+        640
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/db/products.ts",
+          "line": 54,
+          "end_line": 98,
+          "label": "Market and price query"
+        },
+        {
+          "path": "src/lib/db/products.ts",
+          "line": 239,
+          "end_line": 279,
+          "label": "Matching candidates"
+        }
+      ]
+    },
+    {
+      "id": "productpage",
+      "type": "frontend",
+      "label": "Product comparison pages",
+      "sublabel": "Search \u00b7 matching offers \u00b7 price alerts",
+      "pos": [
+        820,
+        940
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/app/[country]/product/[id]/page.tsx",
+          "line": 1,
+          "end_line": 105,
+          "label": "Product detail route"
+        },
+        {
+          "path": "src/app/[country]/products/page.tsx",
+          "line": 1,
+          "end_line": 47,
+          "label": "Regional product catalog"
+        },
+        {
+          "path": "src/components/product/OfferTable.tsx",
+          "line": 29,
+          "end_line": 40,
+          "label": "Direct catalog affiliate links"
+        }
+      ]
+    },
+    {
+      "id": "outbound",
+      "type": "backend",
+      "label": "Tracked store visits",
+      "sublabel": "Validate offer \u00b7 log click \u00b7 append ID",
+      "pos": [
+        430,
+        1540
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/app/api/outbound/route.ts",
+          "line": 13,
+          "end_line": 51,
+          "label": "Market validation"
+        },
+        {
+          "path": "src/app/api/outbound/route.ts",
+          "line": 75,
+          "end_line": 129,
+          "label": "Click tracking and redirect"
+        }
+      ]
+    },
+    {
+      "id": "retailer",
+      "type": "external",
+      "label": "Affiliate link \u2192 retailer",
+      "sublabel": "Customer checkout happens externally",
+      "pos": [
+        430,
+        1840
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/app/api/outbound/route.ts",
+          "line": 113,
+          "end_line": 129,
+          "label": "External network redirect"
+        },
+        {
+          "path": "src/components/product/OfferTable.tsx",
+          "line": 29,
+          "end_line": 40,
+          "label": "Direct catalog affiliate links"
+        }
+      ]
+    },
+    {
+      "id": "alerts",
+      "type": "backend",
+      "label": "Subscriptions + alert jobs",
+      "sublabel": "Confirmed store alerts + target prices",
+      "pos": [
+        820,
+        1240
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/app/api/cron/notify-subscribers/route.ts",
+          "line": 28,
+          "end_line": 82,
+          "label": "Store matching and cursor"
+        },
+        {
+          "path": "src/app/api/cron/notify-product-alerts/route.ts",
+          "line": 42,
+          "end_line": 95,
+          "label": "Price revalidation and send"
+        },
+        {
+          "path": "src/app/api/product-alerts/route.ts",
+          "line": 1,
+          "end_line": 95,
+          "label": "Alert creation endpoint"
+        }
+      ]
+    },
+    {
+      "id": "smtp",
+      "type": "external",
+      "label": "SMTP email delivery",
+      "sublabel": "Confirmations \u00b7 digests \u00b7 price drops",
+      "pos": [
+        820,
+        1540
+      ],
+      "size": [
+        260,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/email.ts",
+          "line": 16,
+          "end_line": 79,
+          "label": "SMTP configured or no-op"
+        },
+        {
+          "path": "src/lib/email.ts",
+          "line": 261,
+          "end_line": 284,
+          "label": "Threaded merchant outreach"
+        }
+      ],
+      "tag": "WHEN CONFIGURED"
+    }
+  ],
+  "connections": [
+    {
+      "id": "feeds",
+      "from": "networks",
+      "to": "sync",
+      "variant": "default",
+      "label": "API feeds"
+    },
+    {
+      "id": "upsert",
+      "from": "sync",
+      "to": "mongo",
+      "variant": "emphasis",
+      "label": "Upsert"
+    },
+    {
+      "id": "read",
+      "from": "mongo",
+      "to": "publication",
+      "variant": "emphasis",
+      "label": "Resolve"
+    },
+    {
+      "id": "render",
+      "from": "publication",
+      "to": "public",
+      "variant": "emphasis",
+      "label": "Publish"
+    },
+    {
+      "id": "cron",
+      "from": "schedule",
+      "to": "sync",
+      "variant": "dashed",
+      "label": "Trigger"
+    },
+    {
+      "id": "edit",
+      "from": "admin",
+      "to": "mongo",
+      "variant": "default",
+      "label": "CRUD + reports"
+    },
+    {
+      "id": "markets",
+      "from": "region",
+      "to": "publication",
+      "variant": "default",
+      "label": "Market rules"
+    },
+    {
+      "id": "ai-call",
+      "from": "admin",
+      "to": "ai",
+      "variant": "dashed",
+      "label": "Generate copy"
+    },
+    {
+      "id": "verification",
+      "from": "automation",
+      "to": "mongo",
+      "variant": "dashed",
+      "label": "Verification"
+    },
+    {
+      "id": "replies",
+      "from": "automation",
+      "to": "ppc",
+      "variant": "dashed",
+      "label": "Replies"
+    },
+    {
+      "id": "permission-records",
+      "from": "ppc",
+      "to": "mongo",
+      "variant": "security",
+      "label": "Permissions"
+    },
+    {
+      "id": "catalog-read",
+      "from": "mongo",
+      "to": "catalog",
+      "variant": "default",
+      "label": "Read products"
+    },
+    {
+      "id": "catalog-display",
+      "from": "catalog",
+      "to": "productpage",
+      "variant": "default",
+      "label": "Compare"
+    },
+    {
+      "id": "store-click",
+      "from": "public",
+      "to": "outbound",
+      "variant": "default",
+      "label": "Shop"
+    },
+    {
+      "id": "product-click",
+      "from": "productpage",
+      "to": "retailer",
+      "variant": "default",
+      "label": "Affiliate URL"
+    },
+    {
+      "id": "redirect",
+      "from": "outbound",
+      "to": "retailer",
+      "variant": "emphasis",
+      "label": "Redirect"
+    },
+    {
+      "id": "subscribe",
+      "from": "productpage",
+      "to": "alerts",
+      "variant": "default",
+      "label": "Subscribe"
+    },
+    {
+      "id": "notify",
+      "from": "alerts",
+      "to": "smtp",
+      "variant": "default",
+      "label": "Send email"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "1 \u00b7 Ingest and retain source truth",
+      "items": [
+        "Four merchant/offer connectors: Awin, Admitad, Commission Factory and Kwanko. Transaction sync currently calls Awin and Admitad.",
+        "Network + merchant identity keeps feeds separate. Complete feeds can remove stale offers; partial feeds retain last-good data. Manual offers and operator flags are protected.",
+        "MongoDB holds advertisers, deals, products, transactions, clicks, alert subscriptions, verifications, permissions and sync metadata. These are application modules inside one Next.js app."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "2 \u00b7 Correct regional publication",
+      "items": [
+        "Only joined merchants with active status or an editor-selected flagship are eligible. Directory pages include eligible stores with zero offers; offer showcases still require offers.",
+        "Offer market priority: reviewed override \u2192 explicit offer markets \u2192 matched merchant geography when the feed omits it. Explicit reviewed [] withholds the offer. Unknown geography does not imply worldwide.",
+        "Offer ownership checks network, merchant ID and normalized name. Expired, future, quarantined, generated placeholder and AI-review offers are withheld. Deduplication happens before counts and pagination."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "3 \u00b7 Coupons, deals and products",
+      "items": [
+        "Any nonblank coupon code belongs to Coupons. A code-free promotion belongs to product Promotions; other code-free records belong to Deals. Store data fetches every result page.",
+        "Admin isExclusive survives into public cards and sorts first. Public cards show Exclusive, Source: Merchant and the available update/expiry information.",
+        "The products collection is a separate comparison catalog: market/currency filters and identifier-based matching. Product promotions on store pages remain offer records, not automatic catalog imports."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "4 \u00b7 Shopping, revenue and PPC",
+      "items": [
+        "Offer shopping links use /api/outbound: recheck eligibility, capture attribution, log a click and append the network click identifier before redirecting externally.",
+        "At the pinned revision, product comparison buttons use their stored affiliate URLs directly. They do not pass through the store-offer /api/outbound handler.",
+        "Affiliate networks report transactions later; revenue is imported and summarized in the dashboard. The diagram does not assume every click becomes an order.",
+        "PPC outreach uses SMTP; n8n replies require human review. Launch readiness checks written permission, scope, partnership, offers, tracking and human economics approval. No automatic ad-platform deployment is asserted."
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "5 \u00b7 Alerts, cache and optional services",
+      "items": [
+        "Confirmed store followers receive matching offers in their region; confirmed product subscribers receive emails when the stored current price meets their target and stock checks pass.",
+        "Failed email sends retain the notification cursor. SMTP, AI keys and n8n workflows are configuration-dependent capabilities; their production activation is not established by the repository.",
+        "Public cache revalidation defaults to 60 seconds with tagged invalidation after admin edits. vercel.json configures feed jobs daily at 03:00 UTC plus alert, outreach and staleness schedules. Actual hosting and job execution remain unverified."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Verified fixes \u00b7 October 9, 2026",
+      "items": [
+        "Beauty Amora / Commission Factory 83335: 6 public coupons + 10 deals + 0 product promotions. BUFIRST retains its Exclusive flag. The public total matches the store count; its offers do not leak into the US.",
+        "Market and ownership fixtures passed for all 37 configured regions. Production build and all 18 test files passed. These checks validate the workspace; no deployment is claimed.",
+        "Source links are pinned to commit 88c9618308be. The extra market-audit scripts were uncommitted when this diagram was authored; validation results describe the current workspace."
+      ]
+    }
+  ]
+}

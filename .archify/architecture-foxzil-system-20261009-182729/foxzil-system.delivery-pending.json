@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "command": "deliver",
+  "status": "pending",
+  "receiptId": "1bc9a188-53ab-433f-8343-706139614f7a",
+  "input": "/mnt/e-drive/affliate project/.archify/architecture-foxzil-system-20261009-182729/candidate.json",
+  "output": "/mnt/e-drive/affliate project/.archify/architecture-foxzil-system-20261009-182729/foxzil-system.html"
+}

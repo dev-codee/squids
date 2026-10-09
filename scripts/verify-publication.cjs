@@ -1,7 +1,9 @@
 // Read-only regression check. Run npm test first, then node --env-file=.env.local scripts/verify-publication.cjs.
 const { MongoClient } = require('mongodb');
 const assert = require('node:assert/strict');
-const { publicMerchantFilter, publicOfferFilter, distinctOfferStages, merchantNameExpression } = require('../.test-out/model/publication.js');
+const publication = require('../.test-out/model/publication.js');
+const { publicMerchantFilter, publicOfferFilter, distinctOfferStages, merchantNameExpression } = publication;
+const { REGION_CODES } = require('../.test-out/regions.js');
 (async () => {
  const client = new MongoClient(process.env.MONGODB_URI,{serverSelectionTimeoutMS:10000});
  try {
@@ -25,6 +27,7 @@ const { publicMerchantFilter, publicOfferFilter, distinctOfferStages, merchantNa
   // A flagship selection changes merchant visibility, never offer eligibility.
   const flagshipOffers=await db.aggregate([{$documents:fixtures.map(x=>({...x,isFlagship:true}))},{$match:publicOfferFilter('AU')},...distinctOfferStages()]).toArray();
   assert.deepEqual(flagshipOffers.map(x=>x.id).sort((a,b)=>a-b),[1,10]);
+  console.log(JSON.stringify(await require('./verify-offer-markets.cjs')(db, publication, REGION_CODES),null,2));
   console.log(JSON.stringify({publicationFixtures:'passed',merchantIdentityFixtures:'passed',flagshipVisibilityFixtures:'passed',flagshipOfferEligibilityFixtures:'passed'},null,2));
  }catch(e){console.error('Query verification failed:',e.name,e.code||'',String(e.message).replace(/mongodb[^ ]*/g,'[redacted]').slice(0,250));process.exitCode=1;}
  finally{await client.close();}

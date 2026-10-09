@@ -12,6 +12,7 @@ import { deliveredTotalsFor } from "@/lib/db/delivered-totals";
 import { getAdvertiserByIdFromDb } from "@/lib/db/advertisers";
 import { getCategories } from "@/lib/db/categories";
 import { getPriceHistory } from "@/lib/db/price-observations";
+import ProductImage from "@/components/product/ProductImage";
 import ProductHero from "@/components/product/ProductHero";
 import ProductIcon from "@/components/product/ProductIcon";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
@@ -145,6 +146,7 @@ export default async function ProductComparisonPage({
                 : "title";
         return {
           productId: row.product.id,
+          title: row.product.title,
           retailerName: advertiser?.name ?? `#${row.product.advertiserId}`,
           retailerKey: `${row.product.network ?? "awin"}:${row.product.advertiserId}`,
           retailerLogo: advertiser?.logoUrl,
@@ -284,7 +286,16 @@ export default async function ProductComparisonPage({
         <Breadcrumbs items={[{label:dict.header.home,href:`/${lc}`},{label:dict.productShop.products,href:`/${lc}/products`},...(categoryEntry?[{label:categoryEntry.name,href:`/${lc}/products?category=${encodeURIComponent(product.category || categoryEntry.name)}`}]:[]),{label:product.title}]} />
         {searchParams?.alert === "confirmed" && <div className="my-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800" role="status">Price alert confirmed. We’ll email you when your target price is reached.</div>}
         <ProductHero product={product} price={lowestPrice} currency={displayCurrency} offerCount={offers.length} retailerName={summaryOffer?.retailerName} />
-        {variants.length>0&&<div className="mb-7 flex flex-wrap items-center gap-2"><span className="mr-2 text-xs font-semibold text-ink-soft">{t.variantTitle}</span><span className="rounded-lg border border-brand bg-brand-soft px-3 py-2 text-xs font-semibold text-brand">{variantLabel(product)}</span>{variants.map(v=><Link key={v.id} href={`/${lc}/product/${v.id}`} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-ink hover:border-brand">{variantLabel(v)}</Link>)}</div>}
+        {variants.length > 0 && <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="variant-heading">
+          <h2 id="variant-heading" className="mb-4 text-base font-bold text-ink">{t.variantTitle}</h2>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {[product, ...variants].map(v => <Link key={v.id} href={`/${lc}/product/${v.id}`} aria-current={v.id === product.id ? "page" : undefined} className={`flex w-44 shrink-0 items-center gap-3 rounded-lg border p-3 transition ${v.id === product.id ? "border-brand bg-brand-soft" : "border-slate-200 hover:border-brand"}`}>
+              <ProductImage src={v.imageUrl} title={v.title} className="h-16 w-10 shrink-0" />
+              <div className="min-w-0"><p className="text-xs font-medium leading-relaxed text-ink">{variantLabel(v)}</p>{typeof v.salePrice === "number" && Number.isFinite(v.salePrice) && v.salePrice >= 0 && <p className="mt-2 text-xs font-bold text-ink">{new Intl.NumberFormat(region.locale, { style: "currency", currency: v.currency?.toUpperCase() || "USD" }).format(v.salePrice)}</p>}</div>
+            </Link>)}
+          </div>
+        </section>}
+
       </div>
       <nav aria-label={dict.productShop.viewOptions} className="sticky top-[117px] z-20 border-y border-slate-200 bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-shell gap-6 overflow-x-auto px-4 sm:px-6 lg:px-8">{[["retailer-offers",dict.productShop.offers],["price-history",t.priceHistory],["product-details",dict.productShop.details]].map(([id,label],i)=><a key={id} href={`#${id}`} className={`shrink-0 border-b-2 py-4 text-sm font-semibold ${i===0?"border-brand text-brand":"border-transparent text-ink-soft hover:text-brand"}`}>{label}{i===0&&<span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-xs">{offers.length}</span>}</a>)}</div></nav>
       <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8">

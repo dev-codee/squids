@@ -1,148 +1,54 @@
 "use client";
-import { useParams } from "next/navigation";
 
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { DealItem } from "@/lib/storeData";
 import { useDictionary } from "@/i18n/DictionaryProvider";
+import { useCurrency } from "@/i18n/CurrencyProvider";
+import ProductImage from "@/components/product/ProductImage";
+import ProductIcon from "@/components/product/ProductIcon";
 
-interface LightningDealCardProps {
-  deal: DealItem;
-}
-
-export default function LightningDealCard({ deal }: LightningDealCardProps) {
+export default function LightningDealCard({ deal }: { deal: DealItem }) {
   const params = useParams();
   const dict = useDictionary();
-  const [timeLeft, setTimeLeft] = useState<number>(deal.endsInSeconds ?? 0);
+  const { region } = useCurrency();
+  const [timeLeft, setTimeLeft] = useState(deal.endsInSeconds ?? 0);
 
   useEffect(() => {
-    if (!timeLeft) return;
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
+    setTimeLeft(deal.endsInSeconds ?? 0);
+    if (!deal.endsInSeconds || deal.type !== "lightning") return;
+    const deadline = Date.now() + deal.endsInSeconds * 1000;
+    const interval = setInterval(() => setTimeLeft(Math.max(0, Math.ceil((deadline - Date.now()) / 1000))), 1000);
     return () => clearInterval(interval);
-  }, [timeLeft]);
+  }, [deal.id, deal.endsInSeconds, deal.type]);
 
-  const formatTime = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
+  const formatTime = (seconds: number) => [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), seconds % 60].map(n => String(n).padStart(2, "0")).join(":");
+  const date = (value: string) => new Date(value).toLocaleDateString(region.locale);
 
   return (
-    <div
-      className={`relative flex flex-col justify-between rounded-2xl border p-5 shadow-sm transition hover:shadow-md ${
-        deal.isExclusive
-          ? "border-purple-300 bg-gradient-to-br from-purple-50/70 to-white ring-2 ring-purple-300/60 hover:border-purple-400"
-          : "border-line bg-white hover:border-brand-border"
-      }`}
-    >
-      <div>
-        {/* Deal Image & Badge Header */}
-        <div className="relative mb-4 h-48 w-full overflow-hidden rounded-xl bg-canvas-sunk">
-          {deal.imageUrl ? (
-            <img
-              src={deal.imageUrl}
-              alt={deal.title}
-              className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-ink-muted">
-              No Image
-            </div>
-          )}
-
-          <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-            {deal.discount && (
-              <span className="inline-flex rounded-lg bg-red-600 px-2.5 py-1 text-xs font-bold text-white shadow">
-                {deal.discount}
-              </span>
-            )}
-            {deal.isExclusive ? (
-              <span className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow">
-                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.958a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.368 2.447a1 1 0 00-.364 1.118l1.287 3.958c.3.922-.755 1.688-1.54 1.118l-3.367-2.447a1 1 0 00-1.176 0l-3.367 2.447c-.784.57-1.838-.196-1.539-1.118l1.286-3.958a1 1 0 00-.363-1.118L2.343 9.385c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.951-.69l1.285-3.958z" />
-                </svg>
-                {dict.cards.exclusive}
-              </span>
-            ) : (
-              deal.badge && (
-                <span className="inline-flex rounded-lg bg-ink/90 px-2 py-0.5 text-[10px] font-semibold text-brand-border backdrop-blur-sm">
-                  {deal.badge}
-                </span>
-              )
-            )}
-          </div>
+    <article className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 sm:grid-cols-[120px_minmax(0,1fr)_180px] sm:gap-5 sm:p-5">
+      <ProductImage src={deal.imageUrl} title={deal.title} className="h-28 w-full rounded-lg bg-slate-50 p-3 sm:h-32" />
+      <div className="min-w-0">
+        <div className="mb-2 flex flex-wrap gap-2">
+          {deal.discount && <span className="rounded bg-brand-soft px-2 py-1 text-[11px] font-semibold text-brand-hover">{deal.discount}</span>}
+          {(deal.isExclusive || deal.badge) && <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-ink-soft">{deal.isExclusive ? dict.cards.exclusive : deal.badge}</span>}
         </div>
-
-        {/* Title */}
-        <h4 className="text-base font-bold text-ink line-clamp-2">
-          {deal.title}
-        </h4>
-        <p className="mt-1 text-xs text-ink-soft line-clamp-2">{deal.description}</p>
-
-        {/* Price. `originalPrice` is admin-managed enrichment with no source or
-            observation date behind it, so it is not shown as a struck-through
-            "was" price — that would be an unevidenced saving claim. */}
-        {deal.salePrice && (
-          <p className="mt-3 text-xl font-extrabold text-ink">{deal.salePrice}</p>
-        )}
-
-        {/* Lightning Claim Progress Bar */}
-        {deal.stockPercentage !== undefined && (
-          <div className="mt-4">
-            <div className="flex justify-between text-xs font-medium text-ink-soft mb-1">
-              <span>{dict.cards.claimed}</span>
-              <span className="font-bold text-brand-hover">{deal.stockPercentage}%</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-canvas-sunk">
-              <div
-                className="h-full rounded-full bg-brand transition-all duration-500"
-                style={{ width: `${deal.stockPercentage}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Countdown Timer */}
-        {deal.type === "lightning" && (
-          <div className="mt-3 flex items-center justify-between rounded-lg bg-red-50 p-2 text-xs font-semibold text-red-700">
-            <span className="flex items-center gap-1">
-              <svg className="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {dict.cards.endsIn}
-            </span>
-            <span className="font-mono font-bold text-red-900 tracking-wider">
-              {formatTime(timeLeft)}
-            </span>
-          </div>
-        )}
+        <h3 className="text-sm font-semibold leading-relaxed text-ink sm:text-base">{deal.title}</h3>
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-ink-muted">{deal.description}</p>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink-muted">
+          {deal.expiryDate && <span>{dict.cards.expires}: {date(deal.expiryDate)}</span>}
+          {deal.updatedAt && <span>{dict.cards.updated}: {date(deal.updatedAt)}</span>}
+          {deal.type === "lightning" && deal.endsInSeconds !== undefined && <span className="font-medium text-brand-hover">{dict.cards.endsIn} <span className="font-mono tabular-nums">{formatTime(timeLeft)}</span></span>}
+        </div>
       </div>
-
-      {deal.updatedAt && (
-        <p className="mt-3 text-[10px] text-ink-muted">
-          {dict.cards.updated}:{" "}
-          {new Date(deal.updatedAt).toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "numeric",
-            year: "2-digit",
-          })}
-        </p>
-      )}
-
-      {/* Buy/Get Deal Button */}
-      <a
-        href={`/api/outbound?dealId=${encodeURIComponent(deal.id)}&market=${encodeURIComponent(String(params?.country || "US"))}`}
-        target="_blank"
-        rel="nofollow noopener noreferrer sponsored"
-        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-2.5 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-brand-hover active:scale-95"
-      >
-        {dict.cards.grabThisDeal}
-        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-        </svg>
-      </a>
-    </div>
+      <div className="col-span-2 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-4 sm:col-span-1 sm:block sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
+        <div>
+          {deal.salePrice ? <><p className="text-[11px] text-ink-muted">{dict.productShop.itemPrice}</p><p className="mt-1 text-2xl font-bold tracking-tight text-ink">{deal.salePrice}</p><p className="mt-1 text-[11px] text-ink-muted">{dict.productShop.deliveryUnknown}</p></> : <p className="text-xs text-ink-muted">{dict.productShop.checkPrice}</p>}
+        </div>
+        <a href={`/api/outbound?dealId=${encodeURIComponent(deal.id)}&market=${encodeURIComponent(String(params?.country || "US"))}`} target="_blank" rel="nofollow noopener noreferrer sponsored" className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-brand-hover sm:mt-4 sm:w-full">
+          {dict.cards.getDeal}<ProductIcon name="external" className="h-3.5 w-3.5" />
+        </a>
+      </div>
+    </article>
   );
 }

@@ -12,7 +12,7 @@ export function readProductCatalogParams(params: Record<string, string | string[
     maxPrice: min !== undefined && max !== undefined ? Math.max(min, max) : max,
     page: Number.isFinite(rawPage) && rawPage >= 1 ? Math.floor(rawPage) : 1,
     sort: (str("sort") === "price-asc" || str("sort") === "price-desc" ? str("sort") : "relevance") as "relevance" | "price-asc" | "price-desc",
-    view: (str("view") === "list" ? "list" : "grid") as "list" | "grid",
+    view: (str("view") === "grid" ? "grid" : "list") as "list" | "grid",
   };
 }
 

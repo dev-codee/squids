@@ -82,7 +82,7 @@ export default async function StoreDealsPage({
             {items.length} {badge.text}
           </span>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-3">
           {items.map((deal) => (
             <LightningDealCard key={deal.id} deal={deal} />
           ))}
@@ -106,15 +106,15 @@ export default async function StoreDealsPage({
           ]}
         />
         {/* Banner */}
-        <div className="rounded-2xl bg-gradient-to-r from-red-600 via-brand-hover to-brand p-8 text-white shadow-lg">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
           <div className="max-w-3xl">
-            <span className="inline-flex items-center rounded-lg bg-white/20 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm mb-3">
-              ⚡ {dict.dealsPage.flashHub}
+            <span className="inline-flex items-center rounded-lg bg-brand-soft px-3 py-1 text-xs font-semibold text-brand mb-3">
+              {dict.dealsPage.flashHub}
             </span>
-            <h1 className="text-[20px] font-extrabold leading-tight text-ink">
+            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
               {dict.dealsPage.heading.replace("{store}", store.name)}
             </h1>
-            <p className="mt-2 text-sm text-red-50 leading-relaxed">
+            <p className="mt-2 text-sm text-ink-soft leading-relaxed">
               {dict.dealsPage.intro}
             </p>
           </div>
