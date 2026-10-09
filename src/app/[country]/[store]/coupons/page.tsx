@@ -5,6 +5,7 @@ import StoreHeader from "@/components/store/StoreHeader";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
 import HorizontalCouponCard from "@/components/store/HorizontalCouponCard";
 import type { CouponItem } from "@/lib/storeData";
+import { groupStoreCoupons } from "@/lib/model/storeOffers";
 import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
 import { getLatestVerificationsForStore } from "@/lib/db/coupon-verifications";
@@ -57,10 +58,7 @@ export default async function StoreCouponsPage({
     permanentRedirect(`/${params.country}/${store.slug}/coupons`);
   }
 
-  const verifiedCoupons = store.coupons.filter((c) => c.verified);
-  const promoCodes = store.coupons.filter((c) => c.code !== null);
-  const studentDiscounts = store.coupons.filter((c) => c.type === "student");
-  const cashbackOffers = store.coupons.filter((c) => c.type === "cashback");
+  const { verified: verifiedCoupons, codes: promoCodes, students: studentDiscounts, cashback: cashbackOffers } = groupStoreCoupons(store.coupons);
 
   const section = (
     title: string,

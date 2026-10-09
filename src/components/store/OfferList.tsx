@@ -66,6 +66,8 @@ export default function OfferList({
       i.expiryDate ? new Date(i.expiryDate).getTime() : Number.POSITIVE_INFINITY;
 
     return [...list].sort((a, b) => {
+      const exclusive = Number(!!b.isExclusive) - Number(!!a.isExclusive);
+      if (exclusive) return exclusive;
       if (sort === "expiring") return expiryOf(a) - expiryOf(b);
       if (sort === "discount") return discountValue(b.discount) - discountValue(a.discount);
       return timeOf(b) - timeOf(a);

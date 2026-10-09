@@ -1,8 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resolveMarkets } from "../marketResolution";
+import { REGION_CODES } from "../../regions";
 
 const CONFIGURED = ["US", "GB", "DE", "FR", "AU", "AT", "CH"];
+
+test("every configured region resolves without a store-specific exception", () => {
+  for (const country of REGION_CODES) {
+    assert.deepEqual(resolveMarkets({ countryCode: country.toLowerCase() }, REGION_CODES).markets, [country]);
+  }
+});
 
 test("explicit country codes become markets", () => {
   const r = resolveMarkets({ countryCodes: ["AU", "DE"] }, CONFIGURED);

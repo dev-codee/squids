@@ -28,6 +28,7 @@ import type { Advertiser } from "@/lib/awin";
 import { cleanAdvertiserName } from "@/lib/networks";
 import type { Deal } from "@/lib/deals";
 import { dealDisplayTitle, dealDisplayDescription } from "@/lib/deals";
+import { splitStoreOffers } from "@/lib/model/storeOffers";
 import { getRegionConfig, formatMoney, type RegionConfig } from "@/lib/regions";
 import { convert, getUsdRates, type UsdRates } from "@/lib/fx";
 
@@ -217,16 +218,13 @@ function toIsoDate(value: string | Date | null | undefined): string | null {
 
 /**
  * Sanitize an expiry date from the network feed.
- * Returns null for absent, unparseable, past, or suspiciously far-future dates
- * (> 2 years from now) — the latter are placeholder values from some networks.
+ * Returns null for absent or unparseable dates. Recorded future expiry dates
+ * remain visible rather than being replaced by an arbitrary unknown label.
  */
 function sanitizeEndDate(value: string | null | undefined): string | null {
   if (!value) return null;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
-  const twoYearsOut = new Date();
-  twoYearsOut.setFullYear(twoYearsOut.getFullYear() + 2);
-  if (d > twoYearsOut) return null;
   return value;
 }
 
@@ -253,7 +251,7 @@ function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): Coupo
   return {
     id: `${deal.network}:${deal.id}`,
     title: dealDisplayTitle(deal, locale),
-    code: deal.code,
+    code: deal.code?.trim() || null,
     discount: deal.discountText || "",
     type: deal.subtype || "code",
     description: dealDisplayDescription(deal, locale),
@@ -269,7 +267,7 @@ function couponFromDeal(deal: Deal, fallbackUrl: string, locale?: string): Coupo
     delivery: deal.delivery,
     expiryDate: sanitizeEndDate(deal.endDate),
     updatedAt: toIsoDate(deal.sourceUpdatedAt || deal.fetchedAt || deal.syncedAt),
-    isExclusive: deal.isExclusive,
+    isExclusive: Boolean(deal.isExclusive),
     cashbackRate: deal.cashbackRate || undefined,
     studentVerificationReq: deal.studentVerificationReq || undefined,
     affiliateUrl: affUrl,
@@ -393,23 +391,18 @@ async function loadStoreDataUncached(
     return editedTime(b) - editedTime(a);
   };
 
-  const deduped = allDeals;
+  const grouped = splitStoreOffers(allDeals);
 
-  // Coupons: vouchers that have an actual non-empty code.
-  const coupons = deduped
-    .filter((d) => d.type === "voucher" && d.code != null && d.code.trim() !== "")
+  const coupons = grouped.coupons
     .sort(byExclusiveThenRecent)
     .map((d) => couponFromDeal(d, websiteUrl, locale));
 
-  // Deals: coupon-style offers without a code (type "deal" OR vouchers with null code).
-  const deals = deduped
-    .filter((d) => d.type === "deal" || (d.type === "voucher" && (!d.code || d.code.trim() === "")))
+  const deals = grouped.deals
     .sort(byExclusiveThenRecent)
     .map((d) => couponFromDeal(d, websiteUrl, locale));
 
   // Promotions: product promotions with image/price (rendered as deal boxes).
-  const promotions = deduped
-    .filter((d) => d.type === "promotion")
+  const promotions = grouped.promotions
     .sort(byExclusiveThenRecent)
     .map((d) => dealFromDeal(d, websiteUrl, advertiser.currencyCode, region, rates, locale));
 
