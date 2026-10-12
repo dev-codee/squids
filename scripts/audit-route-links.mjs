@@ -12,5 +12,13 @@ for (const file of files.filter(file => /\.tsx?$/.test(file))) {
     if (!routes.includes(target)) unknown.push({ file, target });
   }
 }
-console.log(JSON.stringify({ checkedFiles: files.length, apiRoutes: routes.length, missingApiTargets: unknown }, null, 2));
-if (unknown.length) process.exitCode = 1;
+const pages = files.filter(file => /\/page\.tsx$/.test(file)).map(file => '/' + file.slice('src/app/'.length, -'/page.tsx'.length));
+const missingAdminLinks = [];
+for (const file of files.filter(file => /\.tsx$/.test(file))) {
+  for (const match of fs.readFileSync(file, 'utf8').matchAll(/href(?:=|:\s*)["'](\/dashboard[^"']*)["']/g)) {
+    const target = match[1].split(/[?#]/)[0];
+    if (!pages.includes(target)) missingAdminLinks.push({ file, target });
+  }
+}
+console.log(JSON.stringify({ checkedFiles: files.length, apiRoutes: routes.length, missingApiTargets: unknown, missingAdminLinks }, null, 2));
+if (unknown.length || missingAdminLinks.length) process.exitCode = 1;
