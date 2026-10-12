@@ -77,6 +77,23 @@ export async function deliveredTotalsFor(params: {
 
   const entries = await Promise.all(
     params.products.map(async (product): Promise<OfferTotal> => {
+      if (product.demo?.fixtureSet === "beauty-amora-review-v1" && /^\[DEMO\]/.test(product.title)) {
+        const currency = product.currency || "AUD";
+        return {
+          productId: product.id,
+          currency,
+          unresolvedMerchant: false,
+          breakdown: deliveredTotal({
+            itemPrice: fromNullable(product.salePrice),
+            currency,
+            deliveryRule: product.demo.deliveryRule,
+            promotions: [],
+            shopper: { market, quantity: params.shopper?.quantity ?? 1, postcode: params.shopper?.postcode ?? null, serviceLevel: "standard", customerType: "unknown" },
+            productId: product.id,
+            categorySlug: product.category,
+          }, params.now),
+        };
+      }
       const merchantMarket = await getMerchantMarketForMerchant(
         product.advertiserId,
         market,

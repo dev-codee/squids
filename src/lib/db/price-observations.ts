@@ -83,7 +83,7 @@ export async function getPriceHistory(
 
   const docs = await col
     .find({ productId, market: market.toUpperCase() })
-    .sort({ observedAt: 1 })
+    .sort({ observedAt: -1 })
     .limit(limit)
     .toArray();
 

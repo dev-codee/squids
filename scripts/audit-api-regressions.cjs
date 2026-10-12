@@ -34,6 +34,14 @@ function request(body, url = 'https://foxzil.com/api/test') { return { json: asy
   assert.equal((await alerts.POST(request(valid))).status, 500, 'failed confirmation email must not report success');
   for (const productId of [true, 1.5, '1', null]) assert.equal((await alerts.POST(request({ ...valid, productId }))).status, 400);
   assert.equal(writes, 1, 'invalid submissions never reach persistence');
+  const demoAlerts = load('src/app/api/product-alerts/route.ts', {
+    ...alertMocks,
+    '@/lib/db/products': { getProductById: async () => ({ title: '[DEMO] Serum', regionCodes: ['US'], demo: { fixtureSet: 'beauty-amora-review-v1' } }) },
+    '@/lib/email': { sendMail: async () => { throw new Error('Demo must not send email'); } },
+  });
+  const demoResult = await demoAlerts.POST(request(valid));
+  assert.equal(demoResult.body.demo, true);
+  assert.equal(writes, 1, 'demo alerts must not create real subscriptions');
   const failedDb = load('src/app/api/product-alerts/route.ts', { ...alertMocks, '@/lib/db/products': { getProductById: async () => { throw new Error('offline'); } } });
   assert.equal((await failedDb.POST(request(valid))).status, 500, 'DB outage returns a handled form error');
   const unsubscribe = load('src/app/api/product-alerts/unsubscribe/route.ts', { '@/lib/db/product-alerts': { unsubscribeProductAlert: async () => false } });

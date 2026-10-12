@@ -58,6 +58,9 @@ export async function POST(request: NextRequest) {
     if (!product || !product.regionCodes?.includes(country.toUpperCase())) {
       return NextResponse.json({ error: "Product not found." }, { status: 404 });
     }
+    if (product.demo?.fixtureSet === "beauty-amora-review-v1") {
+      return NextResponse.json({ ok: true, demo: true, needsConfirmation: false, message: "Demo alert preview saved. No email was sent and no subscription was created." });
+    }
 
     const currency = product.currency?.toUpperCase() || "USD";
 

@@ -69,6 +69,7 @@ export async function GET(req: Request) {
       db
         .collection<Product>("products")
         .find({
+          "demo.comparisonOnly": { $ne: true },
           regionCodes: country,
           $or: [
             { title: { $regex: regex } },

@@ -654,5 +654,18 @@
     "aboutPrices": "Über diese Preise",
     "recordedSpecs": "Produkteigenschaften",
     "priceUnavailable": "See retailer for price"
+  },
+  "productCompare": {
+    "searchRetailers": "Shops durchsuchen",
+    "verifiedOnly": "Nur bestätigte Zuordnungen",
+    "shownOffers": "{count} Angebote angezeigt",
+    "months3": "3 Monate",
+    "months6": "6 Monate",
+    "year1": "1 Jahr",
+    "viewRecordedPrices": "Erfasste Preise anzeigen",
+    "noHistoryRange": "Keine Preise in diesem Zeitraum erfasst.",
+    "removeFilter": "Filter entfernen",
+    "closeImage": "Bild schließen",
+    "enlargeImage": "Bild vergrößern"
   }
 }

@@ -2,6 +2,7 @@
 
 import type { ProductFeedItem } from "@/lib/storeData";
 import { useCurrency } from "@/i18n/CurrencyProvider";
+import { useDictionary } from "@/i18n/DictionaryProvider";
 
 interface ProductFeedCardProps {
   product: ProductFeedItem;
@@ -18,6 +19,7 @@ interface ProductFeedCardProps {
  */
 export default function ProductFeedCard({ product }: ProductFeedCardProps) {
   const { format } = useCurrency();
+  const dict = useDictionary();
   return (
     <div className="group flex flex-col justify-between rounded-card border border-line bg-white p-4 shadow-card transition hover:border-brand-border hover:shadow-card-hover">
       <div>
@@ -41,7 +43,7 @@ export default function ProductFeedCard({ product }: ProductFeedCardProps) {
         </h4>
 
         <p className="mt-3 text-lg font-extrabold text-ink">
-          {format(product.salePrice, product.currency)}
+          {product.salePrice !== null ? format(product.salePrice, product.currency) : dict.productShop.checkPrice}
         </p>
       </div>
 

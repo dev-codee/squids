@@ -14,6 +14,15 @@ import type { ProductIdentity } from "@/lib/model/productIdentity";
  * rendered publicly as savings or ratings until they do.
  */
 export interface Product extends ProductIdentity {
+  description?: string | null;
+  specifications?: { label: string; value: string }[];
+  /** Explicit review fixtures; never interpreted as real retailer facts. */
+  demo?: {
+    fixtureSet: string;
+    comparisonOnly?: boolean;
+    retailerName: string;
+    deliveryRule: import("@/lib/model/delivery").DeliveryRule | null;
+  };
   id: number;
   advertiserId: number;
   network?: string;

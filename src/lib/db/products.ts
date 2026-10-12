@@ -55,7 +55,7 @@ export async function getProductsFromDb(query: ProductQuery): Promise<PagedProdu
   const db = await getDb();
   const col = db.collection<Product>(COLLECTION);
 
-  const filter: Record<string, unknown> = {};
+  const filter: Record<string, unknown> = { "demo.comparisonOnly": { $ne: true } };
   if (query.country) filter.regionCodes = query.country.toUpperCase();
   if (query.network) filter.network = query.network;
   if (query.currency) filter.currency = query.currency.toUpperCase();
@@ -132,7 +132,7 @@ export async function getProductsFromDb(query: ProductQuery): Promise<PagedProdu
 
 export async function getProductFacets(category?: string, country?: string): Promise<ProductFacets> {
   const db = await getDb();
-  const match: Record<string, unknown> = {};
+  const match: Record<string, unknown> = { "demo.comparisonOnly": { $ne: true } };
   if (country) match.regionCodes = country.toUpperCase();
   if (category?.trim()) {
     const name = category.trim();
@@ -335,7 +335,7 @@ export async function getMatchingProducts(product: Product): Promise<ProductMatc
   // Queue what a person still has to decide. Never blocks the page.
   void Promise.all(
     rows
-      .filter((row) => row.result.decision === "review")
+      .filter((row) => row.result.decision === "review" && !product.demo && !row.product.demo)
       .map((row) =>
         queueMatchReview({
           source: { id: product.id, title: product.title, advertiserId: product.advertiserId },

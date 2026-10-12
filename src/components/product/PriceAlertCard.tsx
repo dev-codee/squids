@@ -11,6 +11,7 @@ interface PriceAlertCardProps {
   productTitle?: string;
   currentPrice?: number | null;
   currency?: string;
+  demo?: boolean;
 }
 
 export default function PriceAlertCard({
@@ -18,6 +19,7 @@ export default function PriceAlertCard({
   productTitle,
   currentPrice,
   currency,
+  demo = false,
 }: PriceAlertCardProps) {
   const dict = useDictionary();
   const t = dict.productV2;
@@ -48,6 +50,11 @@ export default function PriceAlertCard({
       return;
     }
 
+    if (demo) {
+      setNeedsConfirmation(false);
+      setSuccessMessage("Demo alert preview saved. This is a review fixture; no email was sent and no subscription was created.");
+      return;
+    }
     setSubmitting(true);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -89,6 +96,7 @@ export default function PriceAlertCard({
       </div>
       <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{t.alertBody}</p>
 
+      {demo && <p className="mt-3 text-xs font-semibold text-amber-900">Demo form: use any example email to preview the success state.</p>}
       {successMessage ? (
         <div className="mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-4 text-emerald-800" role="status">
           <p className="text-sm font-semibold">{successMessage}</p>

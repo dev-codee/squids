@@ -47,6 +47,7 @@ test("store links use the same cleaned market suffixes as canonical routing", as
 test("explicit test fixtures do not become indexable product pages", async () => {
   const { isIndexableProductTitle } = await import("../productSeo");
   assert.equal(isIndexableProductTitle("[TEST] Serum"), false);
+  assert.equal(isIndexableProductTitle("[DEMO] Dewdrop Serum"), false);
   assert.equal(isIndexableProductTitle("   [test] Example"), false);
   assert.equal(isIndexableProductTitle("Test kit"), true);
 });

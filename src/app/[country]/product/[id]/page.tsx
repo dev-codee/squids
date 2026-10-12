@@ -7,13 +7,14 @@ import {
   getMatchingProducts,
   getRelatedProducts,
   getProductVariants,
-  variantLabel,
 } from "@/lib/db/products";
 import { deliveredTotalsFor } from "@/lib/db/delivered-totals";
 import { getAdvertiserByIdFromDb } from "@/lib/db/advertisers";
 import { getCategories } from "@/lib/db/categories";
 import { getPriceHistory } from "@/lib/db/price-observations";
-import ProductImage from "@/components/product/ProductImage";
+import ProductVariants from "@/components/product/ProductVariants";
+import ProductSectionNav from "@/components/product/ProductSectionNav";
+import DemoProductNotice from "@/components/product/DemoProductNotice";
 import ProductHero from "@/components/product/ProductHero";
 import ProductIcon from "@/components/product/ProductIcon";
 import Breadcrumbs from "@/components/store/Breadcrumbs";
@@ -149,11 +150,12 @@ export default async function ProductComparisonPage({
         return {
           productId: row.product.id,
           title: row.product.title,
-          retailerName: advertiser?.name ?? `#${row.product.advertiserId}`,
+          retailerName: row.product.demo?.retailerName ?? advertiser?.name ?? `#${row.product.advertiserId}`,
           retailerKey: `${row.product.network ?? "awin"}:${row.product.advertiserId}`,
           retailerLogo: advertiser?.logoUrl,
           inStock: row.product.inStock,
-          trackingUrl: row.product.trackingUrl,
+          trackingUrl: row.product.demo ? null : row.product.trackingUrl,
+          demo: Boolean(row.product.demo),
           matchBasis: basis,
           breakdown: entry.breakdown,
           currency: entry.currency,
@@ -260,6 +262,7 @@ export default async function ProductComparisonPage({
   // sourced reads "Not recorded" rather than being quietly omitted — the gap is
   // the point, because it is what keeps this row off an exact-match claim.
   const specs = [
+    ...(product.specifications ?? []),
     { label: t.specBrand, value: product.brand ?? t.notRecorded },
     { label: t.specModel, value: product.mpn ?? t.notRecorded },
     { label: t.specGtin, value: product.gtin ?? t.notRecorded },
@@ -286,27 +289,24 @@ export default async function ProductComparisonPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <div className="mx-auto max-w-shell px-4 pt-6 sm:px-6 lg:px-8">
         <Breadcrumbs items={[{label:dict.header.home,href:`/${lc}`},{label:dict.productShop.products,href:`/${lc}/products`},...(categoryEntry?[{label:categoryEntry.name,href:`/${lc}/products?category=${encodeURIComponent(product.category || categoryEntry.name)}`}]:[]),{label:product.title}]} />
+        {product.demo && <DemoProductNotice />}
         <ProductHero product={product} price={lowestPrice} currency={displayCurrency} offerCount={offers.length} retailerName={summaryOffer?.retailerName} />
-        {variants.length > 0 && <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="variant-heading">
-          <h2 id="variant-heading" className="mb-4 text-base font-bold text-ink">{t.variantTitle}</h2>
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {[product, ...variants].map(v => <Link key={v.id} href={`/${lc}/product/${v.id}`} aria-current={v.id === product.id ? "page" : undefined} className={`flex w-44 shrink-0 items-center gap-3 rounded-lg border p-3 transition ${v.id === product.id ? "border-brand bg-brand-soft" : "border-slate-200 hover:border-brand"}`}>
-              <ProductImage src={v.imageUrl} title={v.title} className="h-16 w-10 shrink-0" />
-              <div className="min-w-0"><p className="text-xs font-medium leading-relaxed text-ink">{variantLabel(v)}</p>{typeof v.salePrice === "number" && Number.isFinite(v.salePrice) && v.salePrice >= 0 && <p className="mt-2 text-xs font-bold text-ink">{new Intl.NumberFormat(region.locale, { style: "currency", currency: v.currency?.toUpperCase() || "USD" }).format(v.salePrice)}</p>}</div>
-            </Link>)}
-          </div>
-        </section>}
-
       </div>
-      <nav aria-label={dict.productShop.viewOptions} className="sticky top-[117px] z-20 border-y border-slate-200 bg-white/95 backdrop-blur"><div className="mx-auto flex max-w-shell gap-6 overflow-x-auto px-4 sm:px-6 lg:px-8">{[["retailer-offers",dict.productShop.offers],["price-history",t.priceHistory],["product-details",dict.productShop.details]].map(([id,label],i)=><a key={id} href={`#${id}`} className={`shrink-0 border-b-2 py-4 text-sm font-semibold ${i===0?"border-brand text-brand":"border-transparent text-ink-soft hover:text-brand"}`}>{label}{i===0&&<span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-xs">{offers.length}</span>}</a>)}</div></nav>
+      <ProductSectionNav offerCount={offers.length} />
+      <div className="mx-auto max-w-shell px-4 pt-6 sm:px-6 lg:px-8">
+        <div className="mb-6 grid items-start gap-5 lg:grid-cols-2">
+          {variants.length > 0 ? <ProductVariants product={product} variants={variants} country={lc} /> : <PriceAlertCard productId={product.id} productTitle={product.title} currentPrice={product.salePrice} currency={displayCurrency} demo={Boolean(product.demo)} />}
+          <PriceHistoryPanel observations={priceHistory} currency={displayCurrency} />
+        </div>
+      </div>
       <div className="mx-auto max-w-shell px-4 sm:px-6 lg:px-8">
         <section id="retailer-offers" className="scroll-mt-48 pt-8">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">{t.offersTitle}</h2><p className="mt-1 text-sm text-ink-muted">{t.offersSummary.replace("{retailers}",String(offers.length)).replace("{totals}",String(knownTotals))}</p></div><a href="#price-alert" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-ink hover:border-brand hover:text-brand"><ProductIcon name="bell" className="h-4 w-4" />{t.setPriceAlert}</a></div>
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">{t.offersTitle}</h2><p className="mt-1 text-sm text-ink-muted">{t.offersSummary.replace("{retailers}",String(new Set(offers.map(o => o.retailerKey)).size)).replace("{totals}",String(knownTotals))}</p></div><a href="#price-alert" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-ink hover:border-brand hover:text-brand"><ProductIcon name="bell" className="h-4 w-4" />{t.setPriceAlert}</a></div>
           <details className="mb-5 rounded-xl border border-slate-200 bg-white"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5 text-sm text-ink-soft"><span className="flex items-center gap-2"><ProductIcon name="truck" className="h-4 w-4" />{t.compareForOrder}</span><span className="text-xs text-ink-muted">{t.quantity}: {quantity}{postcode?` · ${postcode}`:""} <span className="ml-2 text-brand">⌄</span></span></summary><form method="get" action={`/${lc}/product/${id}#retailer-offers`} className="flex flex-wrap items-end gap-3 border-t border-slate-100 px-5 py-4"><label className="text-xs font-semibold text-ink-soft"><span className="block">{t.quantity}</span><input type="number" name="qty" min={1} max={99} defaultValue={quantity} className="mt-2 w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label><label className="text-xs font-semibold text-ink-soft"><span className="block">{t.postcode}</span><input name="postcode" maxLength={10} defaultValue={postcode??""} placeholder={t.postcodePlaceholder} className="mt-2 w-44 rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label><button type="submit" className="rounded-lg bg-ink px-4 py-2.5 text-xs font-semibold text-white hover:bg-brand">{t.applyContext}</button><p className="w-full text-xs leading-relaxed text-ink-muted">{t.contextNote}</p></form></details>
           {offers.length===0?<div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-ink-muted">{t.noOffers}</div>:<OfferTable offers={offers} defaultCurrency={displayCurrency} canClaimComparison={new Set(offers.filter(o=>o.matchBasis!=="title").map(o=>o.retailerKey)).size>=2} />}
         </section>
-        <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]"><PriceHistoryPanel observations={priceHistory} currency={displayCurrency} /><PriceAlertCard productId={product.id} productTitle={product.title} currentPrice={product.salePrice} currency={displayCurrency} /></div>
-        <section id="product-details" className="mt-8 scroll-mt-48 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5"><h2 className="text-xl font-bold tracking-tight text-ink">{dict.productShop.recordedSpecs}</h2><Link href={`/${lc}/report-issue?type=wrong_match&product=${id}`} className="text-xs font-medium text-ink-muted hover:text-brand">{t.reportMatch}</Link></div><dl className="grid sm:grid-cols-2">{specs.map(spec=><div key={spec.label} className="flex justify-between gap-4 border-b border-slate-100 px-6 py-4 text-sm odd:bg-slate-50/40"><dt className="text-ink-muted">{spec.label}</dt><dd className="text-right font-medium text-ink">{spec.value}</dd></div>)}</dl><p className="px-6 py-4 text-xs text-ink-muted">{t.specNote}</p></section>
+        {variants.length > 0 && <div className="mt-8 max-w-xl"><PriceAlertCard productId={product.id} productTitle={product.title} currentPrice={product.salePrice} currency={displayCurrency} demo={Boolean(product.demo)} /></div>}
+        <section id="product-details" className="mt-8 scroll-mt-48 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-6 py-5"><h2 className="text-xl font-bold tracking-tight text-ink">{dict.productShop.recordedSpecs}</h2><Link href={`/${lc}/report-issue?type=wrong_match&product=${id}`} className="text-xs font-medium text-ink-muted hover:text-brand">{t.reportMatch}</Link></div>{product.description && <p className="border-b border-slate-100 px-6 py-5 text-sm leading-7 text-ink-soft">{product.description}</p>}<dl className="grid sm:grid-cols-2">{specs.map(spec=><div key={spec.label} className="flex justify-between gap-4 border-b border-slate-100 px-6 py-4 text-sm odd:bg-slate-50/40"><dt className="text-ink-muted">{spec.label}</dt><dd className="min-w-0 break-words text-right font-medium text-ink">{spec.value}</dd></div>)}</dl><p className="px-6 py-4 text-xs text-ink-muted">{t.specNote}</p></section>
         {related.length>0&&<section className="mt-10"><div className="mb-5 flex items-center justify-between gap-3"><h2 className="text-xl font-bold tracking-tight text-ink">{t.relatedProducts}</h2><Link href={`/${lc}/products`} className="text-xs font-semibold text-brand">{dict.productShop.browseAll} →</Link></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{related.map(item=><CompareProductCard key={item.id} product={item} />)}</div></section>}
       </div>
     </main>

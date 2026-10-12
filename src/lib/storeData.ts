@@ -80,12 +80,17 @@ export interface DealItem {
 }
 
 export interface ProductFeedItem {
+  brand?: string | null;
+  size?: string | null;
+  colour?: string | null;
+  packCount?: number | null;
+  condition?: import("@/lib/model/productIdentity").ProductCondition | null;
   id: string;
   title: string;
   category: string;
   image: string;
   originalPrice: number;
-  salePrice: number;
+  salePrice: number | null;
   currency?: string | null;
   discountPercentage: number;
   rating: number;
@@ -412,13 +417,18 @@ async function loadStoreDataUncached(
   );
   
   const products: ProductFeedItem[] = productsResult.products.map(p => ({
+    brand: p.brand,
+    size: p.size,
+    colour: p.colour,
+    packCount: p.packCount,
+    condition: p.condition,
     id: String(p.id),
     title: p.title,
     category: p.category || "",
     image: p.imageUrl || "",
     currency: p.currency,
     originalPrice: p.originalPrice || 0,
-    salePrice: p.salePrice || 0,
+    salePrice: p.salePrice ?? null,
     discountPercentage: p.discountPercentage || 0,
     rating: p.rating || 0,
     reviewsCount: p.reviewsCount || 0,
