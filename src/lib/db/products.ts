@@ -16,6 +16,8 @@ const COLLECTION = "products";
 export type ProductSort = "relevance" | "price-asc" | "price-desc";
 
 export interface ProductQuery {
+  /** Admin-only listing includes fixture comparison records. */
+  includeComparisonRecords?: boolean;
   country?: string;
   network?: string;
   page?: number;
@@ -55,7 +57,7 @@ export async function getProductsFromDb(query: ProductQuery): Promise<PagedProdu
   const db = await getDb();
   const col = db.collection<Product>(COLLECTION);
 
-  const filter: Record<string, unknown> = { "demo.comparisonOnly": { $ne: true } };
+  const filter: Record<string, unknown> = query.includeComparisonRecords ? {} : { "demo.comparisonOnly": { $ne: true } };
   if (query.country) filter.regionCodes = query.country.toUpperCase();
   if (query.network) filter.network = query.network;
   if (query.currency) filter.currency = query.currency.toUpperCase();
@@ -166,7 +168,7 @@ export async function createProduct(product: Product): Promise<Product> {
   await col.createIndex({ id: 1 }, { unique: true });
   await col.createIndex({ advertiserId: 1 });
 
-  await col.updateOne({ id: product.id }, { $set: product }, { upsert: true });
+  await col.insertOne({ ...product });
 
   return product;
 }

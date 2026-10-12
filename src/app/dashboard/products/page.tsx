@@ -5,7 +5,7 @@ import { notify } from "@/components/common/ActionFeedback";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Product, PagedProducts } from "@/lib/products";
 import Pagination from "@/components/Pagination";
-import ProductModal from "@/components/admin/ProductModal";
+import ProductModal, { type ProductCopyKind } from "@/components/admin/ProductModal";
 
 const PAGE_SIZE = 24;
 
@@ -18,6 +18,7 @@ export default function AdminProductsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [copyKind, setCopyKind] = useState<ProductCopyKind>();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -66,11 +67,13 @@ export default function AdminProductsPage() {
 
   function handleCreate() {
     setSelectedProduct(null);
+    setCopyKind(undefined);
     setIsModalOpen(true);
   }
 
-  function handleEdit(product: Product) {
+  function handleEdit(product: Product, kind?: ProductCopyKind) {
     setSelectedProduct(product);
+    setCopyKind(kind);
     setIsModalOpen(true);
   }
 
@@ -105,7 +108,7 @@ export default function AdminProductsPage() {
             Products Management
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Manage curated products for store pages.
+            Manage product content, variants, retailer offers, delivery and price history.
           </p>
         </div>
         <button
@@ -174,7 +177,7 @@ export default function AdminProductsPage() {
                   <div key={p.id} className="relative group rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition flex flex-col">
                     {p.imageUrl ? (
                       <div className="mb-3 h-32 w-full rounded-lg bg-gray-50 overflow-hidden relative">
-                        <img src={p.imageUrl} alt={p.title} className="h-full w-full object-cover" />
+                        <img src={p.imageUrl} alt={p.title} className="h-full w-full object-contain" />
                         {p.discountPercentage && (
                           <span className="absolute top-1 right-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow">
                             -{p.discountPercentage}%
@@ -188,17 +191,18 @@ export default function AdminProductsPage() {
                     )}
                     
                     <h3 className="text-sm font-bold text-gray-900 line-clamp-2" title={p.title}>{p.title}</h3>
-                    <p className="text-xs text-gray-500 mt-1">Adv ID: {p.advertiserId}</p>
+                    <p className="text-xs text-gray-500 mt-1">{p.demo?.retailerName || `${p.network} · Retailer #${p.advertiserId}`}</p><p className="mt-1 text-[11px] text-gray-500">#{p.id} · {p.regionCodes?.join(", ")}{p.demo?.comparisonOnly ? " · Comparison offer" : ""}</p>
                     <div className="mt-auto pt-2 flex items-baseline gap-2">
                       {p.salePrice != null && (
-                        <span className="text-sm font-bold text-gray-900">${p.salePrice}</span>
+                        <span className="text-sm font-bold text-gray-900">{p.currency || "USD"} {p.salePrice.toFixed(2)}</span>
                       )}
                       {p.originalPrice != null && (
-                        <span className="text-xs text-gray-400 line-through">${p.originalPrice}</span>
+                        <span className="text-xs text-gray-400 line-through">{p.currency || "USD"} {p.originalPrice.toFixed(2)}</span>
                       )}
                     </div>
                     
-                    <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-lg bg-white/95 p-1 shadow-md border border-gray-200 backdrop-blur-sm transition opacity-0 group-hover:opacity-100">
+                    <div className="mt-3 flex flex-wrap gap-2"><button onClick={() => handleEdit(p)} className="rounded border px-2 py-1 text-xs font-semibold text-brand">Manage</button>{p.regionCodes?.[0] && <a href={`/${p.regionCodes[0].toLowerCase()}/product/${p.id}`} target="_blank" rel="noopener noreferrer" className="rounded border px-2 py-1 text-xs">Preview ↗</a>}</div>
+                    <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-lg bg-white/95 p-1 shadow-md border border-gray-200 backdrop-blur-sm transition">
                       <button
                         onClick={() => handleEdit(p)}
                         title="Edit"
@@ -240,7 +244,9 @@ export default function AdminProductsPage() {
       <ProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSaved={() => { notify("Product saved successfully."); load(search, page); }}
+        onSaved={(saved, warning) => { notify(warning || "Product saved successfully.", warning ? "error" : "success"); setSelectedProduct(saved); setCopyKind(undefined); load(search, page); }}
+        onSelect={handleEdit}
+        copyKind={copyKind}
         product={selectedProduct}
       />
     </main>

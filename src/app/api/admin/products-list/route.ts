@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
     const pageSize = pageSizeRaw ? parseInt(pageSizeRaw, 10) : 24;
 
     const query: ProductQuery = {
+      includeComparisonRecords: true,
+      network: searchParams.get("network") || undefined,
+      country: searchParams.get("country") || undefined,
       page: isNaN(page) ? 1 : page,
       pageSize: isNaN(pageSize) ? 24 : pageSize,
       search,

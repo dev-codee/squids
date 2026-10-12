@@ -1,417 +1,78 @@
 "use client";
-
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Product } from "@/lib/products";
 import type { Advertiser } from "@/lib/awin";
 import { merchantProductRegions } from "@/lib/model/productAssignment";
+import ProductManagementPanel from "./ProductManagementPanel";
+import ProductImage from "@/components/product/ProductImage";
 
-interface ProductModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSaved: () => void;
-  product: Product | null;
+export type ProductCopyKind = "variant" | "offer";
+type Props = { isOpen: boolean; onClose: () => void; onSaved: (product: Product, warning?: string) => void; product: Product | null; copyKind?: ProductCopyKind; onSelect: (product: Product, copyKind?: ProductCopyKind) => void };
+const control = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand focus:ring-1 focus:ring-brand disabled:bg-slate-100";
+const textFields = ["title", "category", "description", "brand", "mpn", "gtin", "size", "colour", "flavour", "regionalSpec", "imageUrl", "trackingUrl", "currency", "salePrice", "originalPrice", "discountPercentage", "rating", "reviewsCount", "packCount"] as const;
+function initial(product: Product | null, copyKind?: ProductCopyKind) {
+  const data: Record<string, string> = Object.fromEntries(textFields.map(k => [k, product?.[k] == null ? "" : String(product[k])]));
+  if (copyKind === "variant") data.gtin = "";
+  return { ...data, id: copyKind ? "" : product ? String(product.id) : "", advertiserId: copyKind === "offer" ? "" : product ? String(product.advertiserId) : "", network: copyKind === "offer" ? "" : product?.network || "", regionCodes: product?.regionCodes?.join(", ") || "", condition: product?.condition || "unknown", demoRetailerName: product?.demo?.retailerName || "" };
 }
-
-export default function ProductModal({
-  isOpen,
-  onClose,
-  onSaved,
-  product,
-}: ProductModalProps) {
-  const isEditing = Boolean(product);
-
-  const emptyForm = {
-    id: "",
-    advertiserId: "",
-    network: "",
-    regionCodes: "",
-    currency: "",
-    title: "",
-    category: "",
-    imageUrl: "",
-    originalPrice: "",
-    salePrice: "",
-    discountPercentage: "",
-    rating: "",
-    reviewsCount: "",
-    inStock: true,
-    trackingUrl: "",
-  };
-
-  const [formData, setFormData] = useState(emptyForm);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Advertiser Search State
-  const [advSearch, setAdvSearch] = useState("");
-  const [advResults, setAdvResults] = useState<Advertiser[]>([]);
-  const [isSearchingAdv, setIsSearchingAdv] = useState(false);
-  const [showAdvDropdown, setShowAdvDropdown] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+export default function ProductModal({ isOpen, onClose, onSaved, product, copyKind, onSelect }: Props) {
+  const editing = Boolean(product && !copyKind);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [form, setForm] = useState<Record<string, string>>(() => initial(product, copyKind));
+  const [specs, setSpecs] = useState<{ label: string; value: string }[]>([]);
+  const [stock, setStock] = useState(true), [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState("details");
+  const [search, setSearch] = useState(""), [results, setResults] = useState<Advertiser[]>([]), [searching, setSearching] = useState(false);
+  const update = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
   useEffect(() => {
-    if (product) {
-      setFormData({
-        id: String(product.id),
-        advertiserId: String(product.advertiserId),
-        network: product.network || "",
-        regionCodes: (product.regionCodes ?? []).join(", "),
-        currency: product.currency || "",
-        title: product.title,
-        category: product.category || "",
-        imageUrl: product.imageUrl || "",
-        originalPrice: product.originalPrice != null ? String(product.originalPrice) : "",
-        salePrice: product.salePrice != null ? String(product.salePrice) : "",
-        discountPercentage: product.discountPercentage != null ? String(product.discountPercentage) : "",
-        rating: product.rating != null ? String(product.rating) : "",
-        reviewsCount: product.reviewsCount != null ? String(product.reviewsCount) : "",
-        inStock: product.inStock,
-        trackingUrl: product.trackingUrl || "",
-      });
-      setAdvSearch(String(product.advertiserId));
-    } else {
-      setFormData(emptyForm);
-      setAdvSearch("");
-    }
-    setError(null);
-    setAdvResults([]);
-    setShowAdvDropdown(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product, isOpen]);
-
-  // Search Advertisers on type
+    setForm(initial(product, copyKind)); setSpecs(product?.specifications?.map(s => ({ ...s })) || []); setStock(product?.inStock ?? true); setError(""); setTab("details"); setResults([]);
+    setSearch(product && copyKind !== "offer" ? product.demo?.retailerName || `${product.network} · #${product.advertiserId}` : "");
+  }, [product, copyKind, isOpen]);
+  useEffect(() => { if (isOpen && !dialog.current?.open) dialog.current?.showModal(); else if (!isOpen) dialog.current?.close(); }, [isOpen]);
   useEffect(() => {
-    if (advSearch.trim().length < 2) {
-      setAdvResults([]);
-      setShowAdvDropdown(false);
-      return;
-    }
-
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    
-    searchTimeoutRef.current = setTimeout(async () => {
-      setIsSearchingAdv(true);
-      try {
-        const res = await fetch(`/api/admin/advertisers?search=${encodeURIComponent(advSearch)}&pageSize=5`);
-        const data = await res.json();
-        setAdvResults(data.advertisers || []);
-        setShowAdvDropdown(true);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsSearchingAdv(false);
-      }
+    if (!isOpen || form.advertiserId || search.trim().length < 2) { setResults([]); setSearching(false); return; }
+    const abort = new AbortController();
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try { const response = await fetch(`/api/admin/advertisers?search=${encodeURIComponent(search)}&pageSize=8`, { signal: abort.signal }); const json = await response.json(); if (!response.ok) throw Error(json.error || "Retailer search failed."); setResults(json.advertisers || []); }
+      catch (e) { if (!abort.signal.aborted) setError(e instanceof Error ? e.message : "Retailer search failed."); }
+      finally { if (!abort.signal.aborted) setSearching(false); }
     }, 300);
-
-    return () => {
-      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    };
-  }, [advSearch]);
-
-  if (!isOpen) return null;
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-
+    return () => { clearTimeout(timer); abort.abort(); };
+  }, [search, form.advertiserId, isOpen]);
+  async function save(e: React.FormEvent) {
+    e.preventDefault(); setSaving(true); setError("");
     try {
-      const url = "/api/admin/products";
-      const method = isEditing ? "PUT" : "POST";
-
-      const payload = {
-        id: formData.id ? Number(formData.id) : undefined,
-        advertiserId: Number(formData.advertiserId),
-        network: formData.network || undefined,
-        regionCodes: formData.regionCodes.trim() ? formData.regionCodes.split(",").map(code => code.trim()).filter(Boolean) : undefined,
-        currency: formData.currency || undefined,
-        title: formData.title,
-        category: formData.category || null,
-        imageUrl: formData.imageUrl || null,
-        originalPrice: formData.originalPrice || null,
-        salePrice: formData.salePrice || null,
-        discountPercentage: formData.discountPercentage || null,
-        rating: formData.rating || null,
-        reviewsCount: formData.reviewsCount || null,
-        inStock: formData.inStock,
-        trackingUrl: formData.trackingUrl || null,
-      };
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json?.error || "Failed to save product.");
-      }
-
-      onSaved();
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
-    } finally {
-      setSubmitting(false);
-    }
+      const payload = { ...form, id: form.id ? Number(form.id) : undefined, advertiserId: Number(form.advertiserId), regionCodes: form.regionCodes.split(",").map(s => s.trim().toUpperCase()).filter(Boolean), inStock: stock, specifications: specs, ...(copyKind && { copyFrom: product?.id, copyKind }) };
+      const response = await fetch("/api/admin/products", { method: editing ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const json = await response.json(); if (!response.ok) throw Error(json.error || "Product could not be saved.");
+      onSaved(json.product, json.warning);
+    } catch (e) { setError(e instanceof Error ? e.message : "Product could not be saved."); }
+    finally { setSaving(false); }
   }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {isEditing ? `Edit Product (#${product?.id})` : "Add Product"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+  const field = (name: string, label: string, type = "text", required = false, hint?: string) => <label key={name} className="block text-xs font-semibold text-slate-700">{label}{required && " *"}<input name={name} type={type} required={required} value={form[name] || ""} onChange={e => update(name, e.target.value)} className={control} {...(type === "number" ? { min: name === "packCount" || name === "id" ? 1 : 0, step: ["packCount", "reviewsCount", "id"].includes(name) ? "1" : "0.01" } : {})} />{hint && <span className="mt-1 block text-xs font-normal leading-relaxed text-slate-500">{hint}</span>}</label>;
+  const management = ["related", "delivery", "history"].includes(tab);
+  return <dialog ref={dialog} onCancel={e => { e.preventDefault(); if (!saving) onClose(); }} className="max-h-[92vh] w-[min(960px,96vw)] rounded-2xl bg-white p-0 text-ink shadow-2xl backdrop:bg-black/50">
+    <header className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-7"><div><h2 className="text-lg font-bold">{copyKind === "variant" ? "Add product variant" : copyKind === "offer" ? "Add retailer offer" : editing ? `Manage product #${product?.id}` : "Add product"}</h2><p className="mt-1 text-xs text-slate-500">{editing ? product?.title : "Save the listing, then manage delivery and price history."}</p></div><button type="button" disabled={saving} onClick={onClose} aria-label="Close product editor" className="rounded-lg border border-slate-200 px-3 py-1.5 text-lg disabled:opacity-50">×</button></header>
+    <nav aria-label="Product editor sections" className="flex gap-1 overflow-x-auto border-b border-slate-200 bg-slate-50 px-5 py-2">{[["details", "Details"], ["identity", "Identity & variants"], ["pricing", "Price & links"], ["related", "Variants & offers"], ["delivery", "Delivery"], ["history", "Price history"]].map(([key, label]) => <button type="button" key={key} disabled={!editing && ["related", "delivery", "history"].includes(key)} onClick={() => setTab(key)} aria-pressed={tab === key} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold disabled:opacity-40 ${tab === key ? "bg-ink text-white" : "text-slate-600 hover:bg-slate-200"}`}>{label}</button>)}</nav>
+    {product?.demo && <p className="mx-5 mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-900">Review fixture: keep the [DEMO] title prefix. Demo delivery and history remain separate from real retailer data.</p>}
+    {copyKind && <p className="mx-5 mt-4 rounded-lg bg-blue-50 p-3 text-xs text-blue-900">{copyKind === "offer" ? "Choose a different retailer and set its price, stock and tracking link. The identity fields are copied to connect this offer to the same product." : "Keep the brand and model. Change the size, colour, flavour or pack count, then update the title, price and image."}</p>}
+    {error && <p role="alert" className="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+    {management && product ? <ProductManagementPanel key={`${product.id}:${tab}`} product={product} section={tab} onSelect={onSelect} /> : <form noValidate onSubmit={save} className="space-y-5 p-5 sm:p-7">
+      <div hidden={tab !== "details"} className="space-y-5">
+        <div className="grid gap-4 sm:grid-cols-2"><label className="text-xs font-semibold">Product ID<input type="number" min="1" step="1" value={form.id} disabled={editing} onChange={e => update("id", e.target.value)} placeholder="Assigned automatically" className={control} /></label>
+          <div className="relative"><label className="text-xs font-semibold">Retailer *<input required value={search} onChange={e => { setSearch(e.target.value); setForm(prev => ({ ...prev, advertiserId: "", network: "" })); }} placeholder="Search and select a retailer" className={control} /></label><p className="mt-1 text-xs text-slate-500">{searching ? "Searching…" : form.advertiserId ? `Selected: ${form.network} · #${form.advertiserId}` : "Select a result before saving."}</p>{results.length > 0 && <div className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border bg-white shadow-lg">{results.map(adv => <button type="button" key={`${adv.network}:${adv.id}`} className="block w-full border-b p-3 text-left text-xs hover:bg-slate-50" onClick={() => { setForm(prev => ({ ...prev, advertiserId: String(adv.id), network: adv.network, regionCodes: prev.regionCodes || merchantProductRegions(adv).join(", "), currency: prev.currency || adv.currencyCode || "", demoRetailerName: product?.demo ? `${adv.name} · Demo offer` : "" })); setSearch(adv.name); setResults([]); }}><strong>{adv.name}</strong><span className="mt-1 block text-slate-500">{adv.network} · #{adv.id}</span></button>)}</div>}</div>
         </div>
-
-        {error && (
-          <div className="mt-4 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-800 border border-red-200">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Product ID</label>
-              <input
-                type="number"
-                disabled={isEditing}
-                placeholder="Auto-generated if blank"
-                value={formData.id}
-                onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent disabled:bg-gray-100"
-              />
-            </div>
-
-            {/* Advertiser Search / ID */}
-            <div className="relative">
-              <label className="block text-xs font-medium text-gray-700">
-                Search Advertiser *
-              </label>
-              <input
-                type="text"
-                required
-                value={advSearch}
-                onChange={(e) => {
-                  setAdvSearch(e.target.value);
-                  setFormData({ ...formData, advertiserId: "", network: "", regionCodes: "" });
-                }}
-                placeholder="Search by name (e.g. Nike)"
-                className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
-                  formData.advertiserId ? "border-emerald-500 ring-emerald-500 bg-emerald-50" : "border-gray-300 focus:border-accent focus:ring-accent"
-                }`}
-              />
-              {formData.advertiserId && (
-                <span className="absolute right-3 top-8 text-xs font-bold text-emerald-600">✓ ID: {formData.advertiserId}</span>
-              )}
-              {isSearchingAdv && (
-                <span className="absolute right-3 top-8 text-xs text-gray-400">Searching...</span>
-              )}
-              {showAdvDropdown && advResults.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
-                  {advResults.map((adv) => (
-                    <div
-                      key={`${adv.network}:${adv.id}`}
-                      className="px-4 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0"
-                      onClick={() => {
-                        const sameStore = formData.advertiserId === String(adv.id) && formData.network === adv.network;
-                        setFormData({
-                          ...formData,
-                          advertiserId: String(adv.id),
-                          network: adv.network,
-                          regionCodes: sameStore ? formData.regionCodes : merchantProductRegions(adv).join(", "),
-                          currency: formData.currency || adv.currencyCode || "",
-                        });
-                        setAdvSearch(adv.name);
-                        setShowAdvDropdown(false);
-                      }}
-                    >
-                      <p className="text-sm font-semibold text-gray-900">{adv.name}</p>
-                      <p className="text-xs text-gray-500">ID: {adv.id} · {adv.network} · {merchantProductRegions(adv).join(", ") || "Worldwide"}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Product country codes</label>
-              <input
-                type="text"
-                value={formData.regionCodes}
-                onChange={(e) => setFormData({ ...formData, regionCodes: e.target.value })}
-                placeholder="Defaults to the selected store's countries"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-              <p className="mt-1 text-xs text-gray-500">Separate codes with commas. For worldwide stores, enter the product's actual markets.</p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Price currency</label>
-              <input
-                type="text"
-                maxLength={3}
-                value={formData.currency}
-                onChange={(e) => setFormData({ ...formData, currency: e.target.value.toUpperCase() })}
-                placeholder="Defaults to the selected store's currency"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-gray-700">Product Title *</label>
-              <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g. Nike Air Max 270"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Category</label>
-              <input
-                type="text"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                placeholder="e.g. Shoes"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Discount Percentage</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={formData.discountPercentage}
-                onChange={(e) => setFormData({ ...formData, discountPercentage: e.target.value })}
-                placeholder="e.g. 20"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-gray-700">Image URL</label>
-              <input
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="https://..."
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Original Price</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.originalPrice}
-                onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
-                placeholder="e.g. 150.00"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Sale Price</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.salePrice}
-                onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
-                placeholder="e.g. 120.00"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Rating (0-5)</label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                max="5"
-                value={formData.rating}
-                onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-                placeholder="e.g. 4.5"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700">Reviews Count</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.reviewsCount}
-                onChange={(e) => setFormData({ ...formData, reviewsCount: e.target.value })}
-                placeholder="e.g. 1250"
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-gray-700">Affiliate Tracking URL</label>
-              <input
-                type="url"
-                value={formData.trackingUrl}
-                onChange={(e) => setFormData({ ...formData, trackingUrl: e.target.value })}
-                placeholder="https://www.awin1.com/cread.php?..."
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            </div>
-
-            <div className="flex items-end">
-              <label className="inline-flex items-center gap-2 text-xs font-medium text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={formData.inStock}
-                  onChange={(e) => setFormData({ ...formData, inStock: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
-                />
-                In Stock
-              </label>
-            </div>
-          </div>
-
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !formData.advertiserId}
-              className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white hover:bg-accent-hover transition disabled:opacity-50"
-            >
-              {submitting ? "Saving..." : isEditing ? "Save Changes" : "Create Product"}
-            </button>
-          </div>
-        </form>
+        {field("title", "Product title", "text", true)}
+        <div className="grid gap-4 sm:grid-cols-2">{field("category", "Category")}{field("regionCodes", "Country codes", "text", true, "Comma-separated supported markets, e.g. AU, NZ.")}</div>
+        <label className="block text-xs font-semibold">Description<textarea name="description" rows={4} maxLength={10000} value={form.description} onChange={e => update("description", e.target.value)} className={control} /></label>
+        <div className="grid items-start gap-4 sm:grid-cols-[1fr_120px]">{field("imageUrl", "Product image URL", "text", false, "An https:// URL or an existing local /image path.")}<ProductImage src={form.imageUrl} title={form.title || "Image preview"} className="h-28 w-full rounded-lg border border-slate-200 p-2" /></div>
+        <fieldset><legend className="text-sm font-semibold">Specifications</legend><p className="mt-1 text-xs text-slate-500">Add the details shoppers should see on the product page.</p><div className="mt-3 space-y-2">{specs.map((spec, i) => <div key={i} className="flex gap-2"><input aria-label={`Specification ${i + 1} name`} placeholder="Name" required value={spec.label} onChange={e => setSpecs(rows => rows.map((r, n) => n === i ? { ...r, label: e.target.value } : r))} className={control + " !w-1/3"} /><input aria-label={`Specification ${i + 1} value`} placeholder="Value" required value={spec.value} onChange={e => setSpecs(rows => rows.map((r, n) => n === i ? { ...r, value: e.target.value } : r))} className={control} /><button type="button" aria-label={`Remove specification ${i + 1}`} onClick={() => setSpecs(rows => rows.filter((_, n) => n !== i))} className="px-2 text-red-700">×</button></div>)}</div><button type="button" disabled={specs.length >= 50} onClick={() => setSpecs(rows => [...rows, { label: "", value: "" }])} className="mt-3 rounded-lg border px-3 py-2 text-xs font-semibold">+ Add specification</button></fieldset>
       </div>
-    </div>
-  );
+      <div hidden={tab !== "identity"} className="space-y-4"><p className="rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">Brand and model group variants. Size, colour, flavour, pack and condition keep different items separate. Matching identifiers connect the same item across retailers.</p><div className="grid gap-4 sm:grid-cols-2">{field("brand", "Brand")}{field("mpn", "Model / manufacturer part number")}{field("gtin", "GTIN / EAN / UPC", "text", false, "8, 12, 13 or 14 digits; leave blank if unknown.")}{field("size", "Size / capacity")}{field("colour", "Colour")}{field("flavour", "Flavour")}{field("packCount", "Units in pack", "number")}<label className="text-xs font-semibold">Condition<select value={form.condition} onChange={e => update("condition", e.target.value)} className={control}>{["unknown", "new", "refurbished", "used"].map(v => <option key={v}>{v}</option>)}</select></label>{field("regionalSpec", "Regional specification")}</div></div>
+      <div hidden={tab !== "pricing"} className="space-y-4"><div className="grid gap-4 sm:grid-cols-2">{field("salePrice", "Current item price", "number", false, "Blank means unknown. Zero is a real zero price.")}{field("currency", "Price currency", "text", true, "Three letters, e.g. AUD, USD, EUR.")}</div><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={stock} onChange={e => setStock(e.target.checked)} className="h-4 w-4 accent-brand" />In stock</label>{field("trackingUrl", "Retailer / affiliate tracking URL", "url")}{product?.demo && field("demoRetailerName", "Demo retailer display name", "text", true)}<p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Saving a new or changed price records a dated observation. Delivery costs are managed in the Delivery tab after saving.</p><details className="rounded-lg border p-4"><summary className="cursor-pointer text-xs font-semibold">Legacy internal reference fields</summary><p className="my-3 text-xs text-slate-500">These unsourced reference fields do not appear as public discounts or customer ratings.</p><div className="grid gap-4 sm:grid-cols-2">{field("originalPrice", "Reference price", "number")}{field("discountPercentage", "Reference discount %", "number")}{field("rating", "Reference rating (0–5)", "number")}{field("reviewsCount", "Reference review count", "number")}</div></details></div>
+      <footer className="sticky bottom-0 flex flex-wrap items-center justify-end gap-3 border-t bg-white py-4"><button type="button" disabled={saving} onClick={onClose} className="rounded-lg border px-4 py-2 text-sm">Close</button><button type="submit" disabled={saving || !form.advertiserId} className="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Saving…" : editing ? "Save product" : "Create product"}</button></footer>
+    </form>}
+  </dialog>;
 }
