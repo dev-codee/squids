@@ -37,3 +37,16 @@ test("sitemap XML escapes URLs and distinguishes indexes from URL sets", async (
   assert.match(sitemapXml(["https://example.com/?a=1&b=2"]), /<url><loc>https:\/\/example.com\/\?a=1&amp;b=2<\/loc><\/url>/);
   assert.match(sitemapXml(["https://example.com/sitemap/0"], true), /<sitemapindex[^>]*><sitemap>/);
 });
+
+test("store links use the same cleaned market suffixes as canonical routing", async () => {
+  const { storeSlug } = await import("../../networks");
+  assert.equal(storeSlug("Example Store (US)"), "example-store");
+  assert.equal(storeSlug("Example Store WW"), "example-store");
+});
+
+test("explicit test fixtures do not become indexable product pages", async () => {
+  const { isIndexableProductTitle } = await import("../productSeo");
+  assert.equal(isIndexableProductTitle("[TEST] Serum"), false);
+  assert.equal(isIndexableProductTitle("   [test] Example"), false);
+  assert.equal(isIndexableProductTitle("Test kit"), true);
+});

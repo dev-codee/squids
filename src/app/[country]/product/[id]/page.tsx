@@ -1,3 +1,4 @@
+import { isIndexableProductTitle } from "@/lib/model/productSeo";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -67,6 +68,7 @@ export async function generateMetadata({
 
   return {
     title: product.title,
+    robots: { index: isIndexableProductTitle(product.title), follow: true },
     description: product.category
       ? `${product.title} — ${product.category}. Compare retailer offers.`
       : `${product.title}. Compare retailer offers.`,

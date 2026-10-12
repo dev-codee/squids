@@ -1,4 +1,5 @@
 "use client";
+import ExclusiveRibbon from "./ExclusiveRibbon";
 
 import { useDialogFocus } from "@/components/common/useDialogFocus";
 import { deliveryKind } from "@/lib/model/offerPresentation";
@@ -135,17 +136,13 @@ export default function HorizontalCouponCard({
 
   return (
     <>
-      <article className="overflow-hidden rounded-card border border-line bg-white shadow-card transition hover:shadow-card-hover">
+      <article className={`relative overflow-hidden rounded-card border bg-white shadow-card transition hover:shadow-card-hover ${coupon.isExclusive ? "border-orange-200" : "border-line"}`}>
+        {coupon.isExclusive && <ExclusiveRibbon label={dict.cards.exclusive} />}
         <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-5 sm:p-5">
           {/* Eligibility rail: one tile carrying both the offer kind and the
               discount value, so the number a shopper scans for sits inside the
               badge rather than floating beside it. */}
-          <div className="flex flex-shrink-0 flex-col items-center gap-2 sm:w-28">
-            {coupon.isExclusive && (
-              <span className="inline-flex items-center rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-bold text-brand-hover">
-                {dict.cards.exclusive}
-              </span>
-            )}
+          <div className={`flex flex-shrink-0 flex-col items-center gap-2 sm:w-28 ${coupon.isExclusive ? "pt-12" : ""}`}>
             <div className="flex w-full min-w-[84px] flex-col items-center justify-center gap-1 rounded-card border border-brand-border bg-brand-soft/60 px-3 py-2.5 text-center">
               <span className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">
                 {badge}

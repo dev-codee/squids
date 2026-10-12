@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getSiteUrl } from "@/lib/regions";
+import { getSiteUrl, REGION_CODES } from "@/lib/regions";
 
 /**
  * Dynamic robots.txt file generator for Next.js.
@@ -17,7 +17,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin", "/dashboard", "/api"],
       },
     ],
-    sitemap: [`${siteUrl}/sitemap.xml`, `${siteUrl}/product-sitemap.xml`],
+    sitemap: [`${siteUrl}/sitemap.xml`, `${siteUrl}/product-sitemap.xml`, ...REGION_CODES.map(country => `${siteUrl}/market-sitemaps/${country.toLowerCase()}`)],
     host: siteUrl,
   };
 }

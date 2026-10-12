@@ -119,6 +119,9 @@ export async function generateMetadata({
     maxPrice !== undefined ||
     Boolean(brand || size || condition || discountType || customerType || evidenceStatus || store);
 
+  const total = tab === "deals" ? dealsResult.total : productsResult.total;
+  if (page > Math.max(1, Math.ceil(total / 12))) notFound();
+
   const seo = listingSeo(`${siteUrl}${basePath}`, searchParams, {
     tab: tab === "deals" ? "deals" : undefined,
     refined: isEmpty || isRefined,

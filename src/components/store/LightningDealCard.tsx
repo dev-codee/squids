@@ -1,4 +1,5 @@
 "use client";
+import ExclusiveRibbon from "./ExclusiveRibbon";
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -26,12 +27,13 @@ export default function LightningDealCard({ deal }: { deal: DealItem }) {
   const date = (value: string) => new Date(value).toLocaleDateString(region.locale);
 
   return (
-    <article className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 sm:grid-cols-[120px_minmax(0,1fr)_180px] sm:gap-5 sm:p-5">
-      <ProductImage src={deal.imageUrl} title={deal.title} className="h-28 w-full rounded-lg bg-slate-50 p-3 sm:h-32" />
+    <article className="relative overflow-hidden grid grid-cols-[88px_minmax(0,1fr)] items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 sm:grid-cols-[120px_minmax(0,1fr)_180px] sm:gap-5 sm:p-5">
+      {deal.isExclusive && <ExclusiveRibbon label={dict.cards.exclusive} />}
+      <div className={deal.isExclusive ? "pt-12" : ""}><ProductImage src={deal.imageUrl} title={deal.title} className="h-28 w-full rounded-lg bg-slate-50 p-3 sm:h-32" /></div>
       <div className="min-w-0">
         <div className="mb-2 flex flex-wrap gap-2">
           {deal.discount && <span className="rounded bg-brand-soft px-2 py-1 text-[11px] font-semibold text-brand-hover">{deal.discount}</span>}
-          {(deal.isExclusive || deal.badge) && <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-ink-soft">{deal.isExclusive ? dict.cards.exclusive : deal.badge}</span>}
+          {(!deal.isExclusive && deal.badge) && <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-ink-soft">{deal.badge}</span>}
         </div>
         <h3 className="text-sm font-semibold leading-relaxed text-ink sm:text-base">{deal.title}</h3>
         <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-ink-muted">{deal.description}</p>

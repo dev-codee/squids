@@ -1,3 +1,4 @@
+import { TEST_PRODUCT_TITLE } from "@/lib/model/productSeo";
 import { getDb } from "@/lib/mongodb";
 import { getSiteUrl, isValidRegionCode } from "@/lib/regions";
 import { sitemapXml, PRODUCT_SITEMAP_SHARD_SIZE } from "@/lib/model/sitemapXml";
@@ -10,8 +11,8 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     return new Response("Not found", { status: 404 });
   }
   const db = await getDb();
-  const products = await db.collection<{ id: number; regionCodes?: string[] }>("products")
-    .find({ id: { $gte: shard * PRODUCT_SITEMAP_SHARD_SIZE, $lt: (shard + 1) * PRODUCT_SITEMAP_SHARD_SIZE } }, { projection: { _id: 0, id: 1, regionCodes: 1 } })
+  const products = await db.collection<{ id: number; title: string; regionCodes?: string[] }>("products")
+    .find({ title: { $type: "string", $regex: /\S/, $not: TEST_PRODUCT_TITLE }, id: { $gte: shard * PRODUCT_SITEMAP_SHARD_SIZE, $lt: (shard + 1) * PRODUCT_SITEMAP_SHARD_SIZE } }, { projection: { _id: 0, id: 1, regionCodes: 1 } })
     .sort({ id: 1 }).maxTimeMS(10_000).toArray();
   const urls = new Set<string>();
   for (const product of products) {

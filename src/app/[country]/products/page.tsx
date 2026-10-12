@@ -16,6 +16,11 @@ type Props = { params: { country: string }; searchParams: Record<string, string 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const d=await getDictionary(params.country);
   const q = readProductCatalogParams(searchParams);
+  if (q.page > 1) {
+    // Resolve impossible pages before streaming starts so the HTTP status is 404.
+    const result = await getProductsFromDb({ country: params.country, pageSize: 12 });
+    if (q.page > result.totalPages) notFound();
+  }
   const refined = Boolean(q.search || q.category || q.brand || q.size || q.condition || q.currency || q.inStockOnly || q.minPrice !== undefined || q.maxPrice !== undefined || q.sort !== "relevance");
   const seo = listingSeo(`${getSiteUrl()}/${params.country.toLowerCase()}/products`, searchParams, { refined });
   return {

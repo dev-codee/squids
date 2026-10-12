@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { storeSlug } from "@/lib/networks";
 import type { Advertiser } from "@/lib/awin";
 import { countryName, normalizeCountryCode } from "@/lib/countries";
 import { resolveAffiliateTrackingUrl } from "@/lib/affiliateUrls";
@@ -162,10 +163,7 @@ export default function AdvertiserCard({
 
   // Public pages view
   if (country) {
-    const slug = advertiser.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+    const slug = storeSlug(advertiser.name);
 
     return (
       <Link href={`/${country.toLowerCase()}/${slug}`} className="block h-full">
