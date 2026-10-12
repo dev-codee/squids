@@ -21,14 +21,16 @@ export default async function RootPage({
   // Prefer the visitor's explicitly chosen region (cookie); otherwise detect
   // it from their IP so the region is still sensible on a first visit.
   const preferred = cookies().get(REGION_COOKIE)?.value;
-  const country = isValidRegionCode(preferred)
+  const detected = isValidRegionCode(preferred)
     ? preferred
     : (await getUserCountry({ headers: headers() })).country;
 
-  const search = searchParams.search;
-  if (search && typeof search === "string") {
-    redirect(`/${country.toLowerCase()}?search=${encodeURIComponent(search)}`);
-  } else {
-    redirect(`/${country.toLowerCase()}`);
+  const country = isValidRegionCode(detected) ? detected : "US";
+  // Preserve attribution and search controls through the regional redirect.
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (typeof value === "string") query.append(key, value);
+    else if (Array.isArray(value)) value.forEach(item => query.append(key, item));
   }
+  redirect(`/${country.toLowerCase()}${query.size ? `?${query}` : ""}`);
 }

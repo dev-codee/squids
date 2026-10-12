@@ -1,3 +1,4 @@
+import { listingSeo } from "@/lib/model/listingSeo";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -42,7 +43,7 @@ function readParams(searchParams: Record<string, string | string[] | undefined>)
     rawSort === "price-asc" || rawSort === "price-desc" ? rawSort : "relevance";
 
   const pageRaw = Number(str("page") ?? "1");
-  const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
+  const page = Number.isSafeInteger(pageRaw) && pageRaw >= 1 ? pageRaw : 1;
 
   return {
     tab: (str("tab") === "deals" ? "deals" : "products") as Tab,
@@ -83,19 +84,19 @@ export async function generateMetadata({
   const translatedCategoryName =
     (dict.categoryNames as Record<string, string>)[category.name] ?? category.name;
 
-  const [advertisersResult, dealsResult] = await Promise.all([
+  const [advertisersResult, dealsResult, productsResult] = await Promise.all([
     getAdvertisersFromDb({ country, category: category.name, pageSize: 1, requireDeals: true }),
     getDealsFromDb({ country, category: category.name, pageSize: 1 }),
+    getProductsFromDb({ country, category: category.name, pageSize: 1 }),
   ]);
   const isEmpty =
     (advertisersResult?.advertisers?.length ?? 0) === 0 &&
-    (dealsResult?.deals?.length ?? 0) === 0;
+    (dealsResult?.deals?.length ?? 0) === 0 &&
+    productsResult.total === 0;
 
   const basePath = `/${params.country.toLowerCase()}/category/${slug}`;
-  const hreflang = { [getRegionConfig(country).locale]: `${siteUrl}${basePath}` };
 
-  // The unfiltered category is the canonical page. Sort/filter/page combinations
-  // are navigable but must not spawn duplicate crawl paths of their own.
+  // Filters are noindexed; each unfiltered tab and result page has its own canonical.
   const {
     tab,
     page,
@@ -118,6 +119,10 @@ export async function generateMetadata({
     maxPrice !== undefined ||
     Boolean(brand || size || condition || discountType || customerType || evidenceStatus || store);
 
+  const seo = listingSeo(`${siteUrl}${basePath}`, searchParams, {
+    tab: tab === "deals" ? "deals" : undefined,
+    refined: isEmpty || isRefined,
+  });
   return {
     title: dict.meta.categoryTitle
       .replace("{category}", translatedCategoryName)
@@ -126,8 +131,8 @@ export async function generateMetadata({
       .replace("{category}", translatedCategoryName)
       .replace("{country}", name),
     alternates: {
-      canonical: `${siteUrl}${basePath}`,
-      languages: hreflang,
+      canonical: seo.canonical,
+      languages: { [getRegionConfig(country).locale]: seo.canonical },
     },
     robots:
       isEmpty || isRefined
@@ -275,7 +280,7 @@ export default async function CategoryDetailPage({
     <div className="min-h-screen bg-canvas pb-16">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, "\\u003c") }}
       />
 
       <div className="mx-auto max-w-shell px-4 py-6 sm:px-6 lg:px-8">

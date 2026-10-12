@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/components/common/ActionFeedback";
 import { useState, useEffect, useCallback } from "react";
 
 export interface SavedItem {
@@ -8,6 +9,7 @@ export interface SavedItem {
   imageUrl?: string | null;
   salePrice?: number | null;
   currency?: string | null;
+  country?: string;
   category?: string | null;
   brand?: string | null;
   size?: string | null;
@@ -44,7 +46,8 @@ export function toggleSavedItem(item: Omit<SavedItem, "addedAt">): boolean {
     next = items.filter((i) => i.id !== item.id);
     isSaved = false;
   } else {
-    next = [{ ...item, addedAt: new Date().toISOString() }, ...items];
+    const country = window.location.pathname.split("/")[1]?.toLowerCase();
+    next = [{ ...item, country, addedAt: new Date().toISOString() }, ...items];
     isSaved = true;
   }
 
@@ -52,9 +55,11 @@ export function toggleSavedItem(item: Omit<SavedItem, "addedAt">): boolean {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     window.dispatchEvent(new Event("foxzil_saved_updated"));
   } catch {
+    notify("Your browser couldn’t save this change. Check that site storage is enabled and try again.", "error");
     return index >= 0; // Preserve the actual stored state when writing fails.
   }
 
+  notify(isSaved ? "Product saved to your list." : "Product removed from your saved list.");
   return isSaved;
 }
 

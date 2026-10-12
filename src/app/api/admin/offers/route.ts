@@ -8,7 +8,7 @@ import {
 } from "@/lib/db/offers";
 import { getDeliveryRuleFor } from "@/lib/db/delivery";
 import { deliveredTotal } from "@/lib/model/deliveredTotal";
-import { known } from "@/lib/model/known";
+import { fromNullable } from "@/lib/model/known";
 import type { MerchantMarketId } from "@/lib/model/merchantMarket";
 import type { RetailerOfferRecord } from "@/lib/model/offer";
 
@@ -77,7 +77,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: success });
+    return success ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Offer could not be updated. Check its current status." }, { status: 409 });
   } catch (error) {
     console.error("PATCH /api/admin/offers failed:", error);
     return NextResponse.json({ error: "Failed to update offer." }, { status: 500 });
@@ -85,7 +85,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 /**
- * POST /api/admin/offers/preview-calculation
+ * POST /api/admin/offers
  * Body: { merchantMarketId, itemPrice, destination: { market, postcode } }
  */
 export async function POST(request: NextRequest) {
@@ -97,12 +97,12 @@ export async function POST(request: NextRequest) {
   }
 
   const merchantMarketId = body?.merchantMarketId as MerchantMarketId;
-  const itemPrice = Number(body?.itemPrice);
+  const itemPrice = body?.itemPrice === null || body?.itemPrice === undefined ? null : Number(body.itemPrice);
   const destination = body?.destination || { market: "US" };
 
-  if (!merchantMarketId || !Number.isFinite(itemPrice)) {
+  if (typeof merchantMarketId !== "string" || !merchantMarketId || (itemPrice !== null && (!Number.isFinite(itemPrice) || itemPrice < 0)) || typeof body?.currency !== "string" || !/^[A-Z]{3}$/.test(body.currency) || typeof destination.market !== "string" || !/^[A-Z]{2}$/.test(destination.market)) {
     return NextResponse.json(
-      { error: "merchantMarketId and itemPrice are required" },
+      { error: "Valid merchantMarketId, currency, destination market and itemPrice are required" },
       { status: 400 },
     );
   }
@@ -110,8 +110,8 @@ export async function POST(request: NextRequest) {
   try {
     const deliveryRule = await getDeliveryRuleFor(merchantMarketId, destination);
     const breakdown = deliveredTotal({
-      itemPrice: known(itemPrice),
-      currency: "USD",
+      itemPrice: fromNullable(itemPrice),
+      currency: body.currency,
       deliveryRule,
       shopper: {
         market: destination.market || "US",

@@ -39,7 +39,7 @@ export interface RevalidationResult {
  * Checks whether the current observed price meets or beats the subscriber's target price.
  */
 export function isTargetPriceMet(currentPrice: number, targetPrice: number): boolean {
-  if (typeof currentPrice !== "number" || typeof targetPrice !== "number") return false;
+  if (!Number.isFinite(currentPrice) || !Number.isFinite(targetPrice) || currentPrice <= 0 || targetPrice <= 0) return false;
   return currentPrice <= targetPrice;
 }
 
@@ -82,7 +82,7 @@ export function revalidateOfferBeforeAlert(params: {
   if (!params.inStock) {
     return { canSend: false, reason: "Product is reported out of stock" };
   }
-  if (typeof params.itemPrice !== "number" || params.itemPrice <= 0) {
+  if (typeof params.itemPrice !== "number" || !Number.isFinite(params.itemPrice) || params.itemPrice <= 0) {
     return { canSend: false, reason: "Offer price is missing or invalid" };
   }
   if (!isTargetPriceMet(params.itemPrice, params.targetPrice)) {

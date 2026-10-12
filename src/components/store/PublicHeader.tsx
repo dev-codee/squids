@@ -60,20 +60,25 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
     if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current);
     setSuggestLoading(true);
     setSuggestOpen(true);
+    const controller = new AbortController();
     suggestDebounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
           `/api/search/unified?q=${encodeURIComponent(q)}&country=${encodeURIComponent(cc)}&limit=4`,
+          { signal: controller.signal },
         );
+        if (!res.ok) throw new Error("Search unavailable");
         const json = await res.json();
+        if (controller.signal.aborted) return;
         setUnifiedResults(json || null);
       } catch {
-        setUnifiedResults(null);
+        if (!controller.signal.aborted) setUnifiedResults(null);
       } finally {
-        setSuggestLoading(false);
+        if (!controller.signal.aborted) setSuggestLoading(false);
       }
     }, 250);
     return () => {
+      controller.abort();
       if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current);
     };
   }, [searchQuery, cc]);
@@ -257,7 +262,7 @@ export default function PublicHeader({ country = "" }: { country?: string }) {
                                 </span>
                                 {typeof p.salePrice === "number" && p.salePrice > 0 && (
                                   <span className="text-xs font-mono font-bold text-ink flex-shrink-0">
-                                    ${p.salePrice.toFixed(2)}
+                                    {p.currency ? `${p.currency} ` : ""}{p.salePrice.toFixed(2)}
                                   </span>
                                 )}
                               </button>

@@ -14,6 +14,7 @@ export default function CouponVotes({ couponId, storeSlug, label = "Did this wor
   const [counts, setCounts] = useState<{ up: number; down: number } | null>(null);
   const [userVote, setUserVote] = useState<VoteType | null>(null);
   const [voting, setVoting] = useState(false);
+  const [error, setError] = useState(false);
 
   const storageKey = `foxzil_vote_${couponId}`;
 
@@ -35,6 +36,8 @@ export default function CouponVotes({ couponId, storeSlug, label = "Did this wor
   async function vote(type: VoteType) {
     if (userVote || voting) return;
     setVoting(true);
+    setError(false);
+    const previousCounts = counts;
 
     // Optimistic update
     setCounts((prev) =>
@@ -44,21 +47,22 @@ export default function CouponVotes({ couponId, storeSlug, label = "Did this wor
     );
     setUserVote(type);
     try {
-      localStorage.setItem(storageKey, type);
-    } catch {}
-
-    try {
       const res = await fetch("/api/coupon-votes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ couponId, storeSlug, voteType: type }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setCounts(data);
-      }
-    } catch {}
-    setVoting(false);
+      if (!res.ok) throw new Error("Vote failed");
+      const data = await res.json();
+      setCounts(data);
+      try { localStorage.setItem(storageKey, type); } catch {}
+    } catch {
+      setCounts(previousCounts);
+      setUserVote(null);
+      setError(true);
+    } finally {
+      setVoting(false);
+    }
   }
 
   const up = counts?.up ?? 0;
@@ -109,6 +113,7 @@ export default function CouponVotes({ couponId, storeSlug, label = "Did this wor
           <span className="text-[11px] text-ink-muted italic truncate">Thanks!</span>
         )}
       </div>
+      {error && <p role="alert" className="mt-2 text-xs text-red-600">Your vote could not be saved. Please try again.</p>}
     </div>
   );
 }

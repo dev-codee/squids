@@ -1,3 +1,4 @@
+import AlertStatusBanner from "@/components/common/AlertStatusBanner";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isValidRegionCode } from "@/lib/regions";
@@ -9,15 +10,14 @@ import { DictionaryProvider } from "@/i18n/DictionaryProvider";
 import { CurrencyProvider } from "@/i18n/CurrencyProvider";
 import {
   getRegionConfig,
-  getSiteUrl,
   regionName,
   REGION_CODES,
 } from "@/lib/regions";
 import { convert, getUsdRates } from "@/lib/fx";
 
 /**
- * Per-region metadata: canonical URL, hreflang alternates for every configured
- * region, Open Graph locale, and geo meta tags. This is what makes `/de`, `/us`,
+ * Per-region Open Graph locale and geo meta tags. Page-specific canonical
+ * URLs and hreflang alternates are owned by each page. This is what makes `/de`, `/us`,
  * `/pk` etc. each advertise their own locale, currency and geography to crawlers.
  */
 export async function generateMetadata({
@@ -27,17 +27,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   if (!isValidRegionCode(params.country)) notFound();
   const region = getRegionConfig(params.country);
-  const site = getSiteUrl();
-  const path = `/${region.country.toLowerCase()}`;
   const ogLocale = region.locale.replace("-", "_");
-
-  // hreflang: one entry per configured region, plus x-default at the root.
-  const languages: Record<string, string> = {};
-  for (const code of REGION_CODES) {
-    const r = getRegionConfig(code);
-    languages[r.locale] = `${site}/${code.toLowerCase()}`;
-  }
-  languages["x-default"] = site;
 
   const alternateLocales = REGION_CODES.filter(
     (c) => c !== region.country,
@@ -48,7 +38,6 @@ export async function generateMetadata({
     openGraph: {
       type: "website",
       siteName: "Foxzil",
-      url: `${site}${path}`,
       locale: ogLocale,
       alternateLocale: alternateLocales,
     },
@@ -81,6 +70,7 @@ export default async function StoreLayout({
     <DictionaryProvider dictionary={dictionary}>
       <CurrencyProvider region={region} usdRate={usdRate}>
         <PublicHeader country={region.country} />
+        <AlertStatusBanner />
         {children}
         <PublicFooter country={region.country} dict={dictionary} />
         <CookieConsentBanner country={region.country} />

@@ -1,5 +1,7 @@
 "use client";
 
+import { notify } from "@/components/common/ActionFeedback";
+
 import { useCallback, useEffect, useState } from "react";
 import type { FAQ, Paged } from "@/lib/content";
 import Pagination from "@/components/Pagination";
@@ -36,8 +38,9 @@ export default function AdminFAQsPage() {
     try {
       const res = await fetch(`/api/admin/faqs?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
+      notify("FAQ deleted successfully.");
       load(page);
-    } catch (err) { alert("Error deleting FAQ."); }
+    } catch (err) { notify("Error deleting FAQ.", "error"); }
     finally { setDeletingId(null); }
   }
 
@@ -74,7 +77,7 @@ export default function AdminFAQsPage() {
           )}
         </div>
       )}
-      <FAQModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSaved={() => load(page)} faq={selectedFAQ} />
+      <FAQModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSaved={() => { notify("FAQ saved successfully."); load(page); }} faq={selectedFAQ} />
     </main>
   );
 }

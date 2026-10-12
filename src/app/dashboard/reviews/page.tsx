@@ -1,5 +1,7 @@
 "use client";
 
+import { notify } from "@/components/common/ActionFeedback";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { StoreReview, Paged } from "@/lib/content";
 import Pagination from "@/components/Pagination";
@@ -51,9 +53,10 @@ export default function AdminReviewsPage() {
     try {
       const res = await fetch(`/api/admin/reviews?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete review.");
+      notify("Review deleted successfully.");
       load(page);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error deleting review.");
+      notify(err instanceof Error ? err.message : "Error deleting review.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -106,7 +109,7 @@ export default function AdminReviewsPage() {
         </div>
       )}
 
-      <ReviewModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSaved={() => load(page)} review={selectedReview} />
+      <ReviewModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSaved={() => { notify("Review saved successfully."); load(page); }} review={selectedReview} />
     </main>
   );
 }

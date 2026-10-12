@@ -111,7 +111,7 @@ export default function ReportIssueForm({
 
   if (successTicketId) {
     return (
-      <div className="rounded-card border border-emerald-300 bg-emerald-50 p-6 sm:p-8">
+      <div role="status" className="rounded-card border border-emerald-300 bg-emerald-50 p-6 sm:p-8">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -129,7 +129,7 @@ export default function ReportIssueForm({
         </div>
 
         <p className="mt-4 text-sm text-emerald-800 leading-relaxed">
-          Thank you for helping us maintain accurate catalog data. Our editorial and quality team reviews every flagged listing against merchant source feeds and terms. If you supplied your email address, you will receive an update once investigated.
+          Thank you for helping us maintain accurate catalog data. Our editorial and quality team reviews every flagged listing against merchant source feeds and terms. If you supplied your email address, our team may contact you if more information is needed.
         </p>
 
         <div className="mt-6">

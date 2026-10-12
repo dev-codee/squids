@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unsubscribeProductAlert } from "@/lib/db/product-alerts";
-import { getSiteUrl } from "@/lib/regions";
+import { getSiteUrl, getRegionConfig } from "@/lib/regions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,15 +11,19 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token") || "";
-  const country = request.nextUrl.searchParams.get("country")?.toLowerCase() || "us";
+  const country = getRegionConfig(request.nextUrl.searchParams.get("country")).country.toLowerCase();
   const siteUrl = getSiteUrl();
 
   if (!token) {
     return NextResponse.redirect(`${siteUrl}/${country}?alert=invalid`);
   }
 
-  await unsubscribeProductAlert(token);
-  return NextResponse.redirect(`${siteUrl}/${country}?alert=unsubscribed`);
+  try {
+    const ok = await unsubscribeProductAlert(token);
+    return NextResponse.redirect(`${siteUrl}/${country}?alert=${ok ? "unsubscribed" : "invalid"}`);
+  } catch {
+    return NextResponse.redirect(`${siteUrl}/${country}?alert=error`);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -35,6 +39,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing token" }, { status: 400 });
   }
 
-  const success = await unsubscribeProductAlert(token);
-  return NextResponse.json({ ok: success });
+  try {
+    const success = await unsubscribeProductAlert(token);
+    return success ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Invalid alert link." }, { status: 404 });
+  } catch {
+    return NextResponse.json({ error: "Could not unsubscribe. Please try again." }, { status: 503 });
+  }
 }

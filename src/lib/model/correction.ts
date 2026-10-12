@@ -84,7 +84,7 @@ export function validateCorrectionInput(input: unknown): ValidationResult {
   const data = input as Partial<CreateCorrectionInput>;
 
   // Country
-  if (!data.country || !COUNTRY_RE.test(data.country)) {
+  if (typeof data.country !== "string" || !COUNTRY_RE.test(data.country)) {
     errors.push("Valid 2-letter ISO country code is required");
   }
 
@@ -100,6 +100,12 @@ export function validateCorrectionInput(input: unknown): ValidationResult {
     errors.push("Description is required and must be at least 10 characters");
   } else if (data.description.length > 2000) {
     errors.push("Description must not exceed 2000 characters");
+  }
+
+  for (const key of ["productId", "productTitle", "dealId", "storeSlug", "pageUrl"] as const) {
+    if (data[key] !== undefined && (typeof data[key] !== "string" || data[key]!.length > 2000)) {
+      errors.push(`${key} must be a string of at most 2000 characters`);
+    }
   }
 
   // Reporter Email (optional, but if provided must be valid)

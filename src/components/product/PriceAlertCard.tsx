@@ -35,6 +35,7 @@ export default function PriceAlertCard({
   const [frequency, setFrequency] = useState<AlertFrequency>("instant");
   const [consent, setConsent] = useState(false);
 
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -70,6 +71,7 @@ export default function PriceAlertCard({
         throw new Error(data.error || "Failed to set up alert");
       }
 
+      setNeedsConfirmation(data.needsConfirmation === true);
       setSuccessMessage(
         data.message || "Alert registered! Please check your inbox to confirm.",
       );
@@ -88,11 +90,11 @@ export default function PriceAlertCard({
       <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{t.alertBody}</p>
 
       {successMessage ? (
-        <div className="mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-4 text-emerald-800" role="alert">
+        <div className="mt-4 rounded-md border border-emerald-300 bg-emerald-50 p-4 text-emerald-800" role="status">
           <p className="text-sm font-semibold">{successMessage}</p>
-          <p className="mt-1 text-xs text-emerald-700">
+          {needsConfirmation && <p className="mt-1 text-xs text-emerald-700">
             A confirmation link has been sent to {email}. You won't receive emails until confirmed.
-          </p>
+          </p>}
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="mt-4 space-y-3">

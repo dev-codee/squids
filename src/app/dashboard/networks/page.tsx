@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/components/common/ActionFeedback";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -45,11 +46,11 @@ export default function NetworksOverviewPage() {
 
   useEffect(() => {
     fetch("/api/networks/earnings")
-      .then((res) => res.json())
+      .then((res) => { if (!res.ok) throw new Error("Could not load earnings"); return res.json(); })
       .then((json) => {
         if (json.combined) setData(json);
       })
-      .catch((err) => console.error("Failed to load earnings:", err))
+      .catch(() => notify("Earnings could not load. Refresh the page to try again.", "error"))
       .finally(() => setLoading(false));
   }, []);
 

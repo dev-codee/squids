@@ -24,13 +24,13 @@ import { getDictionary } from "@/i18n";
 import { getSiteUrl, REGION_CODES, getRegionConfig } from "@/lib/regions";
 
 /** Comparison context the shopper can set. Both are optional and crawl-safe. */
-function parseQuantity(raw: string | undefined): number {
-  const n = Number(raw);
+function parseQuantity(raw: string | string[] | undefined): number {
+  const n = typeof raw === "string" ? Number(raw) : NaN;
   return Number.isInteger(n) && n > 0 && n <= 99 ? n : 1;
 }
 
-function parsePostcode(raw: string | undefined): string | null {
-  const value = (raw ?? "").trim();
+function parsePostcode(raw: string | string[] | undefined): string | null {
+  const value = typeof raw === "string" ? raw.trim() : "";
   return /^[A-Za-z0-9 -]{2,10}$/.test(value) ? value : null;
 }
 
@@ -52,7 +52,7 @@ export async function generateMetadata({
   const id = parseId(params.id);
   if (id === null) return {};
 
-  const product = await getProductById(id).catch(() => null);
+  const product = await getProductById(id);
   if (!product?.regionCodes?.includes(params.country.toUpperCase())) return {};
 
   const siteUrl = getSiteUrl();
@@ -84,7 +84,7 @@ export default async function ProductComparisonPage({
   searchParams,
 }: {
   params: { country: string; id: string };
-  searchParams?: { qty?: string; postcode?: string; alert?: string };
+  searchParams?: { qty?: string | string[]; postcode?: string | string[]; alert?: string | string[] };
 }) {
   const id = parseId(params.id);
   if (id === null) notFound();
@@ -93,7 +93,7 @@ export default async function ProductComparisonPage({
   const country = params.country.toUpperCase();
 
   const [product, dict] = await Promise.all([
-    getProductById(id).catch(() => null),
+    getProductById(id),
     getDictionary(country),
   ]);
   if (!product?.regionCodes?.includes(country)) notFound();
@@ -284,7 +284,6 @@ export default async function ProductComparisonPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <div className="mx-auto max-w-shell px-4 pt-6 sm:px-6 lg:px-8">
         <Breadcrumbs items={[{label:dict.header.home,href:`/${lc}`},{label:dict.productShop.products,href:`/${lc}/products`},...(categoryEntry?[{label:categoryEntry.name,href:`/${lc}/products?category=${encodeURIComponent(product.category || categoryEntry.name)}`}]:[]),{label:product.title}]} />
-        {searchParams?.alert === "confirmed" && <div className="my-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800" role="status">Price alert confirmed. We’ll email you when your target price is reached.</div>}
         <ProductHero product={product} price={lowestPrice} currency={displayCurrency} offerCount={offers.length} retailerName={summaryOffer?.retailerName} />
         {variants.length > 0 && <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5" aria-labelledby="variant-heading">
           <h2 id="variant-heading" className="mb-4 text-base font-bold text-ink">{t.variantTitle}</h2>

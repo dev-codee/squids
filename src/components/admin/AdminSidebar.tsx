@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/components/common/ActionFeedback";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -332,12 +333,15 @@ export default function AdminSidebar() {
   async function handleLogout() {
     setLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Logout failed");
+      notify("You’ve signed out successfully.");
       // Return to the public home — the admin login lives at a secret URL that
       // we intentionally don't reference from the client bundle.
       router.push("/");
       router.refresh();
     } catch {
+      notify("Could not sign out. Please try again.", "error");
       setLoggingOut(false);
     }
   }

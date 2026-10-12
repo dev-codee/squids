@@ -1,5 +1,7 @@
 "use client";
 
+import { notify } from "@/components/common/ActionFeedback";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Advertiser, AdvertiserFacets } from "@/lib/awin";
 import AdvertiserCard from "@/components/AdvertiserCard";
@@ -139,9 +141,10 @@ export default function AdminAdvertisersPage() {
       if (!res.ok) {
         throw new Error(json?.error || "Failed to delete advertiser.");
       }
+      notify("Store deleted successfully.");
       load(filters, page, country ?? "");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error deleting advertiser.");
+      notify(err instanceof Error ? err.message : "Error deleting advertiser.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -298,7 +301,7 @@ export default function AdminAdvertisersPage() {
       <AdvertiserModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSaved={() => load(filters, page, country ?? "")}
+        onSaved={() => { notify("Store saved successfully."); load(filters, page, country ?? ""); }}
         advertiser={selectedAdvertiser}
       />
     </main>

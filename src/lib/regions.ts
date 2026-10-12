@@ -61,7 +61,7 @@ const REGIONS: Record<string, Omit<RegionConfig, "country">> = {
   PT: { currency: "EUR", locale: "en-PT" },
   // Nordics
   SE: { currency: "SEK", locale: "en-SE" },
-  NO: { currency: "NOK", locale: "nb-NO" },
+  NO: { currency: "NOK", locale: "en-NO" },
   DK: { currency: "DKK", locale: "en-DK" },
   FI: { currency: "EUR", locale: "en-FI" },
   // Rest of Europe
@@ -102,7 +102,7 @@ export const REGION_CODES = Object.keys(REGIONS);
 export function getRegionConfig(country?: string | null): RegionConfig {
   const cc = (country || "").toUpperCase();
   if (!CODE_RE.test(cc) || !REGIONS[cc]) {
-    return { country: cc && CODE_RE.test(cc) ? cc : "US", ...DEFAULT_REGION };
+    return { country: "US", ...DEFAULT_REGION };
   }
   return { country: cc, ...REGIONS[cc] };
 }

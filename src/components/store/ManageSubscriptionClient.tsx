@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/components/common/ActionFeedback";
 import { useEffect, useState } from "react";
 
 type Frequency = "instant" | "daily" | "weekly";
@@ -20,6 +21,8 @@ const FREQUENCY_LABELS: Record<Frequency, string> = {
 const STATUS_BANNERS: Record<string, { tone: "success" | "info" | "error"; text: string }> = {
   confirmed: { tone: "success", text: "Your alerts are confirmed — you're all set." },
   unsubscribed: { tone: "info", text: "You've been unsubscribed from these alerts." },
+  error: { tone: "error", text: "We couldn’t update your alerts. Please try the link again in a moment." },
+  removed: { tone: "success", text: "You’ve unfollowed this store. Your other alerts remain active." },
   invalid: { tone: "error", text: "That link is invalid or has expired." },
 };
 
@@ -49,13 +52,18 @@ export default function ManageSubscriptionClient({
   async function post(body: Record<string, unknown>) {
     if (!token) return;
     setBusy(true);
+    setError(null);
     try {
       const res = await fetch("/api/subscriptions/manage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, ...body }),
       });
-      if (res.ok) setData(await res.json());
+      if (!res.ok) throw new Error("Update failed");
+      setData(await res.json());
+      notify(body.action === "unsubscribeAll" ? "You’ve unsubscribed from all store alerts." : body.action === "removeStore" ? "Store removed from your alerts." : "Alert frequency updated.");
+    } catch {
+      setError("We couldn’t save your changes. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -89,7 +97,7 @@ export default function ManageSubscriptionClient({
       )}
 
       {token && loading && <p className="mt-6 text-sm text-ink-soft">Loading…</p>}
-      {token && error && <p className="mt-6 text-sm text-red-600">{error}</p>}
+      {token && error && <p role="alert" className="mt-6 text-sm text-red-600">{error}</p>}
 
       {data && (
         <div className="mt-8 space-y-8">

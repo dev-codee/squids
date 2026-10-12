@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/components/common/ActionFeedback";
 
 import { useEffect, useState } from "react";
 import type { RetailerOfferRecord, OfferStatus } from "@/lib/model/offer";
@@ -29,10 +30,11 @@ export default function OffersAdminPage() {
     try {
       const res = await fetch(`/api/admin/offers?status=${status}&limit=100`);
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not load offers.");
       setOffers(data.offers || []);
       setCounts(data.counts || {});
     } catch (err) {
-      console.error(err);
+      notify(err instanceof Error ? err.message : "This action failed. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -50,11 +52,12 @@ export default function OffersAdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, action, reason }),
       });
-      if (res.ok) {
-        await fetchOffers();
-      }
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Offer could not be updated.");
+      notify("Offer updated successfully.");
+      await fetchOffers();
     } catch (err) {
-      console.error(err);
+      notify(err instanceof Error ? err.message : "This action failed. Please try again.", "error");
     } finally {
       setActionLoading(null);
     }
@@ -66,19 +69,21 @@ export default function OffersAdminPage() {
     setPreviewLoading(true);
     try {
       const price = offer.itemPrice.known ? offer.itemPrice.value : 0;
-      const res = await fetch("/api/admin/offers/preview-calculation", {
+      const res = await fetch("/api/admin/offers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           merchantMarketId: offer.merchantMarketId,
-          itemPrice: price,
-          destination: { market: "US", postcode: postcode || null },
+          itemPrice: offer.itemPrice.known ? price : null,
+          currency: offer.currency,
+          destination: { market: offer.merchantMarketId.split(":").pop(), postcode: postcode || null },
         }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not calculate this total.");
       setPreviewResult(data);
     } catch (err) {
-      console.error(err);
+      notify(err instanceof Error ? err.message : "This action failed. Please try again.", "error");
     } finally {
       setPreviewLoading(false);
     }

@@ -52,7 +52,11 @@ function getClientPromise(): Promise<MongoClient> {
     serverSelectionTimeoutMS: 10_000,
   });
 
-  g._mongoClientPromise = client.connect();
+  g._mongoClientPromise = client.connect().catch(async (error) => {
+    g._mongoClientPromise = undefined;
+    await client.close().catch(() => undefined);
+    throw error;
+  });
 
   return g._mongoClientPromise;
 }

@@ -9,6 +9,8 @@ import { SESSION_COOKIE_NAME, getAdminLoginPath } from "@/lib/auth";
  * and Edge-compatible.
  */
 import { jwtVerify } from "jose";
+import { requiresAdmin } from "@/lib/model/routeAccess";
+import { isValidRegionCode } from "@/lib/regions";
 
 function getSecret() {
   const s = process.env.AUTH_SECRET;
@@ -48,17 +50,22 @@ function regionFromPath(pathname: string): string {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const firstSegment = pathname.split("/")[1];
+  if (isValidRegionCode(firstSegment) && firstSegment !== firstSegment.toLowerCase()) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.replace(`/${firstSegment}`, `/${firstSegment.toLowerCase()}`);
+    return NextResponse.redirect(url, 308);
+  }
+
   // Expose the URL region to server components (used to set <html lang>).
   const region = regionFromPath(pathname);
   const forwardHeaders = new Headers(request.headers);
+  forwardHeaders.delete("x-region-country");
   if (region) forwardHeaders.set("x-region-country", region);
   const pass = () =>
     NextResponse.next({ request: { headers: forwardHeaders } });
 
-  const isProtectedRoute =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/api/transactions") ||
-    pathname.startsWith("/api/admin");
+  const isProtectedRoute = requiresAdmin(pathname, request.method);
 
   const loggedIn = await isValidSession(request);
 

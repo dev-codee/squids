@@ -1,7 +1,7 @@
 import { getPublicAdvertisers, slugifyAdvertiserName } from "@/lib/db/advertisers";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { storeSlug } from "@/lib/networks";
+import { isValidRegionCode } from "@/lib/regions";
 import type { Product } from "@/lib/products";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ export interface UnifiedSearchProductItem {
   size?: string | null;
   imageUrl?: string | null;
   salePrice?: number | null;
+  currency?: string | null;
   category?: string | null;
 }
 
@@ -43,9 +44,11 @@ function escapeRegex(value: string): string {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const query = (searchParams.get("q") || "").trim();
+    const query = (searchParams.get("q") || "").trim().slice(0, 160);
     const country = (searchParams.get("country") || "US").toUpperCase();
     const limit = Math.min(10, Math.max(1, parseInt(searchParams.get("limit") || "5", 10) || 5));
+
+    if (!isValidRegionCode(country)) return NextResponse.json({ error: "Unsupported market." }, { status: 400 });
 
     if (query.length < 2) {
       return NextResponse.json({
@@ -81,6 +84,7 @@ export async function GET(req: Request) {
           size: 1,
           imageUrl: 1,
           salePrice: 1,
+          currency: 1,
           category: 1,
         })
         .limit(limit)
@@ -112,6 +116,7 @@ export async function GET(req: Request) {
       size: p.size || null,
       imageUrl: p.imageUrl || null,
       salePrice: typeof p.salePrice === "number" ? p.salePrice : null,
+      currency: p.currency || null,
       category: p.category || null,
     }));
 

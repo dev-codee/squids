@@ -1,5 +1,7 @@
 "use client";
 
+import { notify } from "@/components/common/ActionFeedback";
+
 import { useCallback, useEffect, useState } from "react";
 import type { Category } from "@/lib/db/categories";
 
@@ -94,9 +96,10 @@ export default function AdminCategoriesPage() {
       }
 
       setIsModalOpen(false);
+      notify("Category saved successfully.");
       loadCategories();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error saving category.");
+      notify(err instanceof Error ? err.message : "Error saving category.", "error");
     } finally {
       setSaving(false);
     }
@@ -113,11 +116,11 @@ export default function AdminCategoriesPage() {
           isFeatured: !cat.isFeatured,
         }),
       });
-      if (res.ok) {
-        loadCategories();
-      }
+      if (!res.ok) throw new Error("Update failed");
+      notify("Featured category updated.");
+      loadCategories();
     } catch {
-      /* ignore */
+      notify("Could not update this category. Please try again.", "error");
     }
   }
 
@@ -136,9 +139,10 @@ export default function AdminCategoriesPage() {
       if (!res.ok) {
         throw new Error(json?.error || "Failed to delete category.");
       }
+      notify("Category deleted successfully.");
       loadCategories();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error deleting category.");
+      notify(err instanceof Error ? err.message : "Error deleting category.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -151,10 +155,11 @@ export default function AdminCategoriesPage() {
     try {
       const res = await fetch("/api/admin/categories?action=autoCategorize");
       const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Categorization failed");
       if (json.categories) setCategories(json.categories);
-      alert(`Auto-categorization complete! Categorized ${json.categorizedCount ?? 0} stores.`);
+      notify(`Auto-categorization complete! Categorized ${json.categorizedCount ?? 0} stores.`);
     } catch {
-      alert("Error auto-categorizing stores.");
+      notify("Error auto-categorizing stores.", "error");
     } finally {
       setAutoCategorizing(false);
     }

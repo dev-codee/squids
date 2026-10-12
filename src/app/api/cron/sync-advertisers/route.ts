@@ -35,14 +35,10 @@ export async function GET(request: NextRequest) {
   // ── Awin ─────────────────────────────────────────────────────────────────
   try {
     const [joined, pending] = await Promise.all([
-      fetchProgrammes("joined").catch((err) => {
-        console.warn("[cron/sync-advertisers] Failed to fetch Awin joined:", err);
-        return [];
-      }),
-      fetchProgrammes("pending").catch((err) => {
-        console.warn("[cron/sync-advertisers] Failed to fetch Awin pending:", err);
-        return [];
-      }),
+      // Never treat a failed feed as an empty successful snapshot: that can
+      // delete still-active stores during stale-record removal.
+      fetchProgrammes("joined"),
+      fetchProgrammes("pending"),
     ]);
 
     const byId = new Map<number, (typeof joined)[0]>();

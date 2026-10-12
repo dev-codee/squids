@@ -124,16 +124,12 @@ export default function ActivityLogsPage() {
     setTriggeringSync(true);
     setSyncMessage(null);
     try {
-      // Trigger advertisers sync
-      const advRes = await fetch("/api/cron/sync-advertisers?secret=" + (process.env.NEXT_PUBLIC_CRON_SECRET || ""));
-      const dealsRes = await fetch("/api/cron/sync-deals?secret=" + (process.env.NEXT_PUBLIC_CRON_SECRET || ""));
-      
-      if (advRes.ok || dealsRes.ok) {
-        setSyncMessage("Sync triggered successfully!");
-        loadData(1);
-      } else {
-        setSyncMessage("Sync trigger sent. Check logs below for status.");
-      }
+      const response = await fetch("/api/admin/sync", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || result.message || "Sync failed.");
+      setSyncMessage(result.message);
+      setPage(1);
+      loadData(1);
     } catch (err) {
       setSyncMessage("Error triggering sync: " + (err instanceof Error ? err.message : String(err)));
     } finally {

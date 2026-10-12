@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "skipped",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "/mnt/e-drive/affliate project/.archify/architecture-foxzil-system-20261009-182729/candidate.json",
+    "sha256": "b5c63cfb3df87a82b1eacacad4361b151b95043fbb7fb4c663527c4205ba6d00",
+    "bytes": 20927
+  },
+  "artifact": {
+    "path": "/tmp/.archify/architecture-foxzil-system-20261009-182729/checked/foxzil-system.html",
+    "sha256": "f7072e6ea70e52e981066cf0a33d826899867e701b70de511cae0b795bd009de",
+    "bytes": 797985
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "skipped"
+  },
+  "failedStage": "browser-check",
+  "diagnostics": [
+    {
+      "code": "viewer/chrome-unavailable",
+      "severity": "warning",
+      "message": "Chrome or Chromium is unavailable. Set ARCHIFY_CHROME to its executable path.",
+      "subject": {
+        "artifact": "/tmp/.archify/architecture-foxzil-system-20261009-182729/checked/foxzil-system.html"
+      },
+      "evidence": {
+        "executable": null
+      },
+      "supportedFixes": [
+        "set ARCHIFY_CHROME to a Chrome or Chromium executable and rerun browser-check"
+      ]
+    }
+  ],
+  "diagnosticSummary": {
+    "total": 1,
+    "shown": 1,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/tmp/.archify/architecture-foxzil-system-20261009-182729/review-4/foxzil-system.finalize.json",
+    "summaryReceipt": "/tmp/.archify/architecture-foxzil-system-20261009-182729/review-4/foxzil-system.finalize-summary.json",
+    "browserCheckReceipt": "/tmp/.archify/architecture-foxzil-system-20261009-182729/review-4/foxzil-system.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.0.1",
+    "availableVersion": "3.0.1",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-09T13:48:47.017Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 1055
+}

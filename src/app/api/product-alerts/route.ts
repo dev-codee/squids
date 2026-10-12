@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createOrUpdateProductAlert } from "@/lib/db/product-alerts";
 import { getProductById } from "@/lib/db/products";
 import { sendMail, confirmProductAlertEmail } from "@/lib/email";
-import { getSiteUrl, getRegionConfig } from "@/lib/regions";
+import { getSiteUrl, isValidRegionCode } from "@/lib/regions";
 import type { AlertFrequency } from "@/lib/model/productAlert";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
   }
 
   const email = typeof body?.email === "string" ? body.email.trim() : "";
-  const productId = Number(body?.productId);
-  const targetPrice = Number(body?.targetPrice);
+  const productId = typeof body?.productId === "number" ? body.productId : NaN;
+  const targetPrice = typeof body?.targetPrice === "number" ? body.targetPrice : NaN;
   const consent = body?.consent === true;
   const frequency: AlertFrequency = VALID_FREQUENCIES.includes(body?.frequency)
     ? body.frequency
@@ -35,10 +35,12 @@ export async function POST(request: NextRequest) {
     ? body.country.toLowerCase()
     : "us";
 
+  if (!isValidRegionCode(country)) return NextResponse.json({ error: "Unsupported market." }, { status: 400 });
+
   if (!EMAIL_RE.test(email)) {
     return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
   }
-  if (!Number.isFinite(productId) || productId <= 0) {
+  if (!Number.isSafeInteger(productId) || productId <= 0) {
     return NextResponse.json({ error: "Invalid product ID." }, { status: 400 });
   }
   if (!Number.isFinite(targetPrice) || targetPrice <= 0) {
@@ -51,15 +53,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const product = await getProductById(productId);
-  if (!product || !product.regionCodes?.includes(country.toUpperCase())) {
-    return NextResponse.json({ error: "Product not found." }, { status: 404 });
-  }
-
-  const region = getRegionConfig(country);
-  const currency = product.currency?.toUpperCase() || "USD";
-
   try {
+    const product = await getProductById(productId);
+    if (!product || !product.regionCodes?.includes(country.toUpperCase())) {
+      return NextResponse.json({ error: "Product not found." }, { status: 404 });
+    }
+
+    const currency = product.currency?.toUpperCase() || "USD";
+
     const { alert, needsConfirmation } = await createOrUpdateProductAlert({
       email,
       productId,
@@ -84,7 +85,8 @@ export async function POST(request: NextRequest) {
         targetPrice: `${currency} ${targetPrice.toFixed(2)}`,
       });
 
-      await sendMail({ to: alert.email, subject, html });
+      const sent = await sendMail({ to: alert.email, subject, html });
+      if (!sent) throw new Error("Confirmation email could not be sent");
     }
 
     return NextResponse.json({

@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/components/common/ActionFeedback";
 
 import { useEffect, useState, useCallback } from "react";
 import type {
@@ -39,11 +40,12 @@ export default function CorrectionsAdminPage() {
 
       const res = await fetch(`/api/corrections?${params.toString()}`);
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not load correction reports.");
       setItems(data.items || []);
       setTotal(data.total || 0);
       setStats(data.stats || null);
     } catch (err) {
-      console.error("[dashboard/corrections] Failed to fetch:", err);
+      notify("Correction reports could not load. Please refresh to try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -76,6 +78,7 @@ export default function CorrectionsAdminPage() {
         throw new Error(data.error || "Failed to update ticket");
       }
 
+      notify("Correction report updated successfully.");
       setSelectedTicket(null);
       setResolutionNotes("");
       await fetchCorrections();

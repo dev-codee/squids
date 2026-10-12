@@ -1,3 +1,4 @@
+import { getRegionConfig } from "@/lib/regions";
 import { NextRequest, NextResponse } from "next/server";
 import { confirmSubscriber } from "@/lib/db/subscribers";
 
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token") || "";
-  const country = (request.nextUrl.searchParams.get("country") || "us").toLowerCase();
+  const country = getRegionConfig(request.nextUrl.searchParams.get("country")).country.toLowerCase();
   const dest = new URL(`/${country}/subscriptions`, request.url);
 
   if (!token) {
@@ -20,8 +21,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(dest);
   }
 
-  const subscriber = await confirmSubscriber(token);
-  dest.searchParams.set("status", subscriber ? "confirmed" : "invalid");
-  if (subscriber) dest.searchParams.set("token", token);
-  return NextResponse.redirect(dest);
+  try {
+    const subscriber = await confirmSubscriber(token);
+    dest.searchParams.set("status", subscriber ? "confirmed" : "invalid");
+    if (subscriber) dest.searchParams.set("token", token);
+    return NextResponse.redirect(dest);
+  } catch {
+    dest.searchParams.set("status", "error");
+    return NextResponse.redirect(dest);
+  }
 }

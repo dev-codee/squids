@@ -1,5 +1,7 @@
 "use client";
 
+import { notify } from "@/components/common/ActionFeedback";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Deal, PagedDeals } from "@/lib/deals";
 import DealCard from "@/components/DealCard";
@@ -105,9 +107,10 @@ export default function AdminDealsPage() {
       if (!res.ok) {
         throw new Error(json?.error || "Failed to delete deal.");
       }
+      notify("Deal deleted successfully.");
       load(search, type, status, page);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error deleting deal.");
+      notify(err instanceof Error ? err.message : "Error deleting deal.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -288,7 +291,7 @@ export default function AdminDealsPage() {
       <DealModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSaved={() => load(search, type, status, page)}
+        onSaved={() => { notify("Deal saved successfully."); load(search, type, status, page); }}
         deal={selectedDeal}
       />
     </main>

@@ -1,3 +1,4 @@
+import ActionFeedback from "@/components/common/ActionFeedback";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { headers } from "next/headers";
@@ -83,6 +84,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           />
         </noscript>
         <AttributionCapture />
+        <ActionFeedback />
         {children}
       </body>
     </html>

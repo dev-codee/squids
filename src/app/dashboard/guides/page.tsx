@@ -1,5 +1,7 @@
 "use client";
 
+import { notify } from "@/components/common/ActionFeedback";
+
 import { useCallback, useEffect, useState } from "react";
 import type { BuyingGuide, Paged } from "@/lib/content";
 import Pagination from "@/components/Pagination";
@@ -36,8 +38,9 @@ export default function AdminGuidesPage() {
     try {
       const res = await fetch(`/api/admin/guides?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed");
+      notify("Guide deleted successfully.");
       load(page);
-    } catch (err) { alert("Error deleting guide."); }
+    } catch (err) { notify("Error deleting guide.", "error"); }
     finally { setDeletingId(null); }
   }
 
@@ -74,7 +77,7 @@ export default function AdminGuidesPage() {
           )}
         </div>
       )}
-      <GuideModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSaved={() => load(page)} guide={selectedGuide} />
+      <GuideModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSaved={() => { notify("Guide saved successfully."); load(page); }} guide={selectedGuide} />
     </main>
   );
 }

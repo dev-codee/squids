@@ -93,7 +93,7 @@ export default function FollowStoreButton({ store, country, compact, label }: Fo
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
           <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={text(ui.follow)} tabIndex={-1} className="max-h-[90dvh] overflow-y-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             {result ? (
-              <div className="text-center">
+              <div className="text-center" role="status">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4">
                   <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

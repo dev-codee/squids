@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isValidRegionCode } from "@/lib/regions";
 import { useParams } from "next/navigation";
 import { useSavedItems } from "@/lib/savedItems";
 import { useCurrency } from "@/i18n/CurrencyProvider";
@@ -107,7 +108,7 @@ export default function SavedProductsPage() {
 
                   <div className="mt-auto pt-4">
                     <Link
-                      href={`/${lc}/product/${item.id}`}
+                      href={`/${isValidRegionCode(item.country) ? item.country.toLowerCase() : lc}/product/${item.id}`}
                       className="block rounded-[9px] bg-brand px-4 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-hover"
                     >
                       {t.comparePrices || "Compare prices"}

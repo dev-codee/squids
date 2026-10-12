@@ -88,3 +88,11 @@ test("revalidateOfferBeforeAlert blocks stale, out of stock, or unmet targets", 
   assert.equal(resValid.canSend, true);
   assert.equal(resValid.eligiblePrice, 24);
 });
+
+test("invalid prices never qualify for an alert", () => {
+  for (const price of [NaN, Infinity, -Infinity, -1, 0]) {
+    assert.equal(isTargetPriceMet(price, 25), false);
+    assert.equal(isTargetPriceMet(20, price), false);
+    assert.equal(revalidateOfferBeforeAlert({ isCurrent: true, inStock: true, itemPrice: price, targetPrice: 25 }).canSend, false);
+  }
+});

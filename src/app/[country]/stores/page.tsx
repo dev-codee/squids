@@ -37,7 +37,7 @@ export async function generateMetadata({
     description: dict.meta.storesDescription.replace("{country}", name),
     alternates: {
       canonical: `${siteUrl}/${params.country.toLowerCase()}/stores${page > 1 ? `?page=${page}` : ""}`,
-      languages: hreflang,
+      languages: page === 1 ? hreflang : undefined,
     },
   };
 }
@@ -55,6 +55,7 @@ export default async function StoresPage({
   const search = typeof searchParams.search === "string" ? searchParams.search : "";
   const page = Math.max(1, parseInt(String(searchParams.page || "1"), 10) || 1);
   const initialData = await getPublicAdvertisers({ country: rawCountry.toUpperCase(), search, page, pageSize: 35, requireDeals: false });
+  if (page > initialData.totalPages && page > 1) notFound();
   return (
     <AdvertisersClient
       key={`${rawCountry}:${search}:${page}`}

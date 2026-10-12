@@ -1,5 +1,7 @@
 "use client";
 
+import { notify } from "@/components/common/ActionFeedback";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Product, PagedProducts } from "@/lib/products";
 import Pagination from "@/components/Pagination";
@@ -86,9 +88,10 @@ export default function AdminProductsPage() {
       if (!res.ok) {
         throw new Error(json?.error || "Failed to delete product.");
       }
+      notify("Product deleted successfully.");
       load(search, page);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error deleting product.");
+      notify(err instanceof Error ? err.message : "Error deleting product.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -237,7 +240,7 @@ export default function AdminProductsPage() {
       <ProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSaved={() => load(search, page)}
+        onSaved={() => { notify("Product saved successfully."); load(search, page); }}
         product={selectedProduct}
       />
     </main>

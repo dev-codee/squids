@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { listingSeo } from "@/lib/model/listingSeo";
 import type { Metadata } from "next";
 import { getDictionary } from "@/i18n";
 import { getProductsFromDb, getProductFacets } from "@/lib/db/products";
@@ -13,7 +15,16 @@ export const dynamic = "force-dynamic";
 type Props = { params: { country: string }; searchParams: Record<string, string | string[] | undefined> };
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const d=await getDictionary(params.country);
-  return { title: `${d.productShop.products} · Foxzil`, description:d.productShop.catalogSubtitle,alternates:{canonical:`${getSiteUrl()}/${params.country.toLowerCase()}/products`},robots:Object.keys(searchParams).length ? {index:false,follow:true} : {index:true,follow:true}};
+  const q = readProductCatalogParams(searchParams);
+  const refined = Boolean(q.search || q.category || q.brand || q.size || q.condition || q.currency || q.inStockOnly || q.minPrice !== undefined || q.maxPrice !== undefined || q.sort !== "relevance");
+  const seo = listingSeo(`${getSiteUrl()}/${params.country.toLowerCase()}/products`, searchParams, { refined });
+  return {
+    title: `${d.productShop.products} · Foxzil`,
+    description: d.productShop.catalogSubtitle,
+    alternates: { canonical: seo.canonical },
+    robots: seo.robots,
+    openGraph: { title: `${d.productShop.products} · Foxzil`, description: d.productShop.catalogSubtitle, url: seo.canonical },
+  };
 }
 export default async function ProductsPage({ params, searchParams }: Props) {
   const country=params.country.toUpperCase(), lc=country.toLowerCase(), q=readProductCatalogParams(searchParams);
@@ -24,6 +35,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
   if (!q.currency) {q.sort="relevance";q.minPrice=undefined;q.maxPrice=undefined;}
   let unavailable=false;
   const result=await getProductsFromDb({...q,country,pageSize:12}).catch(()=>{unavailable=true;return {products:[],page:1,pageSize:12,total:0,totalPages:1};});
+  if (!unavailable && q.page > result.totalPages) notFound();
   const url=(changes:Record<string,string|undefined>)=>{const p=new URLSearchParams();for(const [k,v] of Object.entries(searchParams))if(typeof v==="string"&&v)p.set(k,v);for(const [k,v] of Object.entries(changes))v===undefined?p.delete(k):p.set(k,v);return `/${lc}/products${p.size?`?${p}`:""}`;};
   const active=Object.entries({search:q.search,category:q.category,brand:q.brand,size:q.size,condition:q.condition,stock:q.inStockOnly?d.categoryV2.inStockOnly:"",min:q.minPrice!==undefined?`${t.minPrice}: ${q.minPrice} ${q.currency}`:"",max:q.maxPrice!==undefined?`${t.maxPrice}: ${q.maxPrice} ${q.currency}`:""}).filter(([,v])=>Boolean(v));
   return <main className="min-h-screen bg-[#f7f8fa] pb-16">
