@@ -142,13 +142,13 @@ export default function HorizontalCouponCard({
           {/* Eligibility rail: one tile carrying both the offer kind and the
               discount value, so the number a shopper scans for sits inside the
               badge rather than floating beside it. */}
-          <div className={`flex flex-shrink-0 flex-col items-center gap-2 sm:w-28 ${coupon.isExclusive ? "pt-12" : ""}`}>
+          <div className={`flex flex-shrink-0 flex-col items-center gap-2 sm:w-32 ${coupon.isExclusive ? "pt-12" : ""}`}>
             <div className="flex w-full min-w-[84px] flex-col items-center justify-center gap-1 rounded-card border border-brand-border bg-brand-soft/60 px-3 py-2.5 text-center">
               <span className="text-[10px] font-bold uppercase tracking-wide text-ink-soft">
                 {badge}
               </span>
               {coupon.discount && !isDelivery && (
-                <span className="text-xl font-extrabold leading-none text-brand">
+                <span className="max-w-full break-normal text-xl font-extrabold leading-tight text-brand">
                   {coupon.discount}
                 </span>
               )}
